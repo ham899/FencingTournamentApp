@@ -36,11 +36,11 @@ class Poule:
         """Returns true if the input number is a valid poule number; false otherwise."""
         return Poule._is_positive_integer(poule_number)
     
-    def _create_match(self, match_pair: tuple[int,int]) -> PouleMatch:
+    def _create_match(self, match_number: int, match_pair: tuple[int,int]) -> PouleMatch:
         """Based on the poule IDs provided, a PouleMatch is created."""
         poule_fencer_1_entry = self.entries[match_pair[0]-1]
         poule_fencer_2_entry = self.entries[match_pair[1]-1]
-        return PouleMatch(1, self.tournament_id, poule_fencer_1_entry, poule_fencer_2_entry)
+        return PouleMatch(match_number, self.tournament_id, fencer1_entry=poule_fencer_1_entry, fencer2_entry=poule_fencer_2_entry)
 
     # Methods
     def add_entry(self, entry: TournamentEntry) -> bool:
@@ -62,7 +62,7 @@ class Poule:
             self.matches.clear()
 
         # Make and return a list of poule matches
-        return [Poule._create_match(self, bout_pair) for bout_pair in bout_order]
+        return [Poule._create_match(self, match_num, bout_pair) for match_num, bout_pair in enumerate(bout_order)]
     
     def number_of_matches(self):
         """Calculates the number of matches in the poule."""
