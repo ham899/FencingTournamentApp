@@ -1,5 +1,4 @@
 import pytest
-
 from src.fencer import Fencer
 
 def test_fencer_creation_valid():
@@ -50,6 +49,11 @@ def test_update_display_name_strips_name():
     fencer.update_display_name('    Catherine     ')
     assert fencer.display_name == 'Catherine'
 
+def test_update_display_name_invalid_type():
+    fencer = Fencer(id=1, display_name='Katherine')
+    with pytest.raises(TypeError):
+        fencer.update_display_name(1)
+
 def test_update_display_name_empty_input():
     fencer = Fencer(id=1, display_name='Katherine')
     with pytest.raises(ValueError):
@@ -59,3 +63,13 @@ def test_update_display_name_whitespace_only_input():
     fencer = Fencer(id=1, display_name='Katherine')
     with pytest.raises(ValueError):
         fencer.update_display_name('     ')
+
+def test_fencer_equality():
+    fencer1 = Fencer(id=1, display_name='Ash')
+    fencer2 = Fencer(id=1, display_name='Ash')
+    assert fencer1 == fencer2
+
+def test_fencer_inequality():
+    fencer1 = Fencer(id=1, display_name='Daniel')
+    fencer2 = Fencer(id=2, display_name='Daniel')
+    assert fencer1 != fencer2
