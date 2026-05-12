@@ -1,5 +1,5 @@
 import pytest
-from src.fencer import Fencer
+from fencer import Fencer
 
 def test_fencer_creation_valid():
     fencer = Fencer(id=1, display_name='Sam')
