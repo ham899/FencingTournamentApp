@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from src.fencer import Fencer
+from fencer import Fencer
 from typing import Optional
 
 @dataclass
@@ -70,6 +70,10 @@ class TournamentEntry:
             raise ValueError("DE seed must be a positive integer")
 
         self.de_seed = seed
+
+    def display_name(self) -> str:
+        """ Returns the display name of the fencer in this tournament entry. """
+        return self.fencer.display_name
 
     def __str__(self):
         return f'Tournament Entry ID: {self.id} (Display Name: {self.fencer.display_name} - Tournament: {self.tournament_id})'
