@@ -1,6 +1,6 @@
 import pytest
-from src.tournament_entry import TournamentEntry
-from src.fencer import Fencer
+from tournament_entry import TournamentEntry
+from fencer import Fencer
 
 @pytest.fixture
 def fencer():
@@ -123,6 +123,10 @@ def test_set_de_seed_invalid_negative(fencer):
     entry = TournamentEntry(id=1, tournament_id=1, fencer=fencer)
     with pytest.raises(ValueError):
         entry.set_de_seed(-7)
+
+def test_display_name_method(fencer):
+    entry = TournamentEntry(id=1, tournament_id=1, fencer=fencer)
+    assert entry.display_name() == 'Jane'
 
 def test_entry_equality(fencer):
     entry1 = TournamentEntry(id=1, tournament_id=1, fencer=fencer, initial_seed=1)
