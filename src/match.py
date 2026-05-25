@@ -17,7 +17,7 @@ class Match(ABC):
     entry2: TournamentEntry = field(default=None)
     score1: int = field(default=0, init=False)
     score2: int = field(default=0, init=False)
-    winner_entry: TournamentEntry = field(default=None, init=False)
+    winner: TournamentEntry = field(default=None, init=False)
     completed: bool = field(default=False, init=False)
 
     def __post_init__(self):
@@ -75,18 +75,18 @@ class Match(ABC):
             raise ValueError('Winner entry must be one of the fencers in the match.')
 
         # Set the winner and mark the match as complete
-        self.winner_entry = winner_entry
+        self.winner = winner_entry
         self.mark_complete()
 
     def get_winner(self) -> Optional[TournamentEntry]:
         """ Returns the winner of the match; otherwise, returns None. """
         if self.is_complete():
-            return self.winner_entry
+            return self.winner
         return None
 
     def get_loser(self) -> Optional[TournamentEntry]:
         """ Returns the loser of the match; otherwise returns None. """
-        if self.is_complete() and self.winner_entry is None:
+        if self.is_complete() and self.winner is None:
             raise ValueError('Cannot get loser entry. The winner entry should not be None if the match is complete.')
         
         if not self.is_complete():
@@ -97,7 +97,7 @@ class Match(ABC):
             return None
         # Otherwise, both entries are present and return the loser
         else:
-            return self.entry1 if self.winner_entry != self.entry1 else self.entry2
+            return self.entry1 if self.winner != self.entry1 else self.entry2
 
     def record_score(self, score1: int, score2: int) -> None:
         """ Record the result of a match by providing two scores: one for fencer 1 and one for fencer 2. """

@@ -34,7 +34,7 @@ def test_valid_poule_match_creation_defaults(entry1, entry2):
     assert poule_match.score1==0
     assert poule_match.score2==0
     assert poule_match.score_to_win==5
-    assert poule_match.winner_entry is None
+    assert poule_match.winner is None
     assert poule_match.completed==False
 
 def test_valid_poule_match_creation_no_defaults(entry1, entry2):
@@ -47,7 +47,7 @@ def test_valid_poule_match_creation_no_defaults(entry1, entry2):
     assert poule_match.score1==0
     assert poule_match.score2==0
     assert poule_match.score_to_win==8
-    assert poule_match.winner_entry is None
+    assert poule_match.winner is None
     assert poule_match.completed==False
 
 # Test valid DEMatch creation
@@ -60,7 +60,7 @@ def test_valid_de_match_creation_defaults():
     assert de_match.score_to_win == 15
     assert de_match.entry1 is None
     assert de_match.entry2 is None
-    assert de_match.winner_entry is None
+    assert de_match.winner is None
     assert de_match.completed==False
 
 def test_valid_de_match_creation_no_defaults(entry1, entry2):
@@ -72,7 +72,7 @@ def test_valid_de_match_creation_no_defaults(entry1, entry2):
     assert de_match.score_to_win==12
     assert de_match.round_index==1
     assert de_match.match_index==1
-    assert de_match.winner_entry is None
+    assert de_match.winner is None
     assert de_match.completed==False
 
 # Test invalid Match inputs through PouleMatch constructor
@@ -134,23 +134,23 @@ def test_match_record_score_equal_scores(entry1, entry2):
 def test_match_record_score_entry1_wins(entry1, entry2):
     m1 = PouleMatch(id=1, tournament_id=1, entry1=entry1, entry2=entry2, poule_id=1)
     m1.record_score(score1=5, score2=3)
-    assert m1.winner_entry==entry1
+    assert m1.winner==entry1
     assert m1.completed==True
 
     m2 = DEMatch(id=1, tournament_id=1, entry1=entry1, entry2=entry2, round_index=0, match_index=0)
     m2.record_score(score1=12, score2=5)
-    assert m2.winner_entry==entry1
+    assert m2.winner==entry1
     assert m2.completed==True
 
 def test_match_record_score_entry2_wins(entry1, entry2):
     m1 = PouleMatch(id=1, tournament_id=1, entry1=entry1, entry2=entry2, poule_id=1)
     m1.record_score(score1=2, score2=4)
-    assert m1.winner_entry==entry2
+    assert m1.winner==entry2
     assert m1.completed==True
 
     m2 = DEMatch(id=1, tournament_id=1, entry1=entry1, entry2=entry2, round_index=0, match_index=0)
     m2.record_score(score1=11, score2=15)
-    assert m2.winner_entry==entry2
+    assert m2.winner==entry2
     assert m2.completed==True
 
 def test_match_is_complete(entry1, entry2):
@@ -167,7 +167,7 @@ def test_match_mark_complete(entry1, entry2):
 def test_set_winner(entry1, entry2):
     m = PouleMatch(id=1, tournament_id=1, entry1=entry1, entry2=entry2, poule_id=1)
     m.set_winner(entry1)
-    assert m.winner_entry==entry1 # Have as a feature despite score being 0-0 (injuries, etc.)
+    assert m.winner==entry1 # Have as a feature despite score being 0-0 (injuries, etc.)
     assert m.completed==True
 
 def test_set_winner_invalid_entry(entry1, entry2, entry3):
