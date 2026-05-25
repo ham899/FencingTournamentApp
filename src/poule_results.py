@@ -43,8 +43,14 @@ class EntryPouleResult:
         return f'{self.entry.fencer.display_name}: V = {self.victories}, TS = {self.touches_scored}, TR = {self.touches_received}'
                 
     def __eq__(self, other):
-        self_ratio = self.victories / self.matches_fenced
-        other_ratio = other.victories / other.matches_fenced
+        try:
+            self_ratio = self.victories / self.matches_fenced
+        except ZeroDivisionError:
+            self_ratio = 0
+        try:
+            other_ratio = other.victories / other.matches_fenced
+        except ZeroDivisionError:
+            other_ratio = 0
 
         self_indicator = self.touches_scored - self.touches_received
         other_indicator = other.touches_scored - other.touches_received
@@ -53,9 +59,18 @@ class EntryPouleResult:
     
     def __gt__(self, other):
         # First, compare ratio
-        if self.victories / self.matches_fenced > other.victories / other.matches_fenced:
+        try:
+            self_ratio = self.victories / self.matches_fenced
+        except ZeroDivisionError:
+            self_ratio = 0
+        try:
+            other_ratio = other.victories / other.matches_fenced
+        except ZeroDivisionError:
+            other_ratio = 0
+
+        if self_ratio > other_ratio:
             return True
-        elif self.victories / self.matches_fenced < other.victories / other.matches_fenced:
+        elif self_ratio < other_ratio:
             return False
         else:
             # Second, compare indicator
@@ -108,7 +123,7 @@ class EntryPouleResult:
 @dataclass
 class PouleResult:
     poule_id: int
-    results: list[EntryPouleResult] = field(default_factory=list) # List is mirrors the order of the entries in the poule; this is not necessarily sorted by the results
+    results: list[EntryPouleResult] = field(default_factory=list) # List mirrors the order of the entries in the poule; this is not necessarily sorted by the results
 
     def __post_init__(self):
         # Validate types
