@@ -7,6 +7,7 @@ from typing import Optional
 
 @dataclass
 class Poule:
+    """ Represents a single poule in a tournament. """
     id: int
     tournament_id: int
     poule_number: int
@@ -29,7 +30,8 @@ class Poule:
             if not isinstance(entry, TournamentEntry):
                 raise TypeError(f'All entries must be of type TournamentEntry')        
 
-        self.entries = list(self.entries) # Make a copy of the entries list
+        # Make a copy of the entries list
+        self.entries = list(self.entries)
 
         # Validate values
         if self.id < 1:
@@ -218,4 +220,3 @@ class Poule:
                 ret += f'{self.entries[i].fencer.display_name}'
             i+=1
         return ret
-    

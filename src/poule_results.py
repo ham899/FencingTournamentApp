@@ -5,6 +5,7 @@ from functools import total_ordering
 @dataclass
 @total_ordering
 class EntryPouleResult:
+    """ A data container to hold a single entry's poule result based on the matches they've done in the poule. Note: no matches done assumes a ratio of 0.0 """
     entry: TournamentEntry
     poule_id: int
     matches_fenced: int = 0
@@ -122,8 +123,9 @@ class EntryPouleResult:
 
 @dataclass
 class PouleResult:
+    """ Holds all the entry's results in a poule. The list of results mirrors the entries in the poule; it is not sorted by results. """
     poule_id: int
-    results: list[EntryPouleResult] = field(default_factory=list) # List mirrors the order of the entries in the poule; this is not necessarily sorted by the results
+    results: list[EntryPouleResult] = field(default_factory=list)
 
     def __post_init__(self):
         # Validate types
@@ -238,6 +240,7 @@ class PouleResult:
 
 @dataclass
 class PouleResults:
+    """ Data container that holds the combined poule results. The key invarianet is that the list of results must remain in sorted order. """
     results: list[EntryPouleResult] = field(default_factory=list) # Invariant: must be a sorted list for the results to hold
 
     def __post_init__(self):
