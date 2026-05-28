@@ -235,6 +235,26 @@ def test_de_match_type(entry1, entry2):
     m = DEMatch(id=1, tournament_id=1, entry1=entry1, entry2=entry2, round_index=0, match_index=0)
     assert m.match_type() == 'DE'
 
+def test_de_match_add_entry(entry1, entry2):
+    m = DEMatch(id=1, tournament_id=1, round_index=0, match_index=0)
+    assert m.entry1 is None
+    assert m.entry2 is None
+    m.add_entry(entry=entry1, location=0)
+    m.add_entry(entry=entry2, location=1)
+    assert m.entry1 == entry1
+    assert m.entry2 == entry2
+
+def test_de_match_add_entry_invalid(entry1):
+    m = DEMatch(id=1, tournament_id=1, round_index=0, match_index=0)
+    with pytest.raises(TypeError):
+        m.add_entry(entry=True, location=0)
+    with pytest.raises(TypeError):
+        m.add_entry(entry=entry1, location='0')
+    with pytest.raises(ValueError):
+        m.add_entry(entry=entry1, location=2)
+    with pytest.raises(ValueError):
+        m.add_entry(entry=entry1, location=-1)
+
 def test_de_match_add_entry1(entry1):
     m = DEMatch(id=1, tournament_id=1, round_index=0, match_index=0)
     assert m.entry1 is None
@@ -243,6 +263,11 @@ def test_de_match_add_entry1(entry1):
     assert m.entry1 == entry1
     assert m.entry2 is None
 
+def test_de_match_add_entry1_invalid(entry1):
+    m = DEMatch(id=1, tournament_id=1, round_index=0, match_index=0)
+    with pytest.raises(TypeError):
+        m.add_entry1('John')
+
 def test_de_match_add_entry2(entry2):
     m = DEMatch(id=1, tournament_id=1, round_index=0, match_index=0)
     assert m.entry1 is None
@@ -250,3 +275,8 @@ def test_de_match_add_entry2(entry2):
     m.add_entry2(entry2)
     assert m.entry1 is None
     assert m.entry2 == entry2
+
+def test_de_match_add_entry2_invalid(entry2):
+    m = DEMatch(id=1, tournament_id=1, round_index=0, match_index=0)
+    with pytest.raises(TypeError):
+        m.add_entry2(True)

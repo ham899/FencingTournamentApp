@@ -210,20 +210,43 @@ class DEMatch(Match):
     def match_type(self) -> str:
         """ Returns the type of match as a string. """
         return "DE"
+    
+    def add_entry(self, entry: TournamentEntry, location: int) -> None:
+        """ Adds an entry to the match at the given location (0 for entry 1 and 1 for entry 2) """
+        if not isinstance(entry, TournamentEntry):
+            raise TypeError('Entry must be a Tournament Entry object')
+        if type(location) is not int:
+            raise TypeError('Location must be an integer')
+        if location not in [0,1]:
+            raise ValueError('Location must be either 0 or 1')
+
+        if location == 0:
+            self.entry1 = entry
+        else:
+            self.entry2 = entry
 
     def add_entry1(self, entry: TournamentEntry) -> None:
-        """ Adds a fencer entry to the match as entry 1. """
-        if not isinstance(entry, TournamentEntry):
-            raise TypeError("Entry must be of type TournamentEntry.")
-        
-        self.entry1 = entry
+        """ Adds an entry to the match as entry 1. """
+        self.add_entry(entry, 0)
 
     def add_entry2(self, entry: TournamentEntry) -> None:
-        """ Adds a fencer entry to the match as entry 2. """
-        if not isinstance(entry, TournamentEntry):
-            raise TypeError("Entry must be of type TournamentEntry.")
-        
-        self.entry2 = entry
+        """ Add an entry to the match as entry 2. """
+        self.add_entry(entry, 1)
+
+    def is_bye(self):
+        """ Returns true if the match is a BYE; false otherwise. """
+        if self.round_index != 0:
+            return False
+        if self.match_index % 2 == 0:
+            if self.entry1 is not None and self.entry2 is None:
+                return True
+            else:
+                return False
+        else:
+            if self.entry1 is None and self.entry2 is not None:
+                return True
+            else:
+                return False
     
     def __str__(self):
         if self.entry1 is None and self.entry2 is None:
