@@ -1,17 +1,7 @@
 from dataclasses import dataclass
 from match import DEMatch
 from tournament_entry import TournamentEntry
-import math
-
-def is_power_of_two(n: int) -> bool:
-    """ Returns true if the input is a power of two, false otherwise. """
-    if type(n) is not int:
-        raise TypeError('Input must be an integer')
-    if n <= 0:
-        return False
-    while n % 2 == 0:
-        n = n // 2
-    return n == 1
+from utils import is_power_of_two, log2_int
 
 @dataclass
 class DERound:
@@ -166,7 +156,7 @@ class DERound:
             raise ValueError('Location input must be either 0 or 1')
         
         # Calculate the round's depth
-        d = math.log2(self.size)
+        d = log2_int(self.size)
         
         # Generete the tree level of positions
         level = DERound._generate_tree_bracket_level(depth=d)
