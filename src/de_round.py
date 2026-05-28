@@ -154,7 +154,6 @@ class DERound:
 
         return current_level
 
-
     def get_position(self, match_index: int, location: int):
         """ Takes the match index and a location (0 for on top and 1 for on bottom) and the position/rank within the round (not the entry's DE seed) is returned. """
         if type(match_index) is not int:
@@ -174,3 +173,39 @@ class DERound:
 
         # Return the position for this match and fencer (1 or 2)
         return level[match_index*2+location]
+    
+    def add_entry(self, entry: TournamentEntry, match_index: int, location: int):
+        """
+        Adds a given entry to a specified match at a specified location (0 for top and 1 for bottom). 
+        The match must exist and must have a none entry where the entry is to be placed.
+        """
+        if not isinstance(entry, TournamentEntry):
+            raise TypeError('Entry must be a Tournament Entry object')
+        if type(match_index) is not int:
+            raise TypeError('Match index must be an integer')
+        if type(location) is not int:
+            raise TypeError('Location must be an integer')
+        if match_index < 0 or match_index >= len(self.matches):
+            raise ValueError(f'Match index must be with the range 0-{len(self.matches)-1}')
+        if location not in [0,1]:
+            raise ValueError('Location must be either 0 or 1')
+        if not isinstance(self.matches[match_index], DEMatch):
+            raise ValueError('A DE match does not currently exist at that match index')
+        # Add to top
+        if location == 0:
+            if self.matches[match_index].entry1 is not None:
+                raise ValueError('There already exists an entry at this location')
+            self.matches[match_index].add_entry1(entry)
+        # Add to bottom
+        else:
+            if self.matches[match_index].entry2 is not None:
+                raise ValueError('There already exists an entry at this location')
+            self.matches[match_index].add_entry2(entry)
+
+    def add_entry1(self, entry: TournamentEntry, match_index: int):
+        """ Adds an entry to a given match to the entry 1 (top) position. """
+        self.add_entry(entry, match_index, 0)
+
+    def add_entry2(self, entry: TournamentEntry, match_index: int):
+        """ Adds an entry to a given match to the entry 2 (bottom) position. """
+        self.add_entry(entry, match_index, 1)

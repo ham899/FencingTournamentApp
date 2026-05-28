@@ -273,7 +273,6 @@ def test_de_round_get_position(de_round):
     assert de_round.get_position(match_index=3, location=0) == 7
     assert de_round.get_position(match_index=3, location=1) == 2
 
-
 def test_de_round_get_position_invalid(de_round):
     with pytest.raises(TypeError):
         de_round.get_position(match_index='zero', location=0)
@@ -287,3 +286,84 @@ def test_de_round_get_position_invalid(de_round):
         de_round.get_position(match_index=0, location=-1)
     with pytest.raises(ValueError):
         de_round.get_position(match_index=0, location=2)
+
+def test_de_round_add_entry(de_round):
+    de_round.matches[0].entry1 = None
+    de_round.matches[0].entry2 = None
+
+    assert de_round.get_match(0).entry1 is None
+    assert de_round.get_match(0).entry2 is None
+
+    entry1 = TournamentEntry(id=50, tournament_id=TOURNY_ID, fencer=Fencer(id=50, display_name='Edward'), de_seed=4)
+    entry2 = TournamentEntry(id=51, tournament_id=TOURNY_ID, fencer=Fencer(id=51, display_name='Edwin'), de_seed=5)
+
+    de_round.add_entry(entry=entry1, match_index=0, location=0)
+    de_round.add_entry(entry=entry2, match_index=0, location=1)
+
+    assert de_round.get_match(0).entry1 == entry1
+    assert de_round.get_match(0).entry2 == entry2
+
+def test_de_round_add_entry_invalid(de_round):
+    entry = TournamentEntry(id=50, tournament_id=TOURNY_ID, fencer=Fencer(id=50, display_name='Edward'), de_seed=4)
+    with pytest.raises(TypeError):
+        de_round.add_entry(entry=True, match_index=0, location=0)
+    with pytest.raises(TypeError):
+        de_round.add_entry(entry=entry, match_index='0', location=0)
+    with pytest.raises(TypeError):
+        de_round.add_entry(entry=entry, match_index=0, location='Allen')
+    with pytest.raises(ValueError):
+        de_round.add_entry(entry=entry, match_index=-1, location=0)
+    with pytest.raises(ValueError):
+        de_round.add_entry(entry=entry, match_index=len(de_round.matches), location=0)
+    with pytest.raises(ValueError):
+        de_round.add_entry(entry=entry, match_index=0, location=-1)
+    with pytest.raises(ValueError):
+        de_round.add_entry(entry=entry, match_index=0, location=2)
+
+def test_de_round_add_entry1(de_round):
+    de_round.matches[0].entry1 = None
+    de_round.matches[0].entry2 = None
+
+    assert de_round.get_match(0).entry1 is None
+    assert de_round.get_match(0).entry2 is None
+
+    entry1 = TournamentEntry(id=50, tournament_id=TOURNY_ID, fencer=Fencer(id=50, display_name='Edward'), de_seed=4)
+    de_round.add_entry1(entry1, match_index=0)
+
+    assert de_round.get_match(0).entry1 == entry1
+    assert de_round.get_match(0).entry2 is None
+
+def test_de_round_add_entry1(de_round):
+    entry = TournamentEntry(id=50, tournament_id=TOURNY_ID, fencer=Fencer(id=50, display_name='Edward'), de_seed=4)
+    with pytest.raises(TypeError):
+        de_round.add_entry1('Edward', 0)
+    with pytest.raises(TypeError):
+        de_round.add_entry1(entry, 'First')
+    with pytest.raises(ValueError):
+        de_round.add_entry1(entry, -1)
+    with pytest.raises(ValueError):
+        de_round.add_entry1(entry, len(de_round.matches)+100)
+
+def test_de_round_add_entry2(de_round):
+    de_round.matches[0].entry1 = None
+    de_round.matches[0].entry2 = None
+
+    assert de_round.get_match(0).entry1 is None
+    assert de_round.get_match(0).entry2 is None
+
+    entry2 = TournamentEntry(id=51, tournament_id=TOURNY_ID, fencer=Fencer(id=51, display_name='Edwin'), de_seed=5)
+    de_round.add_entry2(entry2, match_index=0)
+
+    assert de_round.get_match(0).entry1 is None
+    assert de_round.get_match(0).entry2 == entry2
+
+def test_de_round_add_entry2(de_round):
+    entry = TournamentEntry(id=50, tournament_id=TOURNY_ID, fencer=Fencer(id=50, display_name='Edward'), de_seed=4)
+    with pytest.raises(TypeError):
+        de_round.add_entry2('Edward', 0)
+    with pytest.raises(TypeError):
+        de_round.add_entry2(entry, 'First')
+    with pytest.raises(ValueError):
+        de_round.add_entry2(entry, -1)
+    with pytest.raises(ValueError):
+        de_round.add_entry2(entry, len(de_round.matches)+100)
