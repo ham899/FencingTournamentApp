@@ -95,9 +95,10 @@ class DERound:
         for match in self.matches:
             if match.is_complete():
                 loser = match.get_loser()
-                if loser is None:
+                if match.get_winner() is None:
                     raise ValueError('A match was marked complete with no winner set.')
-                losers.append(loser)
+                if loser is not None:
+                    losers.append(loser)
         return losers
     
     def get_round_name(self) -> str:
@@ -184,12 +185,12 @@ class DERound:
         # Add to top
         if location == 0:
             if self.matches[match_index].entry1 is not None:
-                raise ValueError('There already exists an entry at this location')
+                raise ValueError(f'There already exists an entry1 at match index {match_index} in round index {self.index}')
             self.matches[match_index].add_entry1(entry)
         # Add to bottom
         else:
             if self.matches[match_index].entry2 is not None:
-                raise ValueError('There already exists an entry at this location')
+                raise ValueError(f'There already exists an entry2 at match index {match_index} in round index {self.index}')
             self.matches[match_index].add_entry2(entry)
 
     def add_entry1(self, entry: TournamentEntry, match_index: int):
