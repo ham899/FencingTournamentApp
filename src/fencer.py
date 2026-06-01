@@ -17,6 +17,7 @@ class Fencer:
     """
     id: int
     display_name: str
+    
     max_name_length: ClassVar[int] = 25
 
     def __post_init__(self) -> None:

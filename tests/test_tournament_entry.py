@@ -1,4 +1,5 @@
 import pytest
+
 from tournament_entry import TournamentEntry
 from fencer import Fencer
 

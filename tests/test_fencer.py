@@ -1,4 +1,5 @@
 import pytest
+
 from fencer import Fencer
 
 ### Constants ###

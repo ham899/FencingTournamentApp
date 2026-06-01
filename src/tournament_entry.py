@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from fencer import Fencer
 from typing import Optional
+
+from fencer import Fencer
 
 @dataclass
 class TournamentEntry:
@@ -27,6 +28,7 @@ class TournamentEntry:
     id: int
     tournament_id: int
     fencer: Fencer
+
     initial_seed: Optional[int] = None
     de_seed: Optional[int] = None
 
