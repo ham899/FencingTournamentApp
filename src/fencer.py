@@ -67,14 +67,14 @@ class Fencer:
         """
         # Validate input
         if not isinstance(name, str):
-            raise TypeError('New display name must be a string')
+            raise TypeError(f'The new display name for Fencer {self.id} must be a string')
         
         # Trim input
         name = name.strip()
 
         # Check that name is a valid length
         if len(name) == 0 or len(name) > Fencer.max_name_length:
-            raise ValueError(f"Name must be between 1-{Fencer.max_name_length} characters, ignoring leading and trailing whitespace")
+            raise ValueError(f'The new display name for Fencer {self.id} must be between 1-{Fencer.max_name_length} characters, ignoring leading and trailing whitespace')
         
         # Set new display name
         self.display_name = name
