@@ -82,6 +82,7 @@ class Fencer:
     def __eq__(self, other: object) -> bool:
         """
         Determines if two fencers are equal based on their IDs.
+        It is based on IDs only since display names are allowed to change.
 
         Parameters
         ----------
@@ -92,11 +93,7 @@ class Fencer:
         -------
         bool
             True if the other object is a Fencer with the same ID, False otherwise.
-        Raises
-        ------
-        TypeError
-            If the other object is not an instance of the Fencer class.
         """
         if not isinstance(other, Fencer):
-            raise TypeError('Can only compare Fencer objects for equality')
+            return False
         return self.id == other.id
