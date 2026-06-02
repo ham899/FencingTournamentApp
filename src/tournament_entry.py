@@ -83,6 +83,7 @@ class TournamentEntry:
         ----------
         other : object
             The object to compare with this tournament entry.
+
         Returns
         -------
         bool
@@ -100,6 +101,7 @@ class TournamentEntry:
         ----------
         seed : int
             The initial seed to assign to the entry. Must be a positive integer.
+
         Raises
         ------
         TypeError
@@ -122,6 +124,7 @@ class TournamentEntry:
         ----------
         seed : int
             The DE seed to assign to the entry. Must be a positive integer.
+
         Raises
         ------
         TypeError

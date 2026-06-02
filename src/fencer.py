@@ -59,6 +59,7 @@ class Fencer:
         ----------
         name : str
             The new display name for the fencer; leading and trailing whitespace will be trimmed from the input.
+
         Raises
         ------
         TypeError
