@@ -12,27 +12,6 @@ ENTRY_ID2 = 2
 NAME1 = 'Jane'
 NAME2 = 'John'
 
-### Parameterization of invalid types for parameters ###
-@pytest.mark.parametrize('invalid_id_types', [
-    None, '1', 1.0, True, [], {}
-])
-
-@pytest.mark.parametrize('invalid_tournament_id_types', [
-    None, '1', 1.0, True, [], {}
-])
-
-@pytest.mark.parametrize('invalid_fencer_types', [
-    None, 'John', 1, 1.0, False, [], {}
-])
-
-@pytest.mark.parametrize('invalid_initial_seed_types', [
-    '1', 1.0, True, [], {}
-])
-
-@pytest.mark.parametrize('invalid_de_seed_types', [
-    '1', 1.0, True, [], {}
-])
-
 ### Fixtures ###
 @pytest.fixture
 def fencer():
@@ -58,6 +37,9 @@ def test_tournament_entry_creation_valid_all_parameters_filled(fencer):
     assert entry.initial_seed==1
     assert entry.de_seed==1
 
+@pytest.mark.parametrize('invalid_id_types', [
+    None, '1', 1.0, True, [], {}
+])
 def test_tournament_entry_creation_invalid_id_type(invalid_id_types, fencer):
     with pytest.raises(TypeError):
         TournamentEntry(id=invalid_id_types, tournament_id=TOURNY_ID, fencer=fencer)
@@ -70,6 +52,9 @@ def test_tournament_entry_creation_invalid_id_negative(fencer):
     with pytest.raises(ValueError):
         TournamentEntry(id=-1, tournament_id=TOURNY_ID, fencer=fencer)
 
+@pytest.mark.parametrize('invalid_tournament_id_types', [
+    None, '1', 1.0, True, [], {}
+])
 def test_tournament_entry_creation_invalid_tournament_id_type(invalid_tournament_id_types, fencer):
     with pytest.raises(TypeError):
         TournamentEntry(id=ENTRY_ID1, tournament_id=invalid_tournament_id_types, fencer=fencer)
@@ -82,10 +67,16 @@ def test_tournament_entry_creation_invalid_tournament_id_negative(fencer):
     with pytest.raises(ValueError):
         TournamentEntry(id=ENTRY_ID1, tournament_id=-1, fencer=fencer)
 
+@pytest.mark.parametrize('invalid_fencer_types', [
+    None, 'John', 1, 1.0, False, [], {}
+])
 def test_tournament_entry_creation_invalid_fencer_type(invalid_fencer_types):
     with pytest.raises(TypeError):
         TournamentEntry(id=ENTRY_ID1, tournament_id=TOURNY_ID, fencer=invalid_fencer_types)
 
+@pytest.mark.parametrize('invalid_initial_seed_types', [
+    '1', 1.0, True, [], {}
+])
 def test_tournament_entry_creation_invalid_initial_seed_type(invalid_initial_seed_types, fencer):
     with pytest.raises(TypeError):
         TournamentEntry(id=ENTRY_ID1, tournament_id=TOURNY_ID, fencer=fencer, initial_seed=invalid_initial_seed_types)
@@ -98,6 +89,9 @@ def test_tournament_entry_creation_invalid_initial_seed_negative(fencer):
     with pytest.raises(ValueError):
         TournamentEntry(id=ENTRY_ID1, tournament_id=TOURNY_ID, fencer=fencer, initial_seed=-1)
 
+@pytest.mark.parametrize('invalid_de_seed_types', [
+    '1', 1.0, True, [], {}
+])
 def test_tournament_entry_creation_invalid_de_seed_type(invalid_de_seed_types, fencer):
     with pytest.raises(TypeError):
         TournamentEntry(id=ENTRY_ID1, tournament_id=TOURNY_ID, fencer=fencer, initial_seed=1, de_seed=invalid_de_seed_types)

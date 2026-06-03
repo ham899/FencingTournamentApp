@@ -8,15 +8,6 @@ VALID_ID2 = 2
 VALID_ID3 = 3
 VALID_NAME = 'Sam'
 
-### Parameterization of invalid types for parameters ###
-@pytest.mark.parametrize('invalid_id_types', [
-    None, '1', 1.0, True, [], {}
-])
-
-@pytest.mark.parametrize('invalid_display_name_types', [
-    None, 1, 1.0, False, [], {}
-])
-
 def test_fencer_creation_valid():
     fencer = Fencer(id=VALID_ID1, display_name=VALID_NAME)
     assert fencer.id == VALID_ID1
@@ -27,6 +18,9 @@ def test_fencer_creation_valid_name_strip():
     assert fencer.id == VALID_ID1
     assert fencer.display_name == 'Frank Jones'
 
+@pytest.mark.parametrize('invalid_id_types', [
+    None, '1', 1.0, True, [], {}
+])
 def test_fencer_creation_invalid_id_type(invalid_id_types):
     with pytest.raises(TypeError):
         Fencer(id=invalid_id_types, display_name=VALID_NAME)
@@ -39,6 +33,9 @@ def test_fencer_creation_invalid_id_negative():
     with pytest.raises(ValueError):
         Fencer(id=-1, display_name=VALID_NAME)
 
+@pytest.mark.parametrize('invalid_display_name_types', [
+    None, 1, 1.0, False, [], {}
+])
 def test_fencer_creation_invalid_display_name_type(invalid_display_name_types):
     with pytest.raises(TypeError):
         Fencer(id=VALID_ID1, display_name=invalid_display_name_types)
