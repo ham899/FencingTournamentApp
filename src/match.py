@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, InitVar
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -261,11 +261,16 @@ class PouleMatch(Match):
 
     score_to_win: int, default=5
         The score required to win the match. It defaults to 5 for poule matches but can be customized when setting up the tournament.
+    
+    max_match_index: InitVar[int]
+        The maximum match index for the poule, which is used to validate the match index field and is passed as an initialization variable to the post init method.
     """
     poule_id: int
     match_index: int
 
     score_to_win: int = 5
+
+    max_match_index: InitVar[int]
 
     def __post_init__(self, max_match_index: int) -> None:
         """
@@ -379,11 +384,19 @@ class DEMatch(Match):
 
     score_to_win : int, default=15
         The score required to win the match. It defaults to 15 for DE matches but can be customized when setting up the tournament.
+    
+    max_round_index: InitVar[int]
+        The maximum round index for the DE bracket.
+    max_match_index: InitVar[int]
+        The maximum match index within the round of the DE bracket.
     """
     round_index: int
     match_index: int
 
     score_to_win: int = 15
+
+    max_round_index: InitVar[int]
+    max_match_index: InitVar[int]
     
     def __post_init__(self, max_round_index: int, max_match_index: int) -> None:
         """
@@ -402,7 +415,7 @@ class DEMatch(Match):
         max_round_index : int
             The maximum round index for the DE bracket.
         max_match_index : int
-            The maximum match index within the round for the DE bracket.
+            The maximum match index within the round of the DE bracket.
 
         Raises
         ------
@@ -416,23 +429,23 @@ class DEMatch(Match):
 
         # Validate input types
         if type(self.round_index) is not int:
-            raise TypeError("Round index must be an integer.")
+            raise TypeError('Round index must be an integer.')
         
         if type(self.match_index) is not int:
-            raise TypeError("Match index must be an integer.")
+            raise TypeError('Match index must be an integer.')
 
         if type(self.score_to_win) is not int:
-            raise TypeError("Score to win must be an integer.")
-        
+            raise TypeError('Score to win must be an integer.')
+
         # Validate input values
         if self.score_to_win < 1:
-            raise ValueError("Score to win must be a positive integer.")
-        
+            raise ValueError('Score to win must be a positive integer.')
+
         if self.round_index < 0 or self.round_index > max_round_index:
-            raise ValueError("Round index must be a non-negative integer.")
+            raise ValueError('Round index must be a non-negative integer.')
 
         if self.match_index < 0 or self.match_index > max_match_index:
-            raise ValueError("Match index must be a non-negative integer.")
+            raise ValueError('Match index must be a non-negative integer.')
         
         # Derive winner if match is a BYE
         if self.entry1 is not None and self.entry2 is None:
