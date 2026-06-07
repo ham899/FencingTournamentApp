@@ -20,6 +20,13 @@ def calculate_max_match_index_within_round(round_index: int, max_round_index: in
     -------
     int
         The maximum valid match index in this tournament.
+
+    Raises
+    ------
+    TypeError
+        If the index inputs are not integers.
+    ValueError
+        If the index inputs are negative or if the round index input is greater than the maximum.
     """
     if type(round_index) is not int:
         raise TypeError(f'The round index input must be an integer - instead got {type(round_index)}')
