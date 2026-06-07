@@ -5,6 +5,36 @@ from typing import Optional
 from tournament_entry import TournamentEntry
 
 
+def calculate_max_match_index_within_round(round_index: int, max_round_index: int) -> int:
+    """
+    Calculates the maximum match index value permissible in this round.
+
+    Parameters
+    ----------
+    round_index : int
+        The round index where the maximum number of matches is desired.
+    max_round_index : int
+        The maximum possible round index in this tournament.
+    
+    Returns
+    -------
+    int
+        The maximum valid match index in this tournament.
+    """
+    if type(round_index) is not int:
+        raise TypeError(f'The round index input must be an integer - instead got {type(round_index)}')
+    if type(max_round_index) is not int:
+        raise TypeError(f'The maximum round index input must be an integer - instead got {type(max_round_index)}')
+    if round_index < 0:
+        raise ValueError(f'The round index input must be non-negative - instead got {round_index}')
+    if max_round_index < 0:
+        raise ValueError(f'The maximum round index input must be non-negative - instead got {max_round_index}')
+    if round_index > max_round_index:
+        raise ValueError(f'The round index input must be less than or equal to the maximum round index input - got {round_index} > {max_round_index}')
+    
+    return 2**(max_round_index-round_index)-1
+
+
 ##### MATCH ABSTRACT BASE CLASS #####
 
 @dataclass
@@ -387,8 +417,6 @@ class DEMatch(Match):
     
     max_round_index: InitVar[int]
         The maximum round index for the DE bracket.
-    max_match_index: InitVar[int]
-        The maximum match index within the round of the DE bracket.
     """
     round_index: int
     match_index: int
@@ -396,9 +424,8 @@ class DEMatch(Match):
     score_to_win: int = 15
 
     max_round_index: InitVar[int]
-    max_match_index: InitVar[int]
     
-    def __post_init__(self, max_round_index: int, max_match_index: int) -> None:
+    def __post_init__(self, max_round_index: int) -> None:
         """
         Validates the fields of the parent match class plus validates the round index, match index, and DE score to win.
         DE matches allow None entries for BYE or empty match situations.
@@ -414,8 +441,6 @@ class DEMatch(Match):
         ----------
         max_round_index : int
             The maximum round index for the DE bracket.
-        max_match_index : int
-            The maximum match index within the round of the DE bracket.
 
         Raises
         ------
@@ -444,7 +469,7 @@ class DEMatch(Match):
         if self.round_index < 0 or self.round_index > max_round_index:
             raise ValueError('Round index must be a non-negative integer.')
 
-        if self.match_index < 0 or self.match_index > max_match_index:
+        if self.match_index < 0 or self.match_index > calculate_max_match_index_within_round(round_index=self.round_index, max_round_index=max_round_index):
             raise ValueError('Match index must be a non-negative integer.')
         
         # Derive winner if match is a BYE
