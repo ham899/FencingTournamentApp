@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import validation
 from entities.fencer import Fencer
 
-@dataclass
+@dataclass(eq=False)
 class TournamentEntry:
     """
     Represents an entry participating in a tournament.

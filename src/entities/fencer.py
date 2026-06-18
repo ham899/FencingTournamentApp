@@ -3,7 +3,7 @@ from typing import ClassVar
 
 import validation
 
-@dataclass
+@dataclass(eq=False)
 class Fencer:
     """
     Represents a fencer with an ID and a display name; a single fencer can participate in multiple tournaments (be multiple entries).
