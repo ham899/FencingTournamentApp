@@ -129,3 +129,36 @@ def validate_optional_non_negative_int(value: int | None, var_name: str, class_n
         message += f' in method {method_name}'
     if value is not None:
         validate_non_negative_int(value, var_name, class_name, method_name)
+
+def validate_int_in_range(value: int, min_value: int, max_value: int, var_name: str, class_name: str, method_name: str | None = None) -> None:
+    """
+    Validates that the value is an integer within a specified range; raises a ValueError if not.
+    
+    Parameters
+    ----------
+    value : int
+        The value to validate.
+    min_value : int
+        The minimum allowed value (inclusive).
+    max_value : int
+        The maximum allowed value (inclusive).
+    var_name : str
+        The name of the variable being validated.
+    class_name : str
+        The name of the class where the variable is being validated.
+    method_name : str | None, default=None
+        The name of the method where the variable is being validated.
+
+    Raises
+    ------
+    TypeError
+        If the value is not an integer.
+    ValueError
+        If the integer value is not within the specified range.
+    """
+    message = f'{var_name} must be between {min_value} and {max_value} (inclusive) in {class_name}'
+    if method_name is not None:
+        message += f' in method {method_name}'
+    validate_int(value, var_name, class_name, method_name)
+    if value < min_value or value > max_value:
+        raise ValueError(message)
