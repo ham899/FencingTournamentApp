@@ -76,7 +76,7 @@ def test_fencer_inequality(fencer):
 def test_fencer_inequality_non_fencer(fencer):
     assert fencer != "not a fencer"
 
-# --- Public Method Tests ---
+# --- Update Method Tests ---
 def test_fencer_update_display_name_valid(fencer):
     fencer.update_display_name('Catherine')
     assert fencer.id == VALID_ID1
