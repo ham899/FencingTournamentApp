@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
-import validation
+import validators
 
 @dataclass(eq=False)
 class Fencer:
@@ -37,7 +37,7 @@ class Fencer:
         ValueError
             If the fencer's ID is not a positive integer or if the display name is empty or exceeds the maximum allowed length after trimming.
         """
-        validation.validate_positive_int(self.id, 'ID', 'Fencer')
+        validators.validate_positive_int(self.id, 'ID', 'Fencer')
         
         validated_name = Fencer._validate_display_name(self.display_name)
         

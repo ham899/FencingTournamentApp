@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-import validation
+import validators
 from entities.fencer import Fencer
 
 @dataclass(eq=False)
@@ -55,16 +55,16 @@ class TournamentEntry:
             If any of the numeric attributes are not positive integers.
         """
         # Validate IDs
-        validation.validate_positive_int(self.id, 'ID', 'TournamentEntry')
-        validation.validate_positive_int(self.tournament_id, 'Tournament ID', 'TournamentEntry')
+        validators.validate_positive_int(self.id, 'ID', 'TournamentEntry')
+        validators.validate_positive_int(self.tournament_id, 'Tournament ID', 'TournamentEntry')
 
         # Validate fencer
         if not isinstance(self.fencer, Fencer):
             raise TypeError('Fencer parameter must be an instance of a Fencer class')
         
         # Validate Optional Seeds
-        validation.validate_optional_positive_int(self.initial_seed, 'Initial seed', 'TournamentEntry')
-        validation.validate_optional_positive_int(self.de_seed, 'DE seed', 'TournamentEntry')
+        validators.validate_optional_positive_int(self.initial_seed, 'Initial seed', 'TournamentEntry')
+        validators.validate_optional_positive_int(self.de_seed, 'DE seed', 'TournamentEntry')
 
     # --- Dunder Methods ---
     def __eq__(self, other: object) -> bool:
@@ -103,7 +103,7 @@ class TournamentEntry:
         ValueError
             If the seed is not a positive integer.
         """
-        validation.validate_optional_positive_int(seed, 'Initial seed', 'TournamentEntry')
+        validators.validate_optional_positive_int(seed, 'Initial seed', 'TournamentEntry')
         self.initial_seed = seed
 
     def set_de_seed(self, seed: int | None) -> None:
@@ -122,5 +122,5 @@ class TournamentEntry:
         ValueError
             If the seed is not a positive integer.
         """
-        validation.validate_optional_positive_int(seed, 'DE seed', 'TournamentEntry')
+        validators.validate_optional_positive_int(seed, 'DE seed', 'TournamentEntry')
         self.de_seed = seed
