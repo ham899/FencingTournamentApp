@@ -1,3 +1,11 @@
+
+def _validation_location(class_name: str, method_name: str | None = None) -> str:
+    """Builds a location string for validation error messages."""
+    location = f'in {class_name}'
+    if method_name is not None:
+        location += f'.{method_name}()'
+    return location
+
 def validate_int(value: int, var_name: str, class_name: str, method_name: str | None = None) -> None:
     """
     Validates that the value is an integer; raises a TypeError if not.
@@ -18,11 +26,9 @@ def validate_int(value: int, var_name: str, class_name: str, method_name: str | 
     TypeError
         If the value is not an integer.
     """
-    message = f'{var_name} must be an integer in {class_name}'
-    if method_name is not None:
-        message += f' in method {method_name}'
     if type(value) is not int:
-        raise TypeError(message)
+        location = _validation_location(class_name, method_name)
+        raise TypeError(f'{var_name} must be an integer {location} - got {type(value).__name__}')
 
 def validate_positive_int(value: int, var_name: str, class_name: str, method_name: str | None = None) -> None:
     """
@@ -41,15 +47,15 @@ def validate_positive_int(value: int, var_name: str, class_name: str, method_nam
 
     Raises
     ------
+    TypeError
+        If the value is not an integer.
     ValueError
         If the value is not a positive integer.
     """
-    message = f'{var_name} must be a positive integer in {class_name}'
-    if method_name is not None:
-        message += f' in method {method_name}'
     validate_int(value, var_name, class_name, method_name)
     if value <= 0:
-        raise ValueError(message)
+        location = _validation_location(class_name, method_name)
+        raise ValueError(f'{var_name} must be a positive integer {location} - got {value}')
 
 def validate_non_negative_int(value: int, var_name: str, class_name: str, method_name: str | None = None) -> None:
     """
@@ -68,15 +74,15 @@ def validate_non_negative_int(value: int, var_name: str, class_name: str, method
 
     Raises
     ------
+    TypeError
+        If the value is not an integer.
     ValueError
         If the value is not a non-negative integer.
     """
-    message = f'{var_name} must be a non-negative integer in {class_name}'
-    if method_name is not None:
-        message += f' in method {method_name}'
     validate_int(value, var_name, class_name, method_name)
     if value < 0:
-        raise ValueError(message)
+        location = _validation_location(class_name, method_name)
+        raise ValueError(f'{var_name} must be a non-negative integer {location} - got {value}')
 
 def validate_optional_positive_int(value: int | None, var_name: str, class_name: str, method_name: str | None = None) -> None:
     """
@@ -98,9 +104,6 @@ def validate_optional_positive_int(value: int | None, var_name: str, class_name:
     ValueError
         If the value is not a positive integer or None.
     """
-    message = f'{var_name} must be a positive integer or None in {class_name}'
-    if method_name is not None:
-        message += f' in method {method_name}'
     if value is not None:
         validate_positive_int(value, var_name, class_name, method_name)
 
@@ -124,9 +127,6 @@ def validate_optional_non_negative_int(value: int | None, var_name: str, class_n
     ValueError
         If the value is not a non-negative integer or None.
     """
-    message = f'{var_name} must be a non-negative integer or None in {class_name}'
-    if method_name is not None:
-        message += f' in method {method_name}'
     if value is not None:
         validate_non_negative_int(value, var_name, class_name, method_name)
 
@@ -152,13 +152,18 @@ def validate_int_in_range(value: int, min_value: int, max_value: int, var_name: 
     Raises
     ------
     TypeError
-        If the value is not an integer.
+        If the value, minimum value, or maximum value is not an integer.
     ValueError
-        If the integer value is not within the specified range.
+        If min_value is greater than max_value, or if value is outside the range.
     """
-    message = f'{var_name} must be between {min_value} and {max_value} (inclusive) in {class_name}'
-    if method_name is not None:
-        message += f' in method {method_name}'
+    if min_value is not int:
+        raise TypeError('The minimum value must be an integer.')
+    if max_value is not int:
+        raise TypeError('The maximum value must be an integer.')
+    if min_value > max_value:
+        raise ValueError(f'The minimum value must be less than or equal to the maximum value - got min={min_value}, max={max_value}')
     validate_int(value, var_name, class_name, method_name)
+
     if value < min_value or value > max_value:
-        raise ValueError(message)
+        location = _validation_location(class_name, method_name)
+        raise ValueError(f'{var_name} must be between {min_value} and {max_value} (inclusive) {location} - got {value}')
