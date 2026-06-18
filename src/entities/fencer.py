@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
+import validation
+
 @dataclass
 class Fencer:
     """
@@ -35,12 +37,8 @@ class Fencer:
         ValueError
             If the fencer's ID is not a positive integer or if the display name is empty or exceeds the maximum allowed length after trimming.
         """
-        if type(self.id) is not int:
-            raise TypeError('A fencer\'s ID must be an integer')
-
-        if self.id < 1:
-            raise ValueError('Fencer ID must be a positive integer')
-
+        validation.validate_positive_int(self.id, 'ID', 'Fencer')
+        
         validated_name = Fencer._validate_display_name(self.display_name)
         
         # Set valid display name
@@ -67,7 +65,7 @@ class Fencer:
         return self.id == other.id
 
 
-    # --- Public Methods ---
+    # --- Update Methods ---
     def update_display_name(self, name: str) -> None:
         """
         Updates the display name of the fencer.
@@ -87,8 +85,8 @@ class Fencer:
         # Set new display name
         self.display_name = Fencer._validate_display_name(name)
 
-    
-    # --- Private Helper Methods ---
+
+    # --- Helper Methods ---
     @staticmethod
     def _validate_display_name(name: str) -> str:
         """
@@ -119,6 +117,6 @@ class Fencer:
 
         # Check that name is a valid length
         if len(name) == 0 or len(name) > Fencer.max_name_length:
-            raise ValueError(f'Name must be between 1-{Fencer.max_name_length} characters inclusive, ignoring leading and trailing whitespace')
+            raise ValueError(f'Input name must be between 1-{Fencer.max_name_length} characters inclusive, ignoring leading and trailing whitespace')
         
         return name
