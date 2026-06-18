@@ -156,10 +156,10 @@ def validate_int_in_range(value: int, min_value: int, max_value: int, var_name: 
     ValueError
         If min_value is greater than max_value, or if value is outside the range.
     """
-    if min_value is not int:
-        raise TypeError('The minimum value must be an integer.')
-    if max_value is not int:
-        raise TypeError('The maximum value must be an integer.')
+    if type(min_value) is not int:
+        raise TypeError(f'The minimum value must be an integer - got {min_value}.')
+    if type(max_value) is not int:
+        raise TypeError(f'The maximum value must be an integer - got {max_value}.')
     if min_value > max_value:
         raise ValueError(f'The minimum value must be less than or equal to the maximum value - got min={min_value}, max={max_value}')
     validate_int(value, var_name, class_name, method_name)
