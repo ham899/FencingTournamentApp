@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+import validation
 from entities.fencer import Fencer
 
 @dataclass
@@ -53,40 +54,23 @@ class TournamentEntry:
         ValueError
             If any of the numeric attributes are not positive integers.
         """
-        # Validate types
-        if type(self.id) is not int:
-            raise TypeError('ID must be an integer')
-        
-        if type(self.tournament_id) is not int:
-            raise TypeError('Tournament ID must be an integer')
-        
+        # Validate IDs
+        validation.validate_positive_int(self.id, 'ID', 'TournamentEntry')
+        validation.validate_positive_int(self.tournament_id, 'Tournament ID', 'TournamentEntry')
+
+        # Validate fencer
         if not isinstance(self.fencer, Fencer):
             raise TypeError('Fencer parameter must be an instance of a Fencer class')
         
-        if self.initial_seed is not None and type(self.initial_seed) is not int:
-            raise TypeError('Provided initial seed must be an integer')
-
-        if self.de_seed is not None and type(self.de_seed) is not int:
-            raise TypeError('Provided DE seed must be an integer')
-
-        # Validate values
-        if self.id <= 0:
-            raise ValueError('ID must be a positive integer')
-        
-        if self.tournament_id <= 0:
-            raise ValueError('Tournament ID must be a positive integer')
-
-        if self.initial_seed is not None and self.initial_seed <= 0:
-            raise ValueError('Provided initial seed must be a positive integer')
-
-        if self.de_seed is not None and self.de_seed <= 0:
-            raise ValueError('Provided DE seed must be a positive integer')
+        # Validate Optional Seeds
+        validation.validate_optional_positive_int(self.initial_seed, 'Initial seed', 'TournamentEntry')
+        validation.validate_optional_positive_int(self.de_seed, 'DE seed', 'TournamentEntry')
 
     # --- Dunder Methods ---
     def __eq__(self, other: object) -> bool:
         """
-        Determines if two tournament entries are equal based on their entry IDs, tournament IDs, and the fencers associated with the objects.
-        Seeds are not considered in the equality check because they may change after initialization.
+        Determines whether two tournament entries represent the same entry based on their entry ID and tournament ID.
+        Seeds are not considered in the equality check because they may change during the tournament.
 
         Parameters
         ----------
@@ -119,11 +103,7 @@ class TournamentEntry:
         ValueError
             If the seed is not a positive integer.
         """
-        if seed is not None and type(seed) is not int:
-            raise TypeError(f'Provided seed must be an integer when setting initial seed for entry with ID {self.id}; got {type(seed)} instead')
-        if seed is not None and seed <= 0:
-            raise ValueError(f'Provided seed must be a positive integer when setting initial seed for entry with ID {self.id}; got {seed} instead')
-
+        validation.validate_optional_positive_int(seed, 'Initial seed', 'TournamentEntry')
         self.initial_seed = seed
 
     def set_de_seed(self, seed: int | None) -> None:
@@ -142,9 +122,5 @@ class TournamentEntry:
         ValueError
             If the seed is not a positive integer.
         """
-        if seed is not None and type(seed) is not int:
-            raise TypeError(f'Provided seed must be an integer when setting a DE seed for entry with ID {self.id}; got {type(seed)} instead')
-        if seed is not None and seed <= 0:
-            raise ValueError(f'Provided seed must be a positive integer when setting a DE seed for entry with ID {self.id}; got {seed} instead')
-
+        validation.validate_optional_positive_int(seed, 'DE seed', 'TournamentEntry')
         self.de_seed = seed
