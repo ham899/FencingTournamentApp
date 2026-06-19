@@ -51,17 +51,14 @@ def test_validate_int_in_range_rejects_non_int_min_value(min_value):
     with pytest.raises(TypeError):
         validation.validate_int_in_range(5, min_value, 10, 'value')
 
-
 @pytest.mark.parametrize('max_value', INVALID_INT_TYPES)
 def test_validate_int_in_range_rejects_non_int_max_value(max_value):
     with pytest.raises(TypeError):
         validation.validate_int_in_range(5, 0, max_value, 'value')
 
-
 def test_validate_int_in_range_rejects_min_greater_than_max():
     with pytest.raises(ValueError):
         validation.validate_int_in_range(5, 10, 0, 'value')
-
 
 @pytest.mark.parametrize('value', INVALID_INT_TYPES)
 def test_validate_int_in_range_rejects_non_int_value(value):
