@@ -36,11 +36,6 @@ class TournamentEntry:
     initial_seed: int | None = None
     de_seed: int | None = None
 
-    @property
-    def display_name(self) -> str:
-        """Gets the display name of the entry."""
-        return self.fencer.display_name
-
     # --- Initialization and Validation ---
     def __post_init__(self) -> None:
         """
@@ -65,6 +60,12 @@ class TournamentEntry:
         # Validate Optional Seeds
         validation.validate_optional_positive_int(self.initial_seed, 'Initial seed', 'TournamentEntry')
         validation.validate_optional_positive_int(self.de_seed, 'DE seed', 'TournamentEntry')
+
+    # --- Properties ---
+    @property
+    def display_name(self) -> str:
+        """Gets the display name of the entry."""
+        return self.fencer.display_name
 
     # --- Dunder Methods ---
     def __eq__(self, other: object) -> bool:
