@@ -86,7 +86,7 @@ class TournamentEntry:
             return False
         return self.id == other.id and self.tournament_id == other.tournament_id
 
-    # --- Public Methods ---
+    # --- Setter Methods ---
     def set_initial_seed(self, seed: int | None) -> None:
         """
         Sets a new initial seed of the entry.

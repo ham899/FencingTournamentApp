@@ -21,7 +21,7 @@ def fencer():
 def entry(fencer):
     return TournamentEntry(id=ENTRY_ID1, tournament_id=TOURNY_ID, fencer=fencer)
 
-# --- Initialization Tests ---
+# --- Initialization and Validation Tests ---
 def test_tournament_entry_valid_creation_with_defaults(fencer):
     entry = TournamentEntry(id=ENTRY_ID1, tournament_id=TOURNY_ID, fencer=fencer)
     assert entry.id==ENTRY_ID1
@@ -141,7 +141,7 @@ def test_tournament_entry_inequality_different_fencers():
     entry2 = TournamentEntry(id=ENTRY_ID2, tournament_id=TOURNY_ID, fencer=Fencer(id=FENCER_ID2, display_name=NAME2))
     assert entry1 != entry2 # Two different fencers at the same tournament - most common case of inequality
 
-# --- Public Method Tests ---
+# --- Setter Methods Tests ---
 def test_tournament_entry_set_initial_seed_valid(entry):
     assert entry.initial_seed is None
     entry.set_initial_seed(1)

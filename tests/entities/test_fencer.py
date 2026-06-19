@@ -13,7 +13,7 @@ VALID_NAME = 'Sam'
 def fencer():
     return Fencer(id=VALID_ID1, display_name='Katherine')
 
-# --- Initialization Tests ---
+# --- Initialization and Validation Tests ---
 def test_fencer_creation_valid():
     fencer = Fencer(id=VALID_ID1, display_name=VALID_NAME)
     assert fencer.id == VALID_ID1
