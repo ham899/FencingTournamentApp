@@ -29,6 +29,7 @@ def test_tournament_entry_valid_creation_with_defaults(fencer):
     assert entry.fencer==fencer
     assert entry.initial_seed is None
     assert entry.de_seed is None
+    assert entry.display_name == fencer.display_name
 
 def test_tournament_entry_valid_creation_no_defaults(fencer):
     entry = TournamentEntry(id=ENTRY_ID1, tournament_id=TOURNY_ID, fencer=fencer, initial_seed=1, de_seed=1)
@@ -37,6 +38,7 @@ def test_tournament_entry_valid_creation_no_defaults(fencer):
     assert entry.fencer==fencer
     assert entry.initial_seed==1
     assert entry.de_seed==1
+    assert entry.display_name == fencer.display_name
 
 @pytest.mark.parametrize('invalid_id_types', [None, '1', 1.0, True, [], {}])
 def test_tournament_entry_creation_invalid_id_type(fencer, invalid_id_types):
@@ -98,9 +100,6 @@ def test_tournament_entry_creation_invalid_de_seed_zero(fencer):
 def test_tournament_entry_creation_invalid_de_seed_negative(fencer, negative_de_seed):
     with pytest.raises(ValueError):
         TournamentEntry(id=ENTRY_ID1, tournament_id=TOURNY_ID, fencer=fencer, initial_seed=1, de_seed=negative_de_seed)
-
-def test_tournament_entry_display_name_property(entry):
-    assert entry.display_name == 'Jane'
 
 # --- Dunder Method Tests ---
 def test_tournament_entry_equality_no_seeds():
