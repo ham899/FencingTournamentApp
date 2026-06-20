@@ -182,6 +182,84 @@ def validate_optional_non_negative_int(value: int | None,
     if value is not None:
         validate_non_negative_int(value, var_name, class_name, method_name, function_name=function_name)
 
+def validate_int_less_than_or_equal_to(value: int,
+                                       max_value: int, 
+                                       var_name: str,
+                                       class_name: str | None = None,
+                                       method_name: str | None = None,
+                                       *,
+                                       function_name: str | None = None) -> None:
+    """
+    Validates that the value is an integer less than or equal to the maximum value.
+
+    Parameters
+    ----------
+    value : int
+        The value to validate.
+    max_value : int
+        The maximum allowed value (inclusive).
+    var_name : str
+        The name of the variable being validated.
+    class_name : str | None, default=None
+        The class in which the value is being validated.
+    method_name : str | None, default=None
+        The method in which the value is being validated.
+    function_name : str | None, default=None
+        The standalone function in which the value is being validated.
+
+    Raises
+    ------
+    TypeError
+        If the value or maximum value is not an integer.
+    ValueError
+        If the value is greater than the maximum value.
+    """
+    validate_int(value, var_name, class_name, method_name, function_name=function_name)
+    validate_int(max_value, 'Maximum value', function_name='validate_int_less_than_or_equal')
+
+    if value > max_value:
+        location = _validation_location(class_name, method_name, function_name)
+        raise ValueError(f'{var_name} must be at most {max_value}{location} - got {value}')
+
+def validate_int_greater_than_or_equal_to(value: int,
+                                          min_value: int,
+                                          var_name: str,
+                                          class_name: str | None = None,
+                                          method_name: str | None = None,
+                                          *,
+                                          function_name: str | None = None) -> None:
+    """
+    Validates that the value is an integer greater than or equal to the minimum value.
+
+    Parameters
+    ----------
+    value : int
+        The value to validate.
+    min_value : int
+        The minimum allowed value (inclusive).
+    var_name : str
+        The name of the variable being validated.
+    class_name : str | None, default=None
+        The class in which the value is being validated.
+    method_name : str | None, default=None
+        The method in which the value is being validated.
+    function_name : str | None, default=None
+        The standalone function in which the value is being validated.
+
+    Raises
+    ------
+    TypeError
+        If the value or minimum value is not an integer.
+    ValueError
+        If the value is less than the minimum value.
+    """
+    validate_int(value, var_name, class_name, method_name, function_name=function_name)
+    validate_int(min_value, 'Minimum value', function_name='validate_int_greater_than_or_equal_to')
+
+    if value < min_value:
+        location = _validation_location(class_name, method_name, function_name)
+        raise ValueError(f'{var_name} must be at least {min_value}{location} - got {value}')
+
 def validate_int_in_range(value: int, 
                           min_value: int, 
                           max_value: int, 
