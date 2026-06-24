@@ -4,6 +4,7 @@ from enum import Enum, auto
 import validation
 from entities.fencer import Fencer
 
+
 class MatchStatus(Enum):
     """
     Represents the current state of a match.
@@ -20,7 +21,8 @@ class MatchStatus(Enum):
     NOT_STARTED = auto()
     IN_PROGRESS = auto()
     COMPLETED = auto()
-    
+
+
 @dataclass(eq=False)
 class Match:
     """
