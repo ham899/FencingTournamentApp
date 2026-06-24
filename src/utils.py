@@ -1,7 +1,7 @@
 """Module for calculating tournament specific values and properties."""
 
 
-from validation import validate_int
+import validation
 
 
 def is_power_of_two(n: int) -> bool:
@@ -23,8 +23,10 @@ def is_power_of_two(n: int) -> bool:
     TypeError
         If the input is not an integer.
     """
-    validate_int(n, 'n', function_name='is_power_of_two')
+    validation.validate_int(n, 'n', function_name='is_power_of_two')
+
     return n > 0 and (n & (n - 1)) == 0
+
 
 def log2_int(n: int) -> int:
     """
@@ -47,11 +49,13 @@ def log2_int(n: int) -> int:
     ValueError
         If the input is not a power of two.
     """
-    validate_int(n, 'n', function_name='log2_int')
+    validation.validate_int(n, 'n', function_name='log2_int')
+
     if not is_power_of_two(n):
         raise ValueError(f'n must be a power of two in log2_int() - got {n}')
-
+    
     return n.bit_length() - 1
+
 
 def calculate_number_poule_matches(poule_size: int) -> int:
     """
@@ -60,7 +64,7 @@ def calculate_number_poule_matches(poule_size: int) -> int:
     Parameters
     ----------
     poule_size : int
-        The number of people in the poule.
+        The number of entries in the poule.
     
     Returns
     -------
@@ -74,11 +78,15 @@ def calculate_number_poule_matches(poule_size: int) -> int:
     ValueError
         If the poule size input is less than 2.
     """
-    validate_int(poule_size, 'poule_size', function_name='calculate_number_poule_matches')
-    if poule_size < 2:
-        raise ValueError(f'poule_size must be at least 2 in calculate_number_poule_matches() - got {poule_size}')
-    
+    validation.validate_int_at_least(
+        poule_size, 
+        2, 
+        'poule_size', 
+        function_name='calculate_number_poule_matches'
+    )
+
     return poule_size * (poule_size - 1) // 2
+
 
 def calculate_number_of_de_rounds(number_de_entries: int) -> int:
     """
@@ -101,11 +109,15 @@ def calculate_number_of_de_rounds(number_de_entries: int) -> int:
     ValueError
         If the number of entries input is less than 2.
     """
-    validate_int(number_de_entries, 'number_de_entries', function_name='calculate_number_of_de_rounds')
-    if number_de_entries < 2:
-        raise ValueError(f'number_de_entries must be at least 2 in calculate_number_of_de_rounds() - got {number_de_entries}')
+    validation.validate_int_at_least(
+        number_de_entries, 
+        2,
+        'number_de_entries',
+        function_name='calculate_number_of_de_rounds'
+    )
 
     return (number_de_entries - 1).bit_length()
+
 
 def calculate_number_matches_in_de_round(round_index: int, number_de_entries: int) -> int:
     """
@@ -118,7 +130,8 @@ def calculate_number_matches_in_de_round(round_index: int, number_de_entries: in
     Parameters
     ----------
     round_index : int
-        The round index under examination.
+        The zero-based round index, where 0 is the opening round; 
+        number_of_rounds - 1 is the final.
     number_de_entries : int
         The number of entrants in the DE tableau.
     
@@ -132,17 +145,23 @@ def calculate_number_matches_in_de_round(round_index: int, number_de_entries: in
     TypeError
         If the round index or number of entries is not an integer.
     ValueError
-        If the number of entries is less than 2, or if the round index is outside the valid range of rounds.
+        If the number of entries is less than 2, or if the round index is less than zero or greater than the index of the final round.
     """
-    validate_int(round_index, 'round_index', function_name='calculate_number_matches_in_de_round')
-    validate_int(number_de_entries, 'number_de_entries', function_name='calculate_number_matches_in_de_round')
+    validation.validate_int_at_least(
+        number_de_entries, 
+        2,
+        'number_de_entries',
+        function_name='calculate_number_matches_in_de_round'
+    )
 
-    if number_de_entries < 2:
-        raise ValueError(f'number_de_entries must be at least 2 in calculate_number_matches_in_de_round() - got {number_de_entries}')
-    
     number_of_rounds = calculate_number_of_de_rounds(number_de_entries)
     
-    if round_index < 0 or round_index > number_of_rounds - 1:
-        raise ValueError(f'round_index must be between 0 and {number_of_rounds - 1} in calculate_number_matches_in_de_round() - got {round_index}')
+    validation.validate_int_in_range(
+        round_index, 
+        0, 
+        number_of_rounds - 1, 
+        'round_index', 
+        function_name='calculate_number_matches_in_de_round'
+    )
     
     return 2 ** (number_of_rounds - round_index - 1)
