@@ -78,7 +78,7 @@ class Match:
         TypeError
             If ID or score to win is not an integer or if a fencer is not either None or a Fencer object.
         ValueError
-            If ID is negative, score to win is non-positive, or if fencer 1 and fencer 2 are the same.
+            If ID is non-positive, score to win is non-positive, or if fencer 1 and fencer 2 are the same.
         """
         # Validate ID and score to win
         validation.validate_positive_int(self.id, 'ID', 'Match')
@@ -171,8 +171,7 @@ class Match:
         """
         Ends a live score-based match.
 
-        Unlike mark_complete(), this requires the match to be in progress and to
-        have a non-tied score.
+        **Note:** required to be in progress and to have a non-tied score.
         """
         self._require_in_progress()
 
@@ -293,8 +292,8 @@ class Match:
 
         Raises
         ------
-        ValueError
-            If the match is a tie, which should not be possible in a match.
+        RuntimeError
+            If the match is a tie or if the leader index is None, which should not be possible in a completed match.
         """
         if self.is_incomplete() or not self.has_scores():
             return None
@@ -305,7 +304,7 @@ class Match:
         winner_index = self.leader_index()
 
         if winner_index is None:
-            raise ValueError('Completed matches must have a leader.')
+            raise RuntimeError('Completed matches must have a leader.')
 
         return winner_index
 
@@ -321,8 +320,8 @@ class Match:
             
         Raises
         ------
-        ValueError
-            If the match is a tie, which should not be possible in a match.
+        RuntimeError
+            If the match is a tie or if the leader index is None, which should not be possible in a completed match.
         """
         if self.is_incomplete() or not self.has_scores():
             return None
@@ -333,7 +332,7 @@ class Match:
         leader_index = self.leader_index()
 
         if leader_index is None:
-            raise ValueError('Completed matches must have a leader.')
+            raise RuntimeError('Completed matches must have a leader.')
 
         return 1 - leader_index
 
