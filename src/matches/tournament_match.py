@@ -413,17 +413,20 @@ class TournamentMatch(Match, ABC):
 
         Parameters
         ----------
-        entry1 : TournamentEntry
+        entry1 : TournamentEntry | None
             The first entry in the pair.
-        entry2 : TournamentEntry
+        entry2 : TournamentEntry | None
             The second entry in the pair.
 
         Raises
         ------
         TypeError
-            If ...
+            If the entry name is not a string, if the entry is not a TournamentEntry or None,
+            if the entry's ID or tournament ID is not an integer, if the entry's fencer attribute is not a Fencer object,
+            or if either the initial seed or DE seed is not an integer if provided.
         ValueError
-            If ...
+            If the entries are the same, or if they have the same fencer (an entry cannot fence itself), 
+            or if either entry's tournament ID does not match the match's tournament ID, or if either the initial seed or DE seed is not a positive integer if provided.
         """
         # Validate the entries in isolation
         self._validate_entry(entry1, 'Entry 1')
