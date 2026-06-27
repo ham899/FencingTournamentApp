@@ -239,6 +239,21 @@ def test_poule_match_is_normal_result(standard_poule_match):
     assert standard_poule_match.is_complete()
     assert standard_poule_match.is_normal_result()
 
+# --- State Transition Method Tests ---
+def test_poule_match_restart_clears_result_status(standard_poule_match):
+    standard_poule_match.record_score(score1=5, score2=2)
+    assert standard_poule_match.is_complete()
+    assert standard_poule_match.is_normal_result()
+    assert standard_poule_match.score() == (5, 2)
+
+    standard_poule_match.restart()
+
+    assert not standard_poule_match.is_complete()
+    assert not standard_poule_match.is_normal_result()
+    assert not standard_poule_match.is_forfeit()
+    assert standard_poule_match.score() == (0, 0)
+    assert standard_poule_match.result_type is None
+
 
 # --- Entry Mutation Method Tests ---
 def test_poule_match_set_entry_rejects_none(standard_poule_match):
