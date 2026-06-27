@@ -26,6 +26,9 @@ class DEMatch(TournamentMatch):
     **Note:** Each present entry **must** have a **positive** DE seed. 
     However, this class does not validate whether the seed is structurally correct for this particular bracket position.
 
+    **Note:** When exactly one entry is supplied during initialization, the match is automatically marked complete as a BYE and the present entry is the winner. 
+    To create a match whose missing entry is still TBD rather than a confirmed BYE, initialize the match with no entries and add entries later. A completed BYE must be reset before its entries can be changed.
+
     Attributes
     ----------
     round_index : int
@@ -51,9 +54,12 @@ class DEMatch(TournamentMatch):
         **ensures** that the entries have DE seeds present, and marks the match as a BYE if only one entry is present.
 
         Initialization Cases:
-            * Case 1: Both entries present \u2192 assumed to be a normal DE match.
-            * Case 2: One None entry \u2192 assumed to be a BYE.
-            * Case 3: Both entries are None \u2192 assumed to be an empty match.
+            * Case 1: Both entries present \u2192 an incomplete DE match ready to be fenced or scored.
+            * Case 2: Exactly one entry present \u2192 automatically marked as a completed BYE; the present entry is the winner.
+            * Case 3: Both entries are None \u2192 an incomplete empty match, representing a bracket position whose entries are still TBD.
+
+        **Note:** To create a match with one known entry and one TBD future entry, initialize it empty and add the known entry afterward. 
+        Supplying exactly one entry during initialization represents a confirmed BYE.
 
         Raises
         ------
@@ -68,12 +74,6 @@ class DEMatch(TournamentMatch):
 
         # Get parent to validate common attributes
         super().__post_init__()
-
-        # Require that both entries have DE seeds if they are present
-        if self.entry1 is not None:
-            validation.validate_positive_int(self.entry1.de_seed, f'Entry 1 DE seed for match {self.id}', 'DEMatch')
-        if self.entry2 is not None:
-            validation.validate_positive_int(self.entry2.de_seed, f'Entry 2 DE seed for match {self.id}', 'DEMatch')
 
         # Mark as a BYE if only one entry is provided
         if self.has_exactly_one_entry():
