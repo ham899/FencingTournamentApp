@@ -38,7 +38,9 @@ class Match:
         The unique identifier of a match.
     
     score_to_win : int
-        The score such that, once reached, the match is over and the fencer with a score equal to the score to win is the winner.
+        The maximum allowed score for either fencer and the conventional target score for the match.
+
+        **Note:** Reaching this score does not automatically complete the match.
 
     fencer1 : Fencer | None, default=None
         The fencer in "position 1" in the match.
@@ -165,27 +167,6 @@ class Match:
         self.score2 = None
         self.status = MatchStatus.NOT_STARTED
 
-    def mark_complete(self) -> None:
-        """
-        Marks the match as complete without requiring a normal score-based result.
-
-        This is intended for generic or administrative completion, including
-        subclass cases like BYEs and forfeits. If scores are present, they must
-        not be tied.
-
-        Raises
-        ------
-        ValueError
-            If one score is set to None but the other is not or if both scores are present and tied.
-        """
-        if (self.score1 is None) != (self.score2 is None):
-            raise ValueError(f'Match {self.id} cannot be marked complete with only one score present - both scores must be present or both scores must be None.')
-
-        if self.has_scores() and self.is_tied():
-            raise ValueError(f'Match {self.id} cannot be marked complete with a tie score of {self.score1}-{self.score2} - matches cannot end in ties.')
-        
-        self.status = MatchStatus.COMPLETED
-
     def end(self) -> None:
         """
         Ends a live score-based match.
@@ -198,7 +179,7 @@ class Match:
         if self.is_tied():
             raise ValueError(f'Match {self.id} cannot be ended with a tie score of {self.score1}-{self.score2} - matches cannot end in ties.')
 
-        self.mark_complete()
+        self._mark_complete()
 
     # --- Live Score Update Methods ---
     def touch1(self) -> None:
@@ -287,7 +268,7 @@ class Match:
         # Set score values and mark complete
         self.score1 = score1
         self.score2 = score2
-        self.mark_complete()
+        self._mark_complete()
 
     # --- Result Query Methods ---
     def score(self) -> tuple[int | None, int | None]:
@@ -319,7 +300,7 @@ class Match:
             return None
         
         if self.is_tied():
-            raise ValueError('Completed matches cannot be tied.')
+            raise RuntimeError('Completed matches cannot be tied.')
 
         winner_index = self.leader_index()
 
@@ -347,7 +328,7 @@ class Match:
             return None
         
         if self.is_tied():
-            raise ValueError('Completed matches cannot be tied.')
+            raise RuntimeError('Completed matches cannot be tied.')
 
         leader_index = self.leader_index()
 
@@ -389,6 +370,28 @@ class Match:
         return None
 
     # --- Helper Methods ---
+    def _mark_complete(self) -> None:
+        """
+        Marks the match as complete after validating its internal score state.
+
+        This helper supports normal score results and subclass-specific
+        administrative results such as BYEs and forfeits. Callers are responsible
+        for establishing any subclass-specific result state before or alongside
+        completion.
+
+        Raises
+        ------
+        ValueError
+            If exactly one score is present, or if both scores are present and tied.
+        """
+        if (self.score1 is None) != (self.score2 is None):
+            raise ValueError(f'Match {self.id} cannot be marked complete with only one score present - both scores must be present or both scores must be None.')
+
+        if self.has_scores() and self.is_tied():
+            raise ValueError(f'Match {self.id} cannot be marked complete with a tie score of {self.score1}-{self.score2} - matches cannot end in ties.')
+        
+        self.status = MatchStatus.COMPLETED
+
     def _validate_score_values(self, score1: int, score2: int, allow_tie: bool = True) -> None:
         """
         Validates the score values for a match.
