@@ -381,7 +381,7 @@ def test_de_match_mark_double_forfeit_invalid_has_no_entries(empty_de_match):
     with pytest.raises(ValueError):
         empty_de_match.mark_double_forfeit()
 
-# --- State Change Method Tests ---
+# --- State Transition Method Tests ---
 def test_de_match_reset_clears_double_forfeit_result(standard_de_match):
     standard_de_match.mark_double_forfeit()
 
@@ -406,6 +406,39 @@ def test_de_match_reset_clears_normal_result(standard_de_match):
     assert not standard_de_match.is_complete()
     assert standard_de_match.result_type is None
     assert standard_de_match.score() == (None, None)
+
+def test_de_match_initialize_as_bye_then_reset_then_normal_match_result(bye_de_match, entry2):
+    assert bye_de_match.is_complete()
+    assert bye_de_match.is_bye()
+    assert bye_de_match.result_type == DEMatchResultType.BYE
+    assert bye_de_match.score() == (None, None)
+    assert bye_de_match.winner_entry() == bye_de_match.entry1
+    assert bye_de_match.loser_entry() is None
+
+    # Reset the match
+    bye_de_match.reset()
+
+    # Add a second entry and record a normal score
+    bye_de_match.add_entry(entry=entry2, entry_index=1)
+    bye_de_match.record_score(score1=15, score2=10)
+
+    # Check that the match is now complete with a normal result
+    assert bye_de_match.is_complete()
+    assert not bye_de_match.is_bye()
+    assert bye_de_match.is_normal_result()
+    assert bye_de_match.result_type == DEMatchResultType.NORMAL
+    assert bye_de_match.score() == (15, 10)
+    assert bye_de_match.winner_entry() == bye_de_match.entry1
+    assert bye_de_match.loser_entry() == bye_de_match.entry2
+
+def test_de_match_restart_clears_result_type_of_normal_match(standard_de_match):
+    standard_de_match.record_score(score1=15, score2=10)
+
+    standard_de_match.restart()
+
+    assert not standard_de_match.is_complete()
+    assert standard_de_match.result_type is None
+    assert standard_de_match.score() == (0, 0)
 
 
 # --- Entry Mutation Method Tests ---
