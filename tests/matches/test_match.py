@@ -1,7 +1,11 @@
+"""Test base match class attributes and methods."""
+
+
 import pytest
 
 from matches.match import Match, MatchStatus
 from entities.fencer import Fencer
+
 
 # --- Constants ---
 FENCER_ID1 = 1
@@ -11,6 +15,7 @@ DISPLAY_NAME2 = 'Bill'
 MATCH_ID1 = 1
 MATCH_ID2 = 2
 TEST_SCORE_TO_WIN = 8 # Must be greater than 2 for certain test cases
+
 
 # --- Fixtures ---
 @pytest.fixture
@@ -82,6 +87,10 @@ def test_match_creation_invalid_fencer_type(invalid_fencer_type):
         Match(id=MATCH_ID1, score_to_win=TEST_SCORE_TO_WIN, fencer2=invalid_fencer_type)
     with pytest.raises(TypeError):
         Match(id=MATCH_ID1, score_to_win=TEST_SCORE_TO_WIN, fencer1=invalid_fencer_type, fencer2=invalid_fencer_type)
+
+def test_match_creation_invalid_id_zero():
+    with pytest.raises(ValueError):
+        Match(id=0, score_to_win=5)
 
 @pytest.mark.parametrize('negative_id', [-100,-10,-1])
 def test_match_creation_invalid_id_negative(negative_id):
@@ -174,13 +183,13 @@ def test_match_has_both_fencers_both_present(standard_match_fencers):
 
 def test_match_is_complete(standard_match_no_fencers):
     assert standard_match_no_fencers.has_not_started()
-    standard_match_no_fencers.mark_complete()
+    standard_match_no_fencers._mark_complete()
     assert standard_match_no_fencers.is_complete()
 
 def test_match_is_incomplete(standard_match_no_fencers):
     assert standard_match_no_fencers.has_not_started()
     assert standard_match_no_fencers.is_incomplete()
-    standard_match_no_fencers.mark_complete()
+    standard_match_no_fencers._mark_complete()
     assert standard_match_no_fencers.is_complete()
     assert not standard_match_no_fencers.is_incomplete()
 
@@ -223,6 +232,15 @@ def test_match_restart(standard_match_no_fencers):
     assert standard_match_no_fencers.score2 == 0
     assert standard_match_no_fencers.status == MatchStatus.IN_PROGRESS
 
+def test_match_restart_can_restart_completed_match():
+    match = Match(id=1, score_to_win=5)
+    match.record_score(5, 3)
+
+    match.restart()
+
+    assert match.is_in_progress()
+    assert match.score() == (0, 0)
+
 def test_match_reset(standard_match_no_fencers):
     standard_match_no_fencers.start()
     standard_match_no_fencers.touch1()
@@ -234,34 +252,14 @@ def test_match_reset(standard_match_no_fencers):
     assert standard_match_no_fencers.score2 is None
     assert standard_match_no_fencers.status == MatchStatus.NOT_STARTED
 
-def test_match_mark_complete(standard_match_no_fencers):
-    assert standard_match_no_fencers.status == MatchStatus.NOT_STARTED
-    standard_match_no_fencers.mark_complete()
-    assert standard_match_no_fencers.status == MatchStatus.COMPLETED
+def test_match_reset_allows_a_new_start(standard_match_no_fencers):
+    standard_match_no_fencers.record_score(5, 3)
 
-def test_match_mark_complete_allows_non_tied_scores(standard_match_no_fencers):
+    standard_match_no_fencers.reset()
     standard_match_no_fencers.start()
-    standard_match_no_fencers.set_score(3, 2)
-    standard_match_no_fencers.mark_complete()
-    assert standard_match_no_fencers.status == MatchStatus.COMPLETED
 
-def test_match_mark_complete_rejects_tied_scores(standard_match_no_fencers):
-    standard_match_no_fencers.start()
-    standard_match_no_fencers.set_score(3, 3)
-    with pytest.raises(ValueError):
-        standard_match_no_fencers.mark_complete()
-
-def test_match_mark_complete_rejects_only_score1_present(standard_match_no_fencers):
-    standard_match_no_fencers.score1 = 1
-    standard_match_no_fencers.score2 = None
-    with pytest.raises(ValueError):
-        standard_match_no_fencers.mark_complete()
-
-def test_match_mark_complete_rejects_only_score2_present(standard_match_no_fencers):
-    standard_match_no_fencers.score1 = None
-    standard_match_no_fencers.score2 = 1
-    with pytest.raises(ValueError):
-        standard_match_no_fencers.mark_complete()
+    assert standard_match_no_fencers.is_in_progress()
+    assert standard_match_no_fencers.score() == (0, 0)
 
 def test_match_end(standard_match_no_fencers):
     standard_match_no_fencers.start()
@@ -469,7 +467,6 @@ def test_match_score(standard_match_no_fencers):
     standard_match_no_fencers.record_score(score1=TEST_SCORE_TO_WIN-1, score2=TEST_SCORE_TO_WIN-2)
     assert standard_match_no_fencers.score() == (TEST_SCORE_TO_WIN-1, TEST_SCORE_TO_WIN-2)
 
-
 def test_match_leader_index(standard_match_no_fencers):
     assert standard_match_no_fencers.leader_index() is None
 
@@ -494,14 +491,14 @@ def test_match_winner_index_normal_1_wins(standard_match_no_fencers):
     assert standard_match_no_fencers.winner_index() == 1
 
 def test_match_winner_index_complete_no_scores_returns_none(standard_match_no_fencers):
-    standard_match_no_fencers.mark_complete()
+    standard_match_no_fencers._mark_complete()
     assert standard_match_no_fencers.winner_index() is None
 
 def test_match_winner_index_raises_if_completed_match_is_tied(standard_match_no_fencers):
     standard_match_no_fencers.status = MatchStatus.COMPLETED
     standard_match_no_fencers.score1 = 3
     standard_match_no_fencers.score2 = 3
-    with pytest.raises(ValueError):
+    with pytest.raises(RuntimeError):
         standard_match_no_fencers.winner_index()
 
 def test_match_loser_index_normal_0_loses(standard_match_no_fencers):
@@ -515,14 +512,14 @@ def test_match_loser_index_normal_1_loses(standard_match_no_fencers):
     assert standard_match_no_fencers.loser_index() == 1
 
 def test_match_loser_index_complete_no_scores_returns_none(standard_match_no_fencers):
-    standard_match_no_fencers.mark_complete()
+    standard_match_no_fencers._mark_complete()
     assert standard_match_no_fencers.loser_index() is None
 
 def test_match_loser_index_raises_if_completed_match_is_tied(standard_match_no_fencers):
     standard_match_no_fencers.status = MatchStatus.COMPLETED
     standard_match_no_fencers.score1 = 3
     standard_match_no_fencers.score2 = 3
-    with pytest.raises(ValueError):
+    with pytest.raises(RuntimeError):
         standard_match_no_fencers.loser_index()
 
 def test_match_winner_fencer_fencer1_wins(standard_match_fencers):
@@ -564,3 +561,34 @@ def test_match_loser_fencer_returns_known_fencer_when_other_slot_is_none(standar
 def test_match_loser_fencer_returns_none_when_losing_slot_is_none(standard_match_fencer2_only):
     standard_match_fencer2_only.record_score(TEST_SCORE_TO_WIN - 1, TEST_SCORE_TO_WIN)
     assert standard_match_fencer2_only.loser_fencer() is None
+
+
+# --- Helper Method Tests ---
+def test_match_mark_complete(standard_match_no_fencers):
+    assert standard_match_no_fencers.status == MatchStatus.NOT_STARTED
+    standard_match_no_fencers._mark_complete()
+    assert standard_match_no_fencers.status == MatchStatus.COMPLETED
+
+def test_match_mark_complete_allows_non_tied_scores(standard_match_no_fencers):
+    standard_match_no_fencers.start()
+    standard_match_no_fencers.set_score(3, 2)
+    standard_match_no_fencers._mark_complete()
+    assert standard_match_no_fencers.status == MatchStatus.COMPLETED
+
+def test_match_mark_complete_rejects_tied_scores(standard_match_no_fencers):
+    standard_match_no_fencers.start()
+    standard_match_no_fencers.set_score(3, 3)
+    with pytest.raises(ValueError):
+        standard_match_no_fencers._mark_complete()
+
+def test_match_mark_complete_rejects_only_score1_present(standard_match_no_fencers):
+    standard_match_no_fencers.score1 = 1
+    standard_match_no_fencers.score2 = None
+    with pytest.raises(ValueError):
+        standard_match_no_fencers._mark_complete()
+
+def test_match_mark_complete_rejects_only_score2_present(standard_match_no_fencers):
+    standard_match_no_fencers.score1 = None
+    standard_match_no_fencers.score2 = 1
+    with pytest.raises(ValueError):
+        standard_match_no_fencers._mark_complete()
