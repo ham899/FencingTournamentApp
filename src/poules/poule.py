@@ -3,8 +3,9 @@ from dataclasses import dataclass, field
 import validation
 from entities.tournament_entry import TournamentEntry
 from matches.poule_match import PouleMatch
-from poules.poule_results import EntryPouleResult, SinglePouleResults
+from poules.poule_results import SinglePouleResults
 from poules.poule_orders import POULE_BOUT_ORDER
+
 
 
 @dataclass
@@ -22,7 +23,7 @@ class Poule:
         The tournament entries that belong to the poule. Must be ordered such that entry at index i is fencer i+1 in the poule.
     size : int, init=False
         The number of tournament entries in the poule.
-    matches : list[PouleMatch], default=None, init=False
+    matches : list[PouleMatch], default=list, init=False
         The matches and the order that they are to be done in for the poule. 
         **Invariant:** they must always reflect the current list of entries in the poule.
     current_match_index : int, default=0, init=False
@@ -32,13 +33,13 @@ class Poule:
     tournament_id: int
     poule_number: int
     entries: list[TournamentEntry]
-    matches: list[PouleMatch] = field(default=None, init=False) # Invariant: matches should reflect the current entries in the poule
+    matches: list[PouleMatch] = field(default_factory=list, init=False) # Invariant: matches should reflect the current entries in the poule
     current_match_index: int = field(default=0, init=False)
 
 
     # --- Initialization and Validation Methods ---
     def __post_init__(self):
-        """ """
+        """Validates the attributes of the poule and generates the poule matches based on the current list of entries."""
         # Validate attributes
         validation.validate_positive_int(self.id, 'ID', 'Poule')
         validation.validate_positive_int(self.tournament_id, 'Tournament ID', 'Poule')
@@ -73,6 +74,12 @@ class Poule:
 
 
     # --- Predicate Methods ---
+    def has_started(self) -> bool:
+        """Checks if the poule has started."""
+        if self.matches is None:
+            return False
+        return any(match.is_complete() for match in self.matches)
+
     def is_complete(self) -> bool:
         """Checks if the poule is complete."""
         if self.matches is None:
@@ -109,19 +116,26 @@ class Poule:
 
         return self.matches[index]
 
-    def get_current_match(self) -> PouleMatch:
+
+    def get_current_match(self) -> PouleMatch | None:
         """Returns the current poule match."""
+        if self.current_match_index == self.number_matches:
+            return None
+
         return self.get_match_at_index(self.current_match_index)
-    
+
+
     def get_next_match(self) -> PouleMatch | None:
         """Returns the match on deck or returns None if the current match is the last match."""
-        if self.current_match_index == self.number_matches - 1:
+        next_index = self.current_match_index + 1
+
+        if next_index >= self.number_matches:
             return None
         
         return self.get_match_at_index(self.current_match_index + 1)
 
 
-    # --- Modification Methods ---
+    # --- Entry Modification Methods ---
     def add_entry(self, entry: TournamentEntry) -> None:
         """
         Adds a valid entry to the poule and regenerates the poule matches after the addition.
@@ -136,18 +150,26 @@ class Poule:
         TypeError
             If the input entry is not a TournamentEntry
         ValueError
-            If the input entry is already in the poule.
+            If the input entry is already in the poule, or if the poule has already started.
         """
+        if self.has_started():
+            raise ValueError(f'Cannot add entry to poule {self.id} because the poule has already started')
+
         if not isinstance(entry, TournamentEntry):
             raise TypeError(f'Entry must be of type TournamentEntry - got {type(entry)}')
+        
         if entry in self.entries:
             raise ValueError(f'Entry {entry.id} is already in poule {self.id}')
         
+        # Validate that adding the entry will be valid
+        self._validate_entries_list(self.entries + [entry])
+
         # Add to list of entries
         self.entries.append(entry)
 
         # Regenerate matches
         self._generate_own_matches()
+
 
     def remove_entry(self, entry: TournamentEntry) -> None:
         """
@@ -163,10 +185,14 @@ class Poule:
         TypeError
             If the input entry is not a TournamentEntry
         ValueError
-            If the specified entry is not in the poule.
+            If the specified entry is not in the poule, or if the poule has already started.
         """
+        if self.has_started():
+            raise ValueError(f'Cannot remove entry from poule {self.id} because the poule has already started')
+
         if not isinstance(entry, TournamentEntry):
             raise TypeError(f'Entry must be of type TournamentEntry - got {type(entry)}')
+        
         if entry not in self.entries:
             raise ValueError(f'Entry {entry.id} is not in poule {self.id}')
 
@@ -193,62 +219,47 @@ class Poule:
         """
         self.get_match_at_index(index).record_score(score1, score2)
 
+
     def record_current_match_result(self, score1: int, score2: int) -> None:
         """
         Records the score of the current match or returns None if there is no current match.
         
         Parameters
         ----------
-        scoer1 : int
+        score1 : int
             Entry 1's score.
         score2 : int
             Entry 2's score.
         """
-        # Record match result and move to the next match
-        self.get_current_match().record_score(score1, score2)
+        match = self.get_current_match()
+        
+        if match is None:
+            raise RuntimeError(f'Poule {self.id} is already complete.')
+
+        match.record_score(score1, score2)
         self.current_match_index += 1
 
 
     # --- Result Query Methods ---
     def calculate_results(self) -> SinglePouleResults:
-        """Based on the current match results in the Poule, a PouleResult is calculated and returned."""
+        """Calculates a SinglePouleResults object based on the current match results in the Poule."""
         if self.matches is None:
-            raise ValueError(f'Cannot calculate results because no matches have been generated yet for this poule')
+            raise ValueError(f'Cannot calculate results because no matches have been generated yet for poule {self.id}')
 
-        # Create a list of empty poule results for each entry
-        list_of_results = []
-        for entry in self.entries:
-            list_of_results.append(EntryPouleResult(entry, self.id))
+        # Initialize a new SinglePouleResults object where result data is initialized to zero for each entry in the poule
+        poule_results = SinglePouleResults(self.id, self.entries)
 
-        # Create the return object
-        ret = SinglePouleResults(self.id, list_of_results)
-
-        # Go through each match and update the results for the entries in the return value
+        # Add each match's result to the SinglePouleResults container
         for match in self.matches:
             # Skip incomplete matches
             if not match.is_complete():
                 continue
 
-            # Extract match information
-            entry1 = match.entry1
-            entry2 = match.entry2
-            winner = match.winner()
+            poule_results.add_match_result(match)
 
-            # Update results for both entries in the match
-            for entry in [entry1, entry2]:
-                for result in ret.results:
-                    if result.entry == entry:
-                        result.matches += 1
-                        if entry == winner:
-                            result.victories += 1
-                        if entry == entry1:
-                            result.touches_scored += match.score1
-                            result.touches_received += match.score2
-                        else:
-                            result.touches_scored += match.score2
-                            result.touches_received += match.score1
-                        break
-        return ret
+        # Return the filled in SinglePouleResults object
+        return poule_results
+
 
     # --- Helper Methods ---
     def _validate_entries_list(self, entries: list[TournamentEntry]):
@@ -274,12 +285,17 @@ class Poule:
             if not isinstance(entry, TournamentEntry):
                 raise TypeError(f'All entries must of type TournamentEntry - got entry {i} in list as type {type(entry)}')
                 
+            if entry.tournament_id != self.tournament_id:
+                raise ValueError(f'All entries must have the same tournament ID as the poule - entry {i} has tournament ID {entry.tournament_id} when poule has tournament ID {self.tournament_id}')
+
         if len(entries) < 2:
             raise ValueError(f'There must be at least two entries in a poule - got {len(entries)}')
-            
+
+
     def _validate_own_entries_list(self):
         """Validates the poule's own list of entries."""
         self._validate_entries_list(self.entries)
+
 
     def _create_match(self, id: int, index: int, match_pair: tuple[int, int]) -> PouleMatch:
         """
@@ -307,6 +323,7 @@ class Poule:
             If the index is out of the poule matches bounds, if the fencer numbers are out of the number of fencers bounds, 
             or if the id is not positive.
         """
+        validation.validate_positive_int(id, 'id', 'Poule', '_create_match')
         validation.validate_int_in_range(index, 0, self.number_matches - 1, 'index', 'Poule', '_create_match')
 
         # Validate the match pair tuple
@@ -320,16 +337,24 @@ class Poule:
         fencer1_number = match_pair[0]
         fencer2_number = match_pair[1]
 
+        if fencer1_number == fencer2_number:
+            raise ValueError(f'Fencer numbers in match pair must be different - got {fencer1_number} and {fencer2_number}')
+
         validation.validate_int_in_range(fencer1_number, 1, self.size, 'fencer number 1', 'Poule', '_create_match')
         validation.validate_int_in_range(fencer2_number, 1, self.size, 'fencer number 2', 'Poule', '_create_match')
 
         # Get entries to create match with from poule entries list
         entry1 = self.entries[fencer1_number - 1]
         entry2 = self.entries[fencer2_number - 1]
-        
+
+        # Check that the entries are distinct
+        if entry1 == entry2:
+            raise ValueError(f'Entries in match pair must be different - got {entry1} and {entry2}')
+
         # Create and return poule match
         return PouleMatch(id=id, tournament_id=self.tournament_id, entry1=entry1, entry2=entry2, poule_id=self.id, match_index=index)
-        
+
+
     def _generate_matches(self) -> list[PouleMatch]:
         """A helper method to genereate poule matches based on standard bout ordering and the current list of entries and standard bout ordering."""
         min_size, max_size = min(POULE_BOUT_ORDER.keys()), max(POULE_BOUT_ORDER.keys())
@@ -343,12 +368,8 @@ class Poule:
         # Set the list of poule matches
         return [self._create_match(index+1, index, match_pair) for index, match_pair in enumerate(match_order)]
 
-    def _generate_own_matches(self) -> None:
-        """A helper method to generate this poules list of matches."""
-        # Clear any already existing matches
-        if self.matches is not None:
-            self.matches.clear()
-            self.matches = None
 
-        # Generate and assign the list of poule matches
+    def _generate_own_matches(self) -> None:
+        """A helper method to generate this poule's list of matches and reset the current match index to 0."""
+        self.current_match_index = 0
         self.matches = self._generate_matches()
