@@ -26,15 +26,12 @@ class Poule:
     matches : list[PouleMatch], default=list, init=False
         The matches and the order that they are to be done in for the poule. 
         **Invariant:** they must always reflect the current list of entries in the poule.
-    current_match_index : int, default=0, init=False
-        The index of the current match to be done in the list of matches, as the matches are supposed to be done in order.
     """
     id: int
     tournament_id: int
     poule_number: int
     entries: list[TournamentEntry]
     matches: list[PouleMatch] = field(default_factory=list, init=False) # Invariant: matches should reflect the current entries in the poule
-    current_match_index: int = field(default=0, init=False)
 
 
     # --- Initialization and Validation Methods ---
@@ -119,26 +116,32 @@ class Poule:
 
     def get_current_match(self) -> PouleMatch | None:
         """Returns the current poule match."""
-        if self.current_match_index == self.number_matches:
-            return None
-
-        return self.get_match_at_index(self.current_match_index)
+        # Get the next incomplete match in the series of incomplete matches or return None if all matches are complete
+        return next((match for match in self.matches if match.is_incomplete()), None)
 
 
     def get_next_match(self) -> PouleMatch | None:
         """Returns the match on deck or returns None if the current match is the last match."""
-        next_index = self.current_match_index + 1
+        current_match = self.get_current_match()
 
-        if next_index >= self.number_matches:
+        # Case: All matches are complete
+        if current_match is None:
             return None
+
+        # Find next incomplete match after current match
+        current_match_index = current_match.match_index
+        for match in self.matches[current_match_index + 1:]:
+            if match.is_incomplete():
+                return match
         
-        return self.get_match_at_index(self.current_match_index + 1)
+        # If the current match is the last match
+        return None
 
 
     # --- Entry Modification Methods ---
     def add_entry(self, entry: TournamentEntry) -> None:
         """
-        Adds a valid entry to the poule and regenerates the poule matches after the addition.
+        Adds a valid entry to the poule and regenerates the poule's bout order while preserving the results of the matches that already occurred.
         
         Parameters
         ----------
@@ -150,25 +153,35 @@ class Poule:
         TypeError
             If the input entry is not a TournamentEntry
         ValueError
-            If the input entry is already in the poule, or if the poule has already started.
-        """
-        if self.has_started():
-            raise ValueError(f'Cannot add entry to poule {self.id} because the poule has already started')
+            If the input entry is already in the poule, belongs to another
+            tournament, or would create an unsupported poule size.
 
-        if not isinstance(entry, TournamentEntry):
-            raise TypeError(f'Entry must be of type TournamentEntry - got {type(entry)}')
+        RuntimeError
+            If a match in the poule is currently in progress.
+        """
+        self._validate_entry(entry)
         
         if entry in self.entries:
             raise ValueError(f'Entry {entry.id} is already in poule {self.id}')
-        
+
+        # Reject adding an entry during an in-progress bout
+        if any(match.is_in_progress() for match in self.matches):
+            raise RuntimeError(f'Cannot add an entry while a match is in progress in poule {self.id}.')
+
         # Validate that adding the entry will be valid
-        self._validate_entries_list(self.entries + [entry])
+        proposed_entries = self.entries + [entry]
+        self._validate_entries_list(proposed_entries)
+        self._validate_poule_size(len(proposed_entries))
 
-        # Add to list of entries
-        self.entries.append(entry)
+        # Generate new matches to potentially add to matches attribute
+        new_matches = self._generate_matches(proposed_entries)
 
-        # Regenerate matches
-        self._generate_own_matches()
+        # Transfer results of any already completed matches to new matches
+        self._transfer_results(self.matches, new_matches)
+
+        # If all steps were successful, update the poule attributes
+        self.entries = proposed_entries
+        self.matches = new_matches
 
 
     def remove_entry(self, entry: TournamentEntry) -> None:
@@ -217,7 +230,8 @@ class Poule:
         score2 : int
             Entry 2's score.
         """
-        self.get_match_at_index(index).record_score(score1, score2)
+        match = self.get_match_at_index(index)
+        match.record_score(score1, score2)
 
 
     def record_current_match_result(self, score1: int, score2: int) -> None:
@@ -237,7 +251,6 @@ class Poule:
             raise RuntimeError(f'Poule {self.id} is already complete.')
 
         match.record_score(score1, score2)
-        self.current_match_index += 1
 
 
     # --- Result Query Methods ---
@@ -262,6 +275,24 @@ class Poule:
 
 
     # --- Helper Methods ---
+    def _validate_poule_size(self, size: int) -> None:
+        """Validates that a poule size is supported by a valid bout order."""
+        supported_sizes = list(POULE_BOUT_ORDER.keys())
+        supported_sizes.sort()
+
+        if size not in supported_sizes:
+            raise ValueError(f'Cannot create a poule with {size} entries because no bout order exists for it; the supported sizes are {supported_sizes[0]}-{supported_sizes[-1]}.')
+
+
+    def _validate_entry(self, entry: TournamentEntry) -> None:
+        """Validates that a tournament entry is valid for this poule."""
+        if not isinstance(entry, TournamentEntry):
+            raise TypeError(f'Entry must be a tournament entry - got {type(entry)}')
+        
+        if entry.tournament_id != self.tournament_id:
+            raise ValueError(f'Entry {entry.id} must belong to this tournament ({self.tournament_id}) - got {entry.tournament_id}')
+
+
     def _validate_entries_list(self, entries: list[TournamentEntry]):
         """
         Validates a given list of tournament entries.
@@ -288,8 +319,13 @@ class Poule:
             if entry.tournament_id != self.tournament_id:
                 raise ValueError(f'All entries must have the same tournament ID as the poule - entry {i} has tournament ID {entry.tournament_id} when poule has tournament ID {self.tournament_id}')
 
+            if entries.count(entry) != 1:
+                raise ValueError(f'The entries must be unique; entry {entry.id} at index {i} is not unique and has a duplicate entry in the list in poule {self.id}')            
+
         if len(entries) < 2:
             raise ValueError(f'There must be at least two entries in a poule - got {len(entries)}')
+
+        self._validate_poule_size(len(entries))
 
 
     def _validate_own_entries_list(self):
@@ -355,15 +391,15 @@ class Poule:
         return PouleMatch(id=id, tournament_id=self.tournament_id, entry1=entry1, entry2=entry2, poule_id=self.id, match_index=index)
 
 
-    def _generate_matches(self) -> list[PouleMatch]:
-        """A helper method to genereate poule matches based on standard bout ordering and the current list of entries and standard bout ordering."""
-        min_size, max_size = min(POULE_BOUT_ORDER.keys()), max(POULE_BOUT_ORDER.keys())
+    def _generate_matches(self, entries: list[TournamentEntry]) -> list[PouleMatch]:
+        """A helper method to genereate poule matches based on standard bout ordering and a provided list of entries."""
+        min_size, max_size = min(list(POULE_BOUT_ORDER.keys())), max(list(POULE_BOUT_ORDER.keys()))
         
-        if self.size < min_size or self.size > max_size:
-            raise RuntimeError(f'Poule {self.id} has a size of {self.size}, which is outside the range of sizes that there are bout orders for \u2192 {min_size}-{max_size}.')
+        if len(entries) < min_size or len(entries) > max_size:
+            raise RuntimeError(f'This list of entries has size {len(entries)}, which is outside the range of sizes that there are bout orders for \u2192 {min_size}-{max_size}.')
         
         # Get match order based on poule size
-        match_order = POULE_BOUT_ORDER[self.size]
+        match_order = POULE_BOUT_ORDER[len(entries)]
 
         # Set the list of poule matches
         return [self._create_match(index+1, index, match_pair) for index, match_pair in enumerate(match_order)]
@@ -371,5 +407,61 @@ class Poule:
 
     def _generate_own_matches(self) -> None:
         """A helper method to generate this poule's list of matches and reset the current match index to 0."""
-        self.current_match_index = 0
-        self.matches = self._generate_matches()
+        self.matches = self._generate_matches(self.entries)
+
+
+    def _transfer_results(self, source_matches, destination_matches) -> None:
+        """Transfers any completed match results from the source matches to the destination matches."""
+        # Validate inputs
+        if not isinstance(source_matches, list):
+            raise TypeError(f'Source matches in Poule._transfer_results() must be a list - got {type(source_matches)}.')
+        
+        for i, match in enumerate(source_matches):
+            if not isinstance(match, PouleMatch):
+                raise TypeError(f'All source matches must be of type PouleMatch in Poule._transfer_results() - got {type(match)} at index {i}.')
+
+        if not isinstance(destination_matches, list):
+            raise TypeError(f'Destination matches in Poule._transfer_results() must be a list - got {type(destination_matches)}.')
+        
+        for i, match in enumerate(destination_matches):
+            if not isinstance(match, PouleMatch):
+                raise TypeError(f'All destination matches must be of type PouleMatch in Poule._transfer_results() - got {type(match)} at index {i}.')
+        
+        # Get completed matches from source matches
+        previous_results = [match for match in source_matches if match.is_complete()]
+
+        # If no source matches were completed, do nothing
+        if len(previous_results) == 0:
+            return
+
+        # Transfer results to destination matches
+        for match_prev in previous_results:
+            result_copied = False
+            entries_prev = match_prev.entries()
+
+            for match_new in destination_matches:                
+                entries_new = match_new.entries()
+
+                if entries_new == entries_prev:
+                    if match_prev.is_forfeit():
+                        forfeiting_index = match_prev.forfeited_index
+                        match_new.forfeit(forfeiting_index)
+                        result_copied = True
+                        break
+                    else:
+                        match_new.record_score(match_prev.score1, match_prev.score2)
+                        result_copied = True
+                        break
+
+                elif entries_new == entries_prev[::-1]:
+                    if match_prev.is_forfeit():
+                        forfeiting_index = match_prev.forfeited_index - 1
+                        match_new.forfeit(forfeiting_index)
+                        result_copied = True
+                    else:
+                        match_new.record_score( match_prev.score2, match_prev.score1)
+                        result_copied = True
+                        break
+
+            if not result_copied:
+                raise RuntimeError(f'Could not transfer the result of match {match_prev.id} to any match in the destination matches.')
