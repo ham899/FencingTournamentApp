@@ -500,6 +500,19 @@ def test_tournament_match_has_both_entries(de_match, empty_de_match, de_match_wi
     assert not de_match_with_one_entry.has_both_entries()
     assert de_match.has_both_entries()
 
+def test_tournament_match_has_entry(entry1, entry2, poule_match, empty_de_match, de_match_with_one_entry, de_match):
+    assert poule_match.has_entry(entry1)
+    assert poule_match.has_entry(entry2)
+
+    assert not empty_de_match.has_entry(entry1)
+    assert not empty_de_match.has_entry(entry2)
+
+    assert de_match_with_one_entry.has_entry(entry1)
+    assert not de_match_with_one_entry.has_entry(entry2)
+
+    assert de_match.has_entry(entry1)
+    assert de_match.has_entry(entry2)
+
 def test_tournament_match_is_forfeit(poule_match, de_match):
     assert not poule_match.is_forfeit()
     assert not de_match.is_forfeit()

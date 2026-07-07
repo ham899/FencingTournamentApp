@@ -108,6 +108,10 @@ class TournamentMatch(Match, ABC):
     def has_both_entries(self) -> bool:
         """Checks if both entries are present in the match."""
         return self.entry1 is not None and self.entry2 is not None
+
+    def has_entry(self, entry: TournamentEntry) -> bool:
+        """Checks if the input entry is present in the match."""
+        return entry in self.entries()
     
     def is_forfeit(self) -> bool:
         """Checks if a match was a forfeit based on the forfeited index."""
