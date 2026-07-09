@@ -74,7 +74,16 @@ class PouleEntryResult:
     def indicator(self) -> int:
         """Returns touches scored minus touches received for the entry."""
         return self.touches_scored - self.touches_received
-      
+
+
+    # --- State Update Helper Methods ---
+    def _reset(self) -> None:
+        """Resets all the entry's results back to zero - **use carefully**."""
+        self.num_matches = 0
+        self.num_victories = 0
+        self.touches_scored = 0
+        self.touches_received = 0
+
 
     # --- Result Calculation Helper Methods ---
     def _add_match_result(self, match: PouleMatch) -> None:

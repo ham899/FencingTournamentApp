@@ -188,6 +188,34 @@ def test_poule_entry_result_inequality_different_tournaments(entry1, poule_entry
     assert poule_entry1_result != poule_entry_result_2
 
 
+# --- State Update Helper Method Tests ---
+def test_poule_entry_result__reset_clears_calculated_totals(poule_entry1_result):
+    poule_entry1_result.num_matches = 3
+    poule_entry1_result.num_victories = 2
+    poule_entry1_result.touches_scored = 13
+    poule_entry1_result.touches_received = 9
+
+    poule_entry1_result._reset()
+
+    assert poule_entry1_result.num_matches == 0
+    assert poule_entry1_result.num_victories == 0
+    assert poule_entry1_result.touches_scored == 0
+    assert poule_entry1_result.touches_received == 0
+
+def test_poule_entry_result__reset_does_not_change_entry_or_context(entry1, poule_entry1_result):
+    poule_entry1_result.num_matches = 3
+    poule_entry1_result.num_victories = 2
+    poule_entry1_result.touches_scored = 13
+    poule_entry1_result.touches_received = 9
+
+    poule_entry1_result._reset()
+
+    assert poule_entry1_result.entry == entry1
+    assert poule_entry1_result.poule_id == POULE_ID
+    assert poule_entry1_result.tournament_id == TOURNY_ID
+    assert poule_entry1_result.display_name == FENCER_DISPLAY_NAME1
+
+
 # --- Result Calculation Helper Method Tests ---
 @pytest.mark.parametrize('invalid_poule_match_type', [None, False, 0, 0.0, 'match', [], (), {}])
 def test_poule_entry_result__add_match_result_rejects_non_poule_match(poule_entry1_result, invalid_poule_match_type):
