@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 import validation
 from entities.tournament_entry import TournamentEntry
 from matches.poule_match import PouleMatch
-from poules.poule_results import SinglePouleResults
+from poules.results.poule_result import PouleResult
 from poules.poule_orders import POULE_BOUT_ORDER
 
 
@@ -285,26 +285,19 @@ class Poule:
 
 
     # --- Result Calculation Methods ---
-    def calculate_results(self) -> SinglePouleResults:
+    def calculate_results(self) -> PouleResult:
         """
-        Calculates and returns the current results for this poule.
+        Calculates and returns a snapshot of the current results for this poule.
 
         A new SinglePouleResults object is created on each call. Only completed
         matches contribute to the returned results; incomplete matches are ignored.
         """
-        # Initialize a new SinglePouleResults object where result data is initialized to zero for each entry in the poule
-        poule_results = SinglePouleResults(self.id, self.entries)
+        return PouleResult.from_matches(self.entries, self.matches, self.id, self.tournament_id)
 
-        # Add each match's result to the SinglePouleResults container
-        for match in self.matches:
-            # Skip incomplete matches
-            if not match.is_complete():
-                continue
-
-            poule_results.add_match_result(match)
-
-        # Return the filled in SinglePouleResults object
-        return poule_results
+    def calculate_results_names_only(self) -> list[str]:
+        """Calculates and returns a snapshot of the ranking in the poule thus far as a list of display names only."""
+        poule_result = PouleResult.from_matches(self.entries, self.matches, self.id, self.tournament_id)
+        return [entry.display_name for entry in poule_result.entries]
 
 
     # --- Validation Helper Methods ---
