@@ -445,6 +445,7 @@ class Poule:
             range; match_pair does not contain exactly two values; or both fencer
             numbers identify the same entry.
         """
+        self._validate_entries_list(entries)
         validation.validate_positive_int(match_id, 'match_id', 'Poule', '_create_match')
         number_matches = len(entries) * (len(entries) - 1) // 2
         validation.validate_int_in_range(match_index, 0, number_matches - 1, 'index', 'Poule', '_create_match')
@@ -459,11 +460,11 @@ class Poule:
         # Validate the fencer numbers in the tuple
         fencer1_number, fencer2_number = match_pair
 
-        if fencer1_number == fencer2_number:
-            raise ValueError(f'Fencer numbers in match pair must be different - got {fencer1_number} and {fencer2_number}')
-
         validation.validate_int_in_range(fencer1_number, 1, len(entries), 'fencer number 1', 'Poule', '_create_match')
         validation.validate_int_in_range(fencer2_number, 1, len(entries), 'fencer number 2', 'Poule', '_create_match')
+
+        if fencer1_number == fencer2_number:
+            raise ValueError(f'Fencer numbers in match pair must be different - got {fencer1_number} and {fencer2_number}')
 
         # Get entries to create match with from poule entries list
         entry1 = entries[fencer1_number - 1]
