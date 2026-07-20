@@ -44,7 +44,7 @@ class PouleResult:
         
         Parameters
         ----------
-        entries : list[TournamentEntry]
+        poule_entries : list[TournamentEntry]
             A list of TournamentEntry objects for which to hold results for.
         
         Raises
