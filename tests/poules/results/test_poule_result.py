@@ -337,7 +337,7 @@ def test_poule_result_alternative_creation_method_classmethod(entries, completed
     assert poule_result.entry_results[6].indicator == -7
 
 
-# --- Result Calculation Mehtod Tests ---
+# --- Result Calculation Method Tests ---
 def test_poule_result_calculate_standings(entries, completed_poule_matches):
     poule_result = PouleResult.from_matches(entries, completed_poule_matches, POULE_ID, TOURNY_ID)
 
@@ -369,44 +369,82 @@ def test_poule_result__reset(entries, completed_poule_matches):
         assert result.touches_received == 0
 
 # --- Result Update Helper Method Tests ---
-def test_poule_result__add_match_result():
-    pass
+def test_poule_result__add_match_result_valid(poule_result):
+    assert poule_result.entry_results[0].num_matches == 0
+    assert poule_result.entry_results[0].num_victories == 0
+    assert poule_result.entry_results[0].touches_scored == 0
+    assert poule_result.entry_results[0].touches_received == 0
 
-def test_poule_result__add_match_result_not_a_poule_match():
-    pass
+    assert poule_result.entry_results[1].num_matches == 0
+    assert poule_result.entry_results[1].num_victories == 0
+    assert poule_result.entry_results[1].touches_scored == 0
+    assert poule_result.entry_results[1].touches_received == 0
 
-def test_poule_result__add_match_result_poule_id_does_not_match():
-    pass
+    match = PouleMatch(id=MATCH_ID, tournament_id=TOURNY_ID, entry1=poule_result.entries[0], entry2=poule_result.entries[1], poule_id=POULE_ID, match_index=0)
+    match.record_score(5,3)
+    poule_result._add_match_result(match)
 
-def test_poule_result__add_match_result_tournament_id_does_not_match():
-    pass
+    assert poule_result.entry_results[0].num_matches == 1
+    assert poule_result.entry_results[0].num_victories == 1
+    assert poule_result.entry_results[0].touches_scored == 5
+    assert poule_result.entry_results[0].touches_received == 3
 
-def test_poule_result__add_match_result_entry_not_in_poule():
-    pass
+    assert poule_result.entry_results[1].num_matches == 1
+    assert poule_result.entry_results[1].num_victories == 0
+    assert poule_result.entry_results[1].touches_scored == 3
+    assert poule_result.entry_results[1].touches_received == 5
 
-def test_poule_result__add_match_result_incomplete_match():
-    pass
+@pytest.mark.parametrize('invalid_match_type', [None, 'Steve vs. Hannah', 0.0, 1, [], (1,), {}])
+def test_poule_result__add_match_result_not_a_poule_match(poule_result, invalid_match_type):
+    match = invalid_match_type
+    with pytest.raises(TypeError):
+        poule_result._add_match_result(match)
 
+def test_poule_result__add_match_result_poule_id_does_not_match(poule_result):
+    match = PouleMatch(id=MATCH_ID, tournament_id=TOURNY_ID, entry1=poule_result.entries[0], entry2=poule_result.entries[1], poule_id=DIFFERENT_POULE_ID, match_index=0)
+    match.record_score(5,3)
+    with pytest.raises(ValueError):
+        poule_result._add_match_result(match)
+
+def test_poule_result__add_match_result_tournament_id_does_not_match(poule_result):
+    poule_result.entry_results[0].entry.tournament_id = DIFFERENT_TOURNY_ID
+    poule_result.entry_results[1].entry.tournament_id = DIFFERENT_TOURNY_ID
+    
+    match = PouleMatch(id=MATCH_ID, tournament_id=DIFFERENT_TOURNY_ID, entry1=poule_result.entries[0], entry2=poule_result.entries[1], poule_id=POULE_ID, match_index=0)
+    match.record_score(5,3)
+    
+    poule_result.entry_results[0].entry.tournament_id = TOURNY_ID
+    poule_result.entry_results[1].entry.tournament_id = TOURNY_ID
+
+    with pytest.raises(ValueError):
+        poule_result._add_match_result(match)
+
+def test_poule_result__add_match_result_entry_not_in_poule(poule_result):
+    unknown_entry = TournamentEntry(8, TOURNY_ID, Fencer(8, 'Joanna'))
+    match = PouleMatch(id=MATCH_ID, tournament_id=TOURNY_ID, entry1=poule_result.entries[0], entry2=unknown_entry, poule_id=POULE_ID, match_index=0)
+    match.record_score(5,3)
+    with pytest.raises(ValueError):
+        poule_result._add_match_result(match)
+
+def test_poule_result__add_match_result_incomplete_match(poule_result):
+    match = PouleMatch(id=MATCH_ID, tournament_id=TOURNY_ID, entry1=poule_result.entries[0], entry2=poule_result.entries[1], poule_id=POULE_ID, match_index=0)
+    with pytest.raises(ValueError):
+        poule_result._add_match_result(match)
 
 def test_poule_result__compute_results_from_matches():
     pass
 
-
 def test_poule_result__compute_results_from_matches_invalid_matches_list_type():
     pass
-
 
 def test_poule_result__compute_results_from_matches_invalid_element_type():
     pass
 
-
 def test_poule_result__compute_results_from_matches_any_poule_id_does_not_match():
     pass
 
-
 def test_poule_result__compute_results_from_matches_any_tournament_id_does_not_match():
     pass
-
 
 def test_poule_result__compute_results_from_matches_any_match_has_entry_that_does_not_belong_to_poule():
     pass
