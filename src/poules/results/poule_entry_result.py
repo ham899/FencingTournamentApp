@@ -5,7 +5,7 @@ from entities.tournament_entry import TournamentEntry
 from matches.poule_match import PouleMatch
 
 
-@dataclass()
+@dataclass
 class PouleEntryResult:
     """
     Represents a single entry's derived results from completed bouts in a poule.
@@ -34,7 +34,7 @@ class PouleEntryResult:
     """
     entry: TournamentEntry
     poule_id: int
-    tournament_id : int
+    tournament_id: int
 
     num_matches: int = field(default=0, init=False)
     num_victories: int = field(default=0, init=False)
@@ -103,7 +103,7 @@ class PouleEntryResult:
         TypeError
             If match is not a PouleMatch.
         ValueError
-            If match belongs to a different tournament or is incomplete.
+            If match belongs to a different tournament or poule, or is incomplete.
         RuntimeError
             If a completed match does not have a valid winner index.
         """
@@ -113,6 +113,9 @@ class PouleEntryResult:
 
         if match.tournament_id != self.tournament_id:
             raise ValueError(f'Match tournament ID {match.tournament_id} does not match PouleEntryResult tournament ID {self.tournament_id}.')
+
+        if match.poule_id != self.poule_id:
+            raise ValueError(f'Match poule ID {match.poule_id} does not match PouleEntryResult poule ID {self.poule_id}.')
 
         if match.is_incomplete():
             raise ValueError(f'Cannot add the incomplete match {match.id} to entry {self.entry.id}\'s poule results container.')
