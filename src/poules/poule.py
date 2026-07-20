@@ -289,15 +289,15 @@ class Poule:
         """
         Calculates and returns a snapshot of the current results for this poule.
 
-        A new SinglePouleResults object is created on each call. Only completed
+        A new PouleResult object is created on each call. Only completed
         matches contribute to the returned results; incomplete matches are ignored.
         """
         return PouleResult.from_matches(self.entries, self.matches, self.id, self.tournament_id)
 
     def calculate_results_names_only(self) -> list[str]:
         """Calculates and returns a snapshot of the ranking in the poule thus far as a list of display names only."""
-        poule_result = PouleResult.from_matches(self.entries, self.matches, self.id, self.tournament_id)
-        return [entry.display_name for entry in poule_result.entries]
+        poule_results = self.calculate_results()
+        return poule_results.calculate_standings_display_names()
 
 
     # --- Validation Helper Methods ---
@@ -338,7 +338,7 @@ class Poule:
             If the entry does not have the same tournament ID as the poule.
         """
         if not isinstance(entry, TournamentEntry):
-            raise TypeError(f'Entry must be a tournament entry - got {type(entry)}')
+            raise TypeError(f'Entry must be a tournament entry - got {type(entry).__name__}')
         
         if entry.tournament_id != self.tournament_id:
             raise ValueError(f'Entry {entry.id} must belong to this tournament ({self.tournament_id}) - got {entry.tournament_id}')
@@ -386,12 +386,12 @@ class Poule:
         """
         # Validate that a list is provided
         if not isinstance(entries, list):
-            raise TypeError(f'The entries variable must be of type list - got {type(entries)}')
+            raise TypeError(f'The entries variable must be of type list - got {type(entries).__name__}')
         
         # Validate each entry in the list
         for i, entry in enumerate(entries):
             if not isinstance(entry, TournamentEntry):
-                raise TypeError(f'All entries must of type TournamentEntry - entry at index {i} is of type {type(entry)}')
+                raise TypeError(f'All entries must be of type TournamentEntry - entry at index {i} is of type {type(entry).__name__}')
                 
             if entry.tournament_id != self.tournament_id:
                 raise ValueError(f'All entries must have the same tournament ID as the poule - entry at index {i} has tournament ID {entry.tournament_id} when poule has tournament ID {self.tournament_id}')
@@ -452,7 +452,7 @@ class Poule:
 
         # Validate the match pair tuple
         if not isinstance(match_pair, tuple):
-            raise TypeError(f'Match pair must be a tuple - got {type(match_pair)}')
+            raise TypeError(f'Match pair must be a tuple - got {type(match_pair).__name__}')
         
         if len(match_pair) != 2:
             raise ValueError(f'Match pair must be of length 2 - got {len(match_pair)}')
@@ -540,19 +540,19 @@ class Poule:
         """
         # Validate inputs
         if not isinstance(source_matches, list):
-            raise TypeError(f'Source matches in Poule._transfer_results() must be a list - got {type(source_matches)}.')
+            raise TypeError(f'Source matches in Poule._transfer_results() must be a list - got {type(source_matches).__name__}.')
         
         for i, match in enumerate(source_matches):
             if not isinstance(match, PouleMatch):
-                raise TypeError(f'All source matches must be of type PouleMatch in Poule._transfer_results() - got {type(match)} at index {i}.')
+                raise TypeError(f'All source matches must be of type PouleMatch in Poule._transfer_results() - got {type(match).__name__} at index {i}.')
 
         if not isinstance(destination_matches, list):
-            raise TypeError(f'Destination matches in Poule._transfer_results() must be a list - got {type(destination_matches)}.')
-        
+            raise TypeError(f'Destination matches in Poule._transfer_results() must be a list - got {type(destination_matches).__name__}.')
+
         for i, match in enumerate(destination_matches):
             if not isinstance(match, PouleMatch):
-                raise TypeError(f'All destination matches must be of type PouleMatch in Poule._transfer_results() - got {type(match)} at index {i}.')
-        
+                raise TypeError(f'All destination matches must be of type PouleMatch in Poule._transfer_results() - got {type(match).__name__} at index {i}.')
+
         # Get completed matches from source matches
         previous_results = [match for match in source_matches if match.is_complete()]
 
