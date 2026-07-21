@@ -58,37 +58,6 @@ def log2_int(n: int) -> int:
     return n.bit_length() - 1
 
 
-def calculate_number_poule_matches(poule_size: int) -> int:
-    """
-    Calculates the number of poule matches in a poule based on the poule's size.
-    
-    Parameters
-    ----------
-    poule_size : int
-        The number of entries in the poule.
-    
-    Returns
-    -------
-    int
-        The number of matches in the poule.
-    
-    Raises
-    ------
-    TypeError
-        If the poule size input is not an integer.
-    ValueError
-        If the poule size input is less than 2.
-    """
-    validation.validate_int_at_least(
-        poule_size, 
-        2, 
-        'poule_size', 
-        function_name='calculate_number_poule_matches'
-    )
-
-    return poule_size * (poule_size - 1) // 2
-
-
 def calculate_number_of_de_rounds(number_de_entries: int) -> int:
     """
     Calculates the number of rounds in a DE bracket based on the number of entries in the bracket.
