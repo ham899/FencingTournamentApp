@@ -2,6 +2,7 @@
 
 
 import validation
+from collections.abc import Iterator
 
 
 def is_power_of_two(n: int) -> bool:
@@ -165,3 +166,39 @@ def calculate_number_matches_in_de_round(round_index: int, number_de_entries: in
     )
     
     return 2 ** (number_of_rounds - round_index - 1)
+
+
+def snake_numbers(stop: int, start: int = 0) -> Iterator[int]:
+    """
+    Yield integers repeatedly in ascending and descending order.
+
+    Both endpoints of the yielded range are repeated when the direction changes.
+
+    Parameters
+    ----------
+    stop : int
+        The exclusive upper bound of the yielded numbers.
+    start : int, optional
+        The inclusive lower bound of the yielded numbers. Default is 0.
+
+    Yields
+    ------
+    int
+        The next integer in the repeating snake pattern.
+
+    Raises
+    ------
+    TypeError
+        If `start` or `stop` is not an integer.
+    ValueError
+        If `stop` is not greater than `start`.
+    """
+    validation.validate_int(stop, 'stop', function_name='snake_numbers')
+    validation.validate_int(start, 'start', function_name='snake_numbers')
+
+    if stop <= start:
+        raise ValueError(f'stop must be greater than start in snake_numbers() - got start={start}, stop={stop}')
+
+    while True:
+        yield from range(start, stop)
+        yield from range(stop - 1, start - 1, -1)
