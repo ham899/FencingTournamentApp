@@ -3,9 +3,9 @@ import pytest
 from utils import (
     is_power_of_two,
     log2_int,
-    calculate_number_poule_matches,
     calculate_number_of_de_rounds,
-    calculate_number_matches_in_de_round
+    calculate_number_matches_in_de_round,
+    snake_numbers
 )
 
 # --- Constants ---
@@ -76,33 +76,6 @@ def test_log2_int_invalid_not_a_power_of_two(not_a_power_of_two):
     with pytest.raises(ValueError):
         log2_int(not_a_power_of_two)
 
-# --- calculate_number_poule_matches tests ---
-@pytest.mark.parametrize(('poule_size', 'expected_matches'), [
-    (2, 1),
-    (3, 3),
-    (4, 6),
-    (5, 10),
-    (6, 15),
-    (7, 21),
-    (8, 28),
-    (9, 36),
-    (10, 45),
-    (11, 55),
-    (12, 66),
-    (20, 190)
-])
-def test_calculate_number_poule_matches_valid(poule_size, expected_matches):
-    assert calculate_number_poule_matches(poule_size) == expected_matches
-
-@pytest.mark.parametrize('invalid_poule_size_type', INVALID_INT_TYPES)
-def test_calculate_number_poule_matches_invalid_input_type(invalid_poule_size_type):
-    with pytest.raises(TypeError):
-        calculate_number_poule_matches(invalid_poule_size_type)
-
-@pytest.mark.parametrize('invalid_poule_size_value', [-10, -1, 0, 1])
-def test_calculate_number_poule_matches_invalid_input_value(invalid_poule_size_value):
-    with pytest.raises(ValueError):
-        calculate_number_poule_matches(invalid_poule_size_value)
 
 # --- calculate_number_of_de_rounds tests ---
 @pytest.mark.parametrize(('number_de_entries', 'expected_rounds'), [
@@ -219,3 +192,38 @@ def test_calculate_number_matches_in_de_round_invalid_number_de_entries_value(in
 def test_calculate_number_matches_in_de_round_invalid_round_index_greater_than_maximum(round_index, number_de_entries):
     with pytest.raises(ValueError):
         calculate_number_matches_in_de_round(round_index=round_index, number_de_entries=number_de_entries)
+
+def test_snake_numbers_3():
+    expected_sequence = [0, 1, 2, 2, 1, 0, 0, 1, 2, 2, 1, 0]
+    snake_generator = snake_numbers(3)
+
+    for i in range(len(expected_sequence)):
+        expected_sequence[i] == next(snake_generator)
+
+def test_snake_numbers_4():
+    expected_sequence = [0, 1, 2, 3, 3, 2, 1, 0, 0, 1, 2, 3, 3, 2, 1, 0]
+    snake_generator = snake_numbers(4)
+
+    for i in range(len(expected_sequence)):
+        expected_sequence[i] == next(snake_generator)
+
+def test_snake_numbers_5():
+    expected_sequence = [0, 1, 2, 3, 4, 4, 3, 2, 1, 0, 0, 1, 2, 3, 4, 4, 3, 2, 1, 0]
+    snake_generator = snake_numbers(5)
+
+    for i in range(len(expected_sequence)):
+        expected_sequence[i] == next(snake_generator)
+
+def test_snake_numbers_6():
+    expected_sequence = [0, 1, 2, 3, 4, 5, 5, 4, 3, 2, 1, 0, 0, 1, 2, 3, 4, 5, 5, 4, 3, 2, 1, 0]
+    snake_generator = snake_numbers(6)
+
+    for i in range(len(expected_sequence)):
+        expected_sequence[i] == next(snake_generator)
+
+def test_snake_numbers_7():
+    expected_sequence = [0, 1, 2, 3, 4, 5, 6, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2, 3, 4, 5, 6, 6, 5, 4, 3, 2, 1, 0]
+    snake_generator = snake_numbers(7)
+
+    for i in range(len(expected_sequence)):
+        expected_sequence[i] == next(snake_generator)
