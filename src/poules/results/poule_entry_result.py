@@ -1,11 +1,13 @@
-from dataclasses import dataclass, field
+from collections.abc import Iterable
+from dataclasses import dataclass, field, InitVar
 
 import validation
+
 from entities.tournament_entry import TournamentEntry
 from matches.poule_match import PouleMatch
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class PouleEntryResult:
     """
     Represents a single entry's derived results from completed bouts in a poule.
@@ -15,6 +17,18 @@ class PouleEntryResult:
 
     **Note:** An entry with no completed bouts has a victory ratio of 0.0.
 
+    Parameters
+    ----------
+    entry : TournamentEntry
+        The tournament entry whose results are represented.
+    poule_id : int
+        The identifier of the entry's poule.
+    tournament_id : int
+        The identifier of the entry's tournament.
+    poule_matches : Iterable[PouleMatch]
+        The poule matches from which to calculate the statistics. The matches
+        themselves are not stored.
+    
     Attributes
     ----------
     entry : TournamentEntry
@@ -36,27 +50,52 @@ class PouleEntryResult:
     poule_id: int
     tournament_id: int
 
-    num_matches: int = field(default=0, init=False)
-    num_victories: int = field(default=0, init=False)
-    touches_scored: int = field(default=0, init=False)
-    touches_received: int = field(default=0, init=False)
+    poule_matches: InitVar[Iterable[PouleMatch]]
+
+    num_matches: int = field(init=False)
+    num_victories: int = field(init=False)
+    touches_scored: int = field(init=False)
+    touches_received: int = field(init=False)
 
 
     # --- Initialization and Validation Methods ---
-    def __post_init__(self) -> None:
+    def __post_init__(self, poule_matches: Iterable[PouleMatch]) -> None:
         """
-        Validates the initialized PouleEntryResult attributes.
+        Validate the inputs and calculate the entry's result statistics.
 
         Raises
         ------
         TypeError
-            If entry is not a TournamentEntry, or if poule_id or tournament_id is not an integer.
+            If `entry` is not a TournamentEntry, if `poule_id` or
+            `tournament_id` is not an integer, if `poule_matches` is not an
+            iterable, or if it contains an item that is not a PouleMatch.
         ValueError
-            If poule_id or tournament_id is not positive, or if entry belongs to a different tournament.
-        """       
+            If `poule_id` or `tournament_id` is not positive, if the entry belongs 
+            to another tournament, if no matches are provided, if a match has a 
+            different poule or tournament ID, or if a match ID occurs more than once.
+        RuntimeError
+            If a completed match involving the entry does not have a valid winner index.
+        """
         validation.validate_positive_int(self.poule_id, 'Poule ID', 'PouleEntryResult')
         validation.validate_positive_int(self.tournament_id, 'Tournament ID', 'PouleEntryResult')
+
         self._validate_entry(self.entry)
+
+        if not isinstance(poule_matches, Iterable):
+            raise TypeError(f'poule_matches must be a valid iterable - got {type(poule_matches).__name__}')
+        
+        poule_matches = tuple(poule_matches) # Convert poule matches into a tuple before validating
+
+        self._validate_matches(poule_matches)
+
+        # Extract the result info
+        num_matches, num_victories, touches_scored, touches_received = self._calculate_results_from_matches(poule_matches)
+
+        # Set result attributes
+        object.__setattr__(self, 'num_matches', num_matches)
+        object.__setattr__(self, 'num_victories', num_victories)
+        object.__setattr__(self, 'touches_scored', touches_scored)
+        object.__setattr__(self, 'touches_received', touches_received)
 
 
     # --- Properties ---
@@ -66,7 +105,7 @@ class PouleEntryResult:
         return self.entry.display_name
 
     @property
-    def ratio(self) -> float:
+    def victory_ratio(self) -> float:
         """Returns the entry's victory ratio, or 0.0 if no completed matches exist."""
         return 0.0 if self.num_matches == 0 else self.num_victories / self.num_matches
     
@@ -76,71 +115,49 @@ class PouleEntryResult:
         return self.touches_scored - self.touches_received
 
 
-    # --- State Update Helper Methods ---
-    def _reset(self) -> None:
-        """Resets all the entry's results back to zero - **use carefully**."""
-        self.num_matches = 0
-        self.num_victories = 0
-        self.touches_scored = 0
-        self.touches_received = 0
-
-
     # --- Result Calculation Helper Methods ---
-    def _add_match_result(self, match: PouleMatch) -> None:
+    def _calculate_results_from_matches(self, matches: tuple[PouleMatch, ...]) -> tuple[int, int, int, int]:
         """
-        Adds the applicable result from a completed poule match to this entry's totals.
-
-        If the match does not involve this entry, this method does nothing. This method
-        is intended for internal use while calculating poule results.
-
+        Calculates the key poule result metrics from the provided poule matches.
+        
         Parameters
         ----------
-        match : PouleMatch
-            A completed poule match from the same tournament as this result container.
+        matches : tuple[PouleMatch, ...]
+            The matches to compute the results from.
 
-        Raises
-        ------
-        TypeError
-            If match is not a PouleMatch.
-        ValueError
-            If match belongs to a different tournament or poule, or is incomplete.
-        RuntimeError
-            If a completed match does not have a valid winner index.
+        Returns
+        -------
+        tuple[int, int, int, int]
+            Four integer values representing the calculated values: 
+            number of matches, number of victories, touches scored, and touches received respectively.
         """
-        # Validate the given match
-        if not isinstance(match, PouleMatch):
-            raise TypeError(f'Match must be a PouleMatch object in PouleEntryResult._add_match_result() - got {type(match).__name__}')
+        # Set counter variables to zero
+        num_matches = 0
+        num_victories = 0
+        touches_scored = 0
+        touches_received = 0
 
-        if match.tournament_id != self.tournament_id:
-            raise ValueError(f'Match tournament ID {match.tournament_id} does not match PouleEntryResult tournament ID {self.tournament_id}.')
+        for match in matches:
+            if match.is_complete() and match.has_entry(self.entry):
+                # Identify whether this entry is entry 1 or 2
+                entry_index = 0 if match.entry1 == self.entry else 1
 
-        if match.poule_id != self.poule_id:
-            raise ValueError(f'Match poule ID {match.poule_id} does not match PouleEntryResult poule ID {self.poule_id}.')
+                # Extract the winner index of the match
+                winner_index = match.winner_index()
 
-        if match.is_incomplete():
-            raise ValueError(f'Cannot add the incomplete match {match.id} to entry {self.entry.id}\'s poule results container.')
-        
-        # If this entry is not in the match, don't update the entry's results
-        if not match.has_entry(self.entry):
-            return
-        
-        # Identify whether this entry is entry 1 or 2
-        entry_index = 0 if match.entry1 == self.entry else 1
+                if winner_index not in (0, 1):
+                    raise RuntimeError(f'Completed poule match {match.id} has an invalid winner index of {winner_index} in PouleEntryResult._calculate_results_from_matches().')
 
-        # Extract the winner index of the match
-        winner_index = match.winner_index()
+                # Add match result information
+                num_matches += 1
+                num_victories += 1 if entry_index == winner_index else 0
+                touches_scored += match.score1 if entry_index == 0 else match.score2
+                touches_received += match.score2 if entry_index == 0 else match.score1
 
-        if winner_index not in (0,1):
-            raise RuntimeError(f'Completed poule match {match.id} has an invalid winner index of {winner_index} in PouleEntryResult._add_match_result().')
-
-        # Add match result information
-        self.num_matches += 1        
-        self.num_victories += 1 if entry_index == winner_index else 0
-        self.touches_scored += match.score1 if entry_index == 0 else match.score2
-        self.touches_received += match.score2 if entry_index == 0 else match.score1
+        return num_matches, num_victories, touches_scored, touches_received
 
 
-    # --- Helper Methods ---
+    # --- Validation Helper Methods ---
     def _validate_entry(self, entry: TournamentEntry) -> None:
         """
         Validates that an entry is a TournamentEntry belonging to this result's tournament.
@@ -164,3 +181,44 @@ class PouleEntryResult:
 
         if entry.tournament_id != self.tournament_id:
             raise ValueError(f'Entry tournament ID {entry.tournament_id} does not match the provided tournament ID {self.tournament_id} in PouleEntryResult')
+        
+    def _validate_matches(self, matches: tuple[PouleMatch, ...]) -> None:
+        """
+        Validate the poule matches used to calculate this entry's results.
+
+        Parameters
+        ----------
+        matches : tuple[PouleMatch, ...]
+            The poule matches to validate.
+
+        Raises
+        ------
+        TypeError
+            If `matches` is not a tuple or contains an item that is not a
+            PouleMatch.
+        ValueError
+            If `matches` is empty, if a match has a different poule or
+            tournament ID, or if a match ID occurs more than once.
+        """
+        if not isinstance(matches, tuple):
+            raise TypeError(f'The provided matches must be a tuple - got {type(matches).__name__}')
+        
+        if not matches:
+            raise ValueError(f'There must be at least one match present in the tuple - got {len(matches)}')
+        
+        seen_match_ids: set[int] = set()
+
+        for i, match in enumerate(matches):
+            if not isinstance(match, PouleMatch):
+                raise TypeError(f'The entry at index {i} in `matches` must be a PouleMatch object - got {type(match).__name__}')
+
+            if match.poule_id != self.poule_id:
+                raise ValueError(f'The poule match at index {i} in `matches` does not have the same poule ID {match.poule_id} as the poule ID of this result {self.poule_id}')
+            
+            if match.tournament_id != self.tournament_id:
+                raise ValueError(f'The poule match at index {i} in `matches` does not have the same tournament ID {match.tournament_id} as the tournament ID this result {self.tournament_id}')
+            
+            if match.id in seen_match_ids:
+                raise ValueError(f'Poule match ID {match.id} occurs more than once.')
+
+            seen_match_ids.add(match.id)
