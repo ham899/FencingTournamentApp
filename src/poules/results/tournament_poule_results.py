@@ -106,7 +106,7 @@ class TournamentPouleResults:
         rng = Random(self.random_seed)
         rng.shuffle(round_results)
 
-        round_results.sort(key=lambda entry_result: (entry_result.ratio, entry_result.indicator, entry_result.touches_scored), reverse=True)
+        round_results.sort(key=lambda entry_result: (entry_result.victory_ratio, entry_result.indicator, entry_result.touches_scored), reverse=True)
     
         return tuple(round_results)
     
