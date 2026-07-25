@@ -85,6 +85,11 @@ class TournamentMatch(Match, ABC):
         """Returns the type of the match as a string - implemented by subclasses."""
         pass
 
+    @property
+    def entries(self) -> tuple[TournamentEntry | None, TournamentEntry | None]:
+        """Returns a tuple of the entries in the match in the order (entry1, entry2)."""
+        return (self.entry1, self.entry2)
+
     # --- Dunder Methods ---
     def __eq__(self, other: object) -> bool:
         """Checks equality between this TournamentMatch and another object based on their IDs and tournament IDs."""
@@ -111,7 +116,7 @@ class TournamentMatch(Match, ABC):
 
     def has_entry(self, entry: TournamentEntry) -> bool:
         """Checks if the input entry is present in the match."""
-        return entry in self.entries()
+        return entry in self.entries
     
     def is_forfeit(self) -> bool:
         """Checks if a match was a forfeit based on the forfeited index."""
@@ -159,9 +164,6 @@ class TournamentMatch(Match, ABC):
         self._validate_entry_index(index)
         return self.entry2 if index == 0 else self.entry1
     
-    def entries(self) -> tuple[TournamentEntry | None, TournamentEntry | None]:
-        """Returns a tuple of the entries in the match in the order (entry1, entry2)."""
-        return (self.entry1, self.entry2)
     
     # --- Result Query Methods ---
     @abstractmethod

@@ -1,10 +1,11 @@
 from dataclasses import dataclass, field
 
 import validation
+
 from entities.tournament_entry import TournamentEntry
 from matches.poule_match import PouleMatch
-from poules.results.poule_result import PouleResult
 from poules.poule_orders import POULE_BOUT_ORDER
+from poules.results.poule_result import PouleResult
 
 
 @dataclass(eq=False)
@@ -563,10 +564,10 @@ class Poule:
         # Transfer results to destination matches
         for match_prev in previous_results:
             result_copied = False
-            entries_prev = match_prev.entries()
+            entries_prev = match_prev.entries
 
             for match_new in destination_matches:                
-                entries_new = match_new.entries()
+                entries_new = match_new.entries
 
                 if entries_new == entries_prev:
                     if match_prev.is_forfeit():
