@@ -192,6 +192,13 @@ class PouleResult:
         """Returns the tuple of poule entry results in descending ranked order."""
         return self._calculate_ranked_results()
     
+    
+    # --- Display Methods ---
+    def get_ranked_results_display_names(self) -> tuple[str, ...]:
+        """Returns the tuple of display names of the ranked results in descending ranked order."""
+        ranked_results = self.ranked_results
+        return tuple(result.display_name for result in ranked_results)
+    
 
     # --- Result Calculation Helper Methods ---
     def _calculate_results_from_matches(self, entries: tuple[TournamentEntry, ...], matches: tuple[PouleMatch, ...]) -> tuple[PouleEntryResult, ...]:
