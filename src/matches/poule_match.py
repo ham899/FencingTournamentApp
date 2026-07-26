@@ -50,6 +50,7 @@ class PouleMatch(TournamentMatch):
 
     result_type: PouleMatchResultType | None = field(default=None, init=False)
 
+
     # --- Initialization and Validation ---
     def __post_init__(self) -> None:
         """
@@ -69,17 +70,29 @@ class PouleMatch(TournamentMatch):
         # Validate inherited attributes and use poule match validation rules
         super().__post_init__()
 
+
     # --- Properties ---
     @property
     def match_type(self) -> str:
         """Returns the match type as a string."""
         return 'poule'
 
+
+    # --- Dunder Methods ---
+    def __eq__(self, other: object) -> bool:
+        """Checks equality based on match ID, tournament ID, and poule ID."""
+        if not isinstance(other, PouleMatch):
+            return False
+
+        return super().__eq__(other) and self.poule_id == other.poule_id
+
+
     # --- Predicate methods ---
     def is_normal_result(self) -> bool:
         """Checks if the match result type is a normal result."""
         return self.result_type == PouleMatchResultType.NORMAL
-    
+
+
     # --- Result Query Methods ---
     def winner_entry(self) -> TournamentEntry | None:
         """
@@ -175,6 +188,7 @@ class PouleMatch(TournamentMatch):
         else:
             raise RuntimeError(f'Completed poule match {self.id} has no recognized result type.')
 
+
     # --- TournamentMatch Hook Implementations ---
     def _assign_normal_result_status(self) -> None:
         """Assigns subclass-specific normal result state."""
@@ -198,6 +212,7 @@ class PouleMatch(TournamentMatch):
     def _clear_result_status(self) -> None:
         """A helper method to clear the result status of the match."""
         self.result_type = None
+
 
     # --- Helper Methods ---
     def _validate_entry(self, entry: TournamentEntry | None, entry_name: str) -> None:
