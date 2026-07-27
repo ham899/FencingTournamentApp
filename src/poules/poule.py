@@ -74,7 +74,8 @@ class Poule:
         expected_number_matches = self.size * (self.size - 1) // 2
 
         if self.number_matches != expected_number_matches:
-            raise RuntimeError(f'The actual number of matches != the expected number of matches - got {self.number_matches} matches; expected {expected_number_matches} matches')
+            raise RuntimeError(f'Poule {self.id} generated {self.number_matches} matches, '
+                               f'but {expected_number_matches} matches were expected.')
 
 
     # --- Properties ---
@@ -121,7 +122,7 @@ class Poule:
         Parameters
         ----------
         index : int
-            Zero-based index of the match in the official bout-order list.
+            The match's zero-based position in the official bout order.
 
         Returns
         -------
@@ -240,6 +241,7 @@ class Poule:
     def calculate_results(self) -> PouleResult:
         """
         Calculates and returns a snapshot of the poule's current results.
+        
         The matches remain the source of truth for all results.
         """
         return PouleResult(self.entries, self.matches, self.id, self.tournament_id)
@@ -307,8 +309,8 @@ class Poule:
 
         # Check that the entries are distinct
         if entry1 == entry2:
-            raise RuntimeError('Poule._create_match() selected the same entry twice. This should \
-                not be possible after the entries and match pair have been validated.')
+            raise RuntimeError('Poule._create_match() selected the same entry twice. '
+                               'This should not be possible after the entries and match pair have been validated.')
 
         # Create and return the generated poule match
         return PouleMatch(id=match_id, tournament_id=self.tournament_id, entry1=entry1, entry2=entry2, poule_id=self.id, match_index=match_index)
@@ -344,10 +346,10 @@ class Poule:
         
         match_schedule_order = POULE_BOUT_ORDER[len(entries)]
 
-        return tuple(self._create_match(index+1, index, match_pair, entries) for index, match_pair in enumerate(match_schedule_order))
+        return tuple(self._create_match(index + 1, index, match_pair, entries) for index, match_pair in enumerate(match_schedule_order))
 
 
-# --- Validation Helper Methods ---
+    # --- Validation Helper Methods ---
     def _validate_match_index(self, index: int, method_name: str) -> None:
         """
         Validates that an index refers to a match in this poule.
@@ -391,8 +393,8 @@ class Poule:
             raise TypeError(f'Entry must be a TournamentEntry object - got {type(entry).__name__}')
         
         if entry.tournament_id != self.tournament_id:
-            raise ValueError(f'Entry {entry.id} belongs to tournament {entry.tournament_id}, \
-                             but poule {self.id} belongs to tournament {self.tournament_id}')
+            raise ValueError(f'Entry {entry.id} belongs to tournament {entry.tournament_id}, '
+                             f'but poule {self.id} belongs to tournament {self.tournament_id}')
 
     def _validate_poule_size(self, size: int) -> None:
         """
@@ -412,10 +414,11 @@ class Poule:
         """
         validation.validate_positive_int(size, 'size', 'Poule', '_validate_poule_size')
         supported_sizes = list(POULE_BOUT_ORDER.keys())
-
+        supported_sizes.sort()
+        
         if size not in supported_sizes:
-            raise ValueError(f'Cannot create a poule with {size} entries because no official \
-                             bout order exists for that size - supported sizes are {supported_sizes}')
+            raise ValueError(f'Cannot create a poule with {size} entries because no official '
+                             f'bout order exists for that size - supported sizes are {supported_sizes}')
 
     def _validate_entries(self, entries: tuple[TournamentEntry, ...]) -> None:
         """
@@ -444,7 +447,7 @@ class Poule:
         if len(entries) < 2:
             raise ValueError(f'There must be at least two entries in a poule - got {len(entries)}')
         
-        # Validate each entry in the list
+        # Validate each entry
         seen_entry_ids: set[int] = set()
 
         for i, entry in enumerate(entries):
@@ -452,8 +455,8 @@ class Poule:
                 raise TypeError(f'Each entry must be a TournamentEntry object - entry at index {i} is a {type(entry).__name__}')
                 
             if entry.tournament_id != self.tournament_id:
-                raise ValueError(f'Entry {entry.id} at index {i} belongs to tournament {entry.tournament_id}, but poule {self.id} \
-                                 belongs to tournament {self.tournament_id}')
+                raise ValueError(f'Entry {entry.id} at index {i} belongs to tournament {entry.tournament_id}, '
+                                 f'but poule {self.id} belongs to tournament {self.tournament_id}')
 
             if entry.id in seen_entry_ids:
                 raise ValueError(f'Entry {entry.id} appears more than once - duplicate found at index {i}')
@@ -495,7 +498,8 @@ class Poule:
             raise TypeError(f'Match pair must be a tuple in Poule.{method_name}() - got {type(match_pair).__name__}')
         
         if len(match_pair) != 2:
-            raise ValueError(f'Match pair must contain exactly two items - got {len(match_pair)}')
+            raise ValueError(f'Match pair must contain exactly two fencer numbers in '
+                             f'Poule.{method_name}() - got {len(match_pair)}')
         
         # Validate the fencer numbers in the pair
         fencer_number1, fencer_number2 = match_pair
