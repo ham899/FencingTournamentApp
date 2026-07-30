@@ -367,37 +367,21 @@ class PouleRound:
         validation.validate_int_at_least(num_entries, 2, 'num_entries', 'PouleRound', '_calculate_poule_sizes')
         validation.validate_int_at_least(max_poule_size, 3, 'max_poule_size', 'PouleRound', '_calculate_poule_sizes')
 
-        # Check if only one poule is necessary
-        if num_entries <= max_poule_size:
-            return (num_entries,)
+        # The minimal number of poules required is the smallest integer that 
+        # satisfies the inequality: num_poules * max_poule_size >= num_entries
+        num_poules = math.ceil(num_entries / max_poule_size)
 
-        # Idea: Try higher priority candidate poule sizes first
-        min_size = (max_poule_size + 1) // 2 # The minimum possible size
-        current_max_size = max_poule_size
+        # Use divmod
+        integer_quotient, remainder = divmod(num_entries, num_poules)
 
-        while current_max_size >= min_size:
-            # Case 1: Evenly divisible
-            if num_entries % current_max_size == 0:
-                return (current_max_size,) * (num_entries // current_max_size)
-            
-            # Case 2: Can form with combination of size and size-1
-            num_poules = int(math.ceil(num_entries / current_max_size))
-            if num_entries > num_poules * (current_max_size - 1):
-                sizes = [current_max_size] * num_poules
-                i = -1
-                while abs(i) <= len(sizes) and sum(sizes) != num_entries:
-                    sizes[i] = current_max_size-1
-                    i-=1
-                if sum(sizes) == num_entries:
-                    return tuple(sizes)
-                else:
-                    raise RuntimeError(f'Could not obtain the poule sizes configuration in PouleRound._calculate_poule_sizes()')
-            
-            # Case 3: Cannot form with this size; try next priority size
-            current_max_size -= 1
+        # Only a difference of one in poule size in poules is allowed upon round initialization
+        larger_poule_size = integer_quotient + 1
+        smaller_poule_size = integer_quotient
 
-        raise RuntimeError('Could not find a solution in PouleRound._calculate_poule_sizes()')    
-    
+        num_larger_poules = remainder
+        num_smaller_poules = num_poules - num_larger_poules
+
+        return (larger_poule_size,) * num_larger_poules + (smaller_poule_size,) * num_smaller_poules
 
     def _assign_entries_to_poules(self, entries: tuple[TournamentEntry, ...], poule_sizes: tuple[int, ...]) -> tuple[tuple[TournamentEntry, ...], ...]:
         """
