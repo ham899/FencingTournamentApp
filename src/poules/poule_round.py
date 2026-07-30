@@ -23,8 +23,12 @@ class PouleRound:
     
     Attributes
     ----------
+    id : int
+        The unique identifier of the poule round.
     tournament_id : int
         The unique identifier of the tournament that the poule round belongs in.
+    round_number : int
+        The one-based round number of the poule round in the tournament.
     entries : tuple[TournamentEntry, ...]
         The tournament entries assigned to the poule round, ordered from
         highest to lowest initial seed. This order determines their snake
@@ -33,7 +37,9 @@ class PouleRound:
     poules : tuple[Poule, ...], init=False
         The poules that belong in this poule round.
     """
+    id: int
     tournament_id: int
+    round_number: int
     entries: tuple[TournamentEntry, ...]
 
     poules: tuple[Poule, ...] = field(init=False)
@@ -42,19 +48,23 @@ class PouleRound:
     # --- Initialization and Validation Methods ---
     def __post_init__(self) -> None:
         """
-        Validates the tournament ID and entries, and generates the poules from the entries.
+        Validates the ID, tournament ID, round number, and entries, and generates the poules from the entries.
 
         Raises
         ------
         TypeError
-            If tournament ID is not an integer, if entries is not a tuple, or if any entry is not a TournamentEntry object.
+            If ID, tournament ID, or round number is not an integer, if entries is not a tuple, or if any entry is not a TournamentEntry object.
         ValueError
-            If tournament ID is not positive, if entries contains fewer than 2 entries, or if any entry's tournament ID does not match the
+            If ID, tournament ID, or round number is not positive, if entries contains fewer than 2 entries, or if any entry's tournament ID does not match the
             poule round's tournament ID, or if any entry occurs more than once.
         """
+        validation.validate_positive_int(self.id, 'PouleRound ID', 'PouleRound')
         validation.validate_positive_int(self.tournament_id, 'Tournament ID', 'PouleRound')
-        
+        validation.validate_positive_int(self.round_number, 'Round Number', 'PouleRound')
+
         self._validate_entries(self.entries, '__post_init__')
+
+        self.entries = tuple(sorted(self.entries, key=lambda entry: entry.initial_seed))
         
         self.poules = self._generate_poules(self.entries)
 
@@ -70,6 +80,14 @@ class PouleRound:
         """Returns the number of entries in the round."""
         return len(self.entries)
 
+
+    # --- Dunder Methods ---
+    def __eq__(self, other: object) -> bool:
+        """Checks whether two PouleRound objects are equal based on their ID and tournament ID."""
+        if not isinstance(other, PouleRound):
+            return False
+        
+        return self.id == other.id and self.tournament_id == other.tournament_id
 
     # --- Predicate Methods ---
     def has_started(self) -> bool:
@@ -452,7 +470,7 @@ class PouleRound:
         ----------
         entries : tuple[TournamentEntry, ...]
             The entries to distribute into poules.
-        max_size : int, default=7
+        max_poule_size : int, default=7
             The maximum allowable size for any poule.
 
         Returns
@@ -463,7 +481,7 @@ class PouleRound:
         Raises
         ------
         TypeError
-            If entries is not a tuple, if any entry is not a TournamentEntry object, or if max_size is not an integer.
+            If entries is not a tuple, if any entry is not a TournamentEntry object, or if max_poule_size is not an integer.
         ValueError
             If entries contains less than 2 entries, or if max_size is less than 3, or if any entry's tournament ID does not match the poule round's tournament ID.
         """
@@ -532,13 +550,16 @@ class PouleRound:
 
         location = f'PouleRound.{method_name}()'
 
+        # Validate entries
         if not isinstance(entries, tuple):
             raise TypeError(f'Entries must be a tuple in {location} - got {type(entries).__name__}')
 
         if len(entries) < 2:
             raise ValueError(f'Entries must contain at least 2 entries in {location} - got {len(entries)}')
 
+        # Validate each entry
         seen_entry_ids: set[int] = set()
+        seen_initial_seeds: set[int] = set()
 
         for i, entry in enumerate(entries):
             if not isinstance(entry, TournamentEntry):
@@ -550,5 +571,23 @@ class PouleRound:
             
             if entry.id in seen_entry_ids:
                 raise ValueError(f'Entry {entry.id} exists more than once in entries in {location}')
+            
+            initial_seed = entry.initial_seed
 
+            if initial_seed is None:
+                raise ValueError(f'Entry {entry.id} at index {i} in {location} must have an initial seed')
+
+            validation.validate_positive_int(initial_seed, f'Initial seed for entry {entry.id} at index {i}', 'PouleRound', '_validate_entries')
+
+            if initial_seed in seen_initial_seeds:
+                raise ValueError(f'Initial seed {initial_seed} is assigned more than once in {location}')
+            
             seen_entry_ids.add(entry.id)
+            seen_initial_seeds.add(entry.initial_seed)
+
+        # Verify that all expected initial seeds are present
+        expected_initial_seeds = set(range(1, len(entries) + 1))
+
+        if seen_initial_seeds != expected_initial_seeds:
+            raise ValueError(f'Initial seeds in {location} must be a one-to-one mapping '
+                             f'with the integers from 1 through {len(entries)}')
