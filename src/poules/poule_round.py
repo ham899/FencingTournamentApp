@@ -1,5 +1,3 @@
-import math
-
 from dataclasses import dataclass, field
 
 import validation
@@ -380,7 +378,7 @@ class PouleRound:
 
         # The minimal number of poules required is the smallest integer that 
         # satisfies the inequality: num_poules * max_poule_size >= num_entries
-        num_poules = math.ceil(num_entries / max_poule_size)
+        num_poules = (num_entries + max_poule_size - 1) // max_poule_size # equivalent to ceil(num_entries / max_poule_size)
 
         integer_quotient, remainder = divmod(num_entries, num_poules)
 
