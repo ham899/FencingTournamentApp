@@ -15,27 +15,27 @@ from utils import snake_numbers
 @dataclass(eq=False)
 class PouleRound:
     """
-    Represents a stage in a tournament where entries fence each other in one 
-    or more poules. All entries in a poule round get placed into exactly one poule, 
-    and each entry fences every other entry in their poule.
+    Represents one poule round in a tournament.
 
-    This class acts as a controller for all the poules in this poule round.
+    A poule round validates and stores its entries in ascending initial-seed
+    order, distributes each entry into exactly one poule using snake seeding,
+    and coordinates match access and result calculation across those poules.
+    Each entry fences every other entry in its assigned poule.
     
     Attributes
     ----------
     id : int
-        The unique identifier of the poule round.
+        The poule round's identifier within the tournament.
     tournament_id : int
-        The unique identifier of the tournament that the poule round belongs in.
+        The identifier of the tournament containing the poule round.
     round_number : int
-        The one-based round number of the poule round in the tournament.
+        The poule round's one-based position within the tournament.
     entries : tuple[TournamentEntry, ...]
-        The tournament entries assigned to the poule round, ordered from
-        highest to lowest initial seed. This order determines their snake
-        distribution among the poules.
-    
-    poules : tuple[Poule, ...], init=False
-        The poules that belong in this poule round.
+        The entries assigned to the poule round. Each entry must belong to this tournament
+        and have a unique initial seed from 1 through the number of entries. 
+        Entries are stored in ascending initial-seed order, with seed 1 first.
+    poules : tuple[Poule, ...]
+        The generated poules in poule-number order.
     """
     id: int
     tournament_id: int
@@ -48,21 +48,26 @@ class PouleRound:
     # --- Initialization and Validation Methods ---
     def __post_init__(self) -> None:
         """
-        Validates the ID, tournament ID, round number, and entries, and generates the poules from the entries.
+        Validates the round, sorts its entries by initial seed, and generates its poules.
 
         Raises
         ------
         TypeError
-            If ID, tournament ID, or round number is not an integer, if entries is not a tuple, or if any entry is not a TournamentEntry object.
+            If `id`, `tournament_id`, or `round_number` is not an integer;
+            `entries` is not a tuple; an item is not a `TournamentEntry`; or an
+            initial seed is not an integer.
         ValueError
-            If ID, tournament ID, or round number is not positive, if entries contains fewer than 2 entries, or if any entry's tournament ID does not match the
-            poule round's tournament ID, or if any entry occurs more than once.
+            If `id`, `tournament_id`, or `round_number` is not positive; fewer
+            than two entries are provided; an entry belongs to another
+            tournament or appears more than once; an initial seed is missing,
+            nonpositive, or repeated; or the initial seeds are not exactly the
+            integers from 1 through the number of entries.
         """
         validation.validate_positive_int(self.id, 'PouleRound ID', 'PouleRound')
         validation.validate_positive_int(self.tournament_id, 'Tournament ID', 'PouleRound')
         validation.validate_positive_int(self.round_number, 'Round Number', 'PouleRound')
 
-        self._validate_entries(self.entries, '__post_init__')
+        self._validate_entries(self.entries)
 
         self.entries = tuple(sorted(self.entries, key=lambda entry: entry.initial_seed))
         
@@ -72,18 +77,18 @@ class PouleRound:
     # --- Properties ---
     @property
     def num_poules(self) -> int:
-        """Returns the number of poules in the round."""
+        """Returns the number of poules in this round."""
         return len(self.poules)
 
     @property
     def num_entries(self) -> int:
-        """Returns the number of entries in the round."""
+        """Returns the number of entries in this round."""
         return len(self.entries)
 
 
     # --- Dunder Methods ---
     def __eq__(self, other: object) -> bool:
-        """Checks whether two PouleRound objects are equal based on their ID and tournament ID."""
+        """Returns whether another object represents the same poule round."""
         if not isinstance(other, PouleRound):
             return False
         
@@ -91,63 +96,61 @@ class PouleRound:
 
     # --- Predicate Methods ---
     def has_started(self) -> bool:
-        """Returns whether the poule round has started yet or not - true if any poule in the round has started."""
+        """Returns whether any poule in this round has started."""
         return any(poule.has_started() for poule in self.poules)
 
     def is_complete(self) -> bool:
-        """Checks whether the poule round is complete - true if all the poules in the round are complete."""
+        """Returns whether every poule in this round is complete."""
         return all(poule.is_complete() for poule in self.poules)
     
 
     # --- Poule Access Methods ---
     def get_poule_at(self, index: int) -> Poule:
         """
-        Returns the poule at the specified index.
+        Returns the poule at a specified index.
         
         Parameters
         ----------
         index : int
-            The index of the poule to retrieve.
+            The poule's zero-based position in the round.
 
         Returns
         -------
         Poule
-            The poule at the specified index.
+            The poule at the index.
 
         Raises
         ------
         TypeError
-            If the index is not an integer.
+            If `index` is not an integer.
         ValueError
-            If the index is outside the valid poule range: 0 to (number of poules - 1).
+            If `index` is outside the valid range of poule indices.
         """
         self._validate_poule_index(index, 'get_poule_at')
         return self.poules[index]
     
     def get_match_at(self, poule_index: int, match_index: int) -> PouleMatch:
         """
-        Returns the poule match at the specified poule and match index.
+        Returns a match from a specified poule.
         
         Parameters
         ----------
         poule_index : int
-            The index of the poule to retrieve the match from.
+            The poule's zero-based position in the round.
         match_index : int
-            The index of the match to retrieve from the specified poule.
+            The match's zero-based position in the poule's official bout order.
 
         Returns
         -------
         PouleMatch
-            The match at the specified poule and match index.
+            The match at the specified poule and match indices.
 
         Raises
         ------
         TypeError
-            If either index is not an integer.
+            If `poule_index` or `match_index` is not an integer.
         ValueError
-            If either index is outside its valid range.
-            Poule index must be between 0 and (number of poules - 1).
-            Match index must be between 0 and (number of matches in the poule - 1).
+            If either index is outside its respective valid range.
         """
         self._validate_poule_index(poule_index, 'get_match_at')
         return self.poules[poule_index].get_match_at(match_index)
@@ -157,12 +160,12 @@ class PouleRound:
         Returns the match that should currently be on piste in the specified poule.
 
         If a match in the poule is already in progress, it is returned. Otherwise,
-        the first incomplete match in the official bout order is returned.
+        the first not-started match in the official bout order is returned.
 
         Parameters
         ----------
         poule_index : int
-            The zero-based index of the poule.
+            The poule's zero-based position in the round.
 
         Returns
         -------
@@ -172,9 +175,13 @@ class PouleRound:
         Raises
         ------
         TypeError
-            If the poule index is not an integer.
+            If `poule_index` is not an integer.
         ValueError
-            If the poule index is outside the valid range.
+            If `poule_index` is outside the valid range of poule indices.
+
+        Notes
+        -----
+        This method assumes that each poule is being run one match at a time on one piste.
         """
         self._validate_poule_index(poule_index, 'get_on_piste_match')
         return self.poules[poule_index].get_on_piste_match()
@@ -183,25 +190,25 @@ class PouleRound:
         """
         Returns the next match waiting to fence in the specified poule.
 
-        The on-piste match is excluded, and the first remaining not-started match
-        in the official bout order is returned.
+        The on-piste match is excluded, and the first remaining not-started 
+        match in the official bout order is returned.
         
         Parameters
         ----------
         poule_index : int
-            The index of the poule to retrieve the "on-deck" match from.
+            The poule's zero-based position in the round.
 
         Returns
         -------
         PouleMatch | None
-            The "on-deck" match at the specified poule, or None if there is no match on deck.
+            The match on deck, or None if no match is waiting to fence.
 
         Raises
         ------
         TypeError
-            If the poule index is not an integer.
+            If `poule_index` is not an integer.
         ValueError
-            If the poule index is outside the valid poule range: 0 to (number of poules - 1).
+            If `poule_index` is outside the valid range of poule indices.
         """
         self._validate_poule_index(poule_index, 'get_on_deck_match')
         return self.poules[poule_index].get_on_deck_match()
@@ -210,7 +217,7 @@ class PouleRound:
     # --- Match Result Recording Methods ---
     def record_match_result(self, poule_index: int, match_index: int, score1: int, score2: int) -> None:
         """
-        Records a result for a specified match in a specified poule.
+        Records the result of a specified match in a specified poule.
 
         Parameters
         ----------
@@ -226,7 +233,7 @@ class PouleRound:
         Raises
         ------
         TypeError
-            If either index or score is not an integer.
+            If either index or either score is not an integer.
         ValueError
             If either index is outside its valid range, the match already has a
             forfeit result, or the scores do not form a valid completed result.
@@ -250,10 +257,10 @@ class PouleRound:
         Raises
         ------
         TypeError
-            If the poule index or either score is not an integer.
+            If `poule_index` or either score is not an integer.
         ValueError
-            If the poule index is outside its valid range, the match already has a
-            forfeit result, or the scores do not form a valid completed result.
+            If `poule_index` is outside its valid range, the match already has
+            a forfeit result, or the scores do not form a valid completed result.
         RuntimeError
             If the poule is complete and therefore has no on-piste match.
         """
@@ -266,11 +273,14 @@ class PouleRound:
         """
         Calculates and returns a snapshot of the poule round's current results.
 
+        The matches in each poule remain the source of truth. 
+        Complete ranking ties are shuffled using `random_seed`.
+
         Parameters
         ----------
         random_seed : int | None, optional
-            The seed used to resolve complete ranking ties. If None, complete ties
-            are resolved nondeterministically. Default is None.
+            The seed used to order complete ranking ties. 
+            If `None`, no fixed seed is used. Default is `None`.
 
         Returns
         -------
@@ -280,9 +290,9 @@ class PouleRound:
         Raises
         ------
         TypeError
-            If random_seed is neither an integer nor None.
+            If `random_seed` is neither an integer nor `None`.
         ValueError
-            If random_seed is negative.
+            If `random_seed` is negative.
         """
         return TournamentPouleResults(self.tournament_id, self.poules, random_seed=random_seed)
     
@@ -290,11 +300,14 @@ class PouleRound:
         """
         Calculates and returns the round's entry results in ranked order.
 
+        Entries are ranked by victory ratio, indicator, and touches scored, all
+        in descending order. Complete ties are shuffled using `random_seed`.
+
         Parameters
         ----------
         random_seed : int | None, optional
-            The seed used to resolve complete ranking ties. If None, complete ties
-            are resolved nondeterministically. Default is None.
+            The seed used to order complete ranking ties. 
+            If `None`, no fixed seed is used. Default is `None`.
 
         Returns
         -------
@@ -304,21 +317,21 @@ class PouleRound:
         Raises
         ------
         TypeError
-            If random_seed is neither an integer nor None.
+            If `random_seed` is neither an integer nor `None`.
         ValueError
-            If random_seed is negative.
+            If `random_seed` is negative.
         """
         return self.calculate_results(random_seed).round_results
     
     def calculate_ranked_results_display_names(self, random_seed: int | None = None) -> tuple[str, ...]:
         """
-        Calculates and returns the display names in round ranking order.
+        Calculates and returns entry display names in round ranking order.
 
         Parameters
         ----------
         random_seed : int | None, optional
-            The seed used to resolve complete ranking ties. If None, complete ties
-            are resolved nondeterministically. Default is None.
+            The seed used to order complete ranking ties. 
+            If `None`, no fixed seed is used. Default is `None`.
 
         Returns
         -------
@@ -328,9 +341,9 @@ class PouleRound:
         Raises
         ------
         TypeError
-            If random_seed is neither an integer nor None.
+            If `random_seed` is neither an integer nor `None`.
         ValueError
-            If random_seed is negative.
+            If `random_seed` is negative.
         """
         return self.calculate_results(random_seed).round_results_display_names
 
@@ -338,31 +351,29 @@ class PouleRound:
     # --- Creation Helper Methods ---
     def _calculate_poule_sizes(self, num_entries: int, max_poule_size: int = 7) -> tuple[int, ...]:
         """
-        Calculates the number of poules that there should be and their respective sizes 
-        based on the number of entries in the poule round and the maximum allowable poule size.
-        The poule sizes must be such that all poules differ in size by at most one, and the number of poules is minimized.
+        Calculates balanced poule sizes for a specified number of entries.
+
+        The number of poules is minimized, no poule exceeds `max_poule_size`,
+        and the poules differ in size by at most one.
 
         Parameters
         ----------
         num_entries : int
-            The number of entries in the PouleRound.
-        max_poule_size : int
-            The maximum allowable size for the poules.
+            The number of entries to distribute.
+        max_poule_size : int, optional
+            The maximum allowable poule size. Default is 7.
 
         Returns
         -------
         tuple[int, ...]
-            A tuple of integers where the size of the tuple is the number of poules in the round and the 
-            integer values represent the size of each poule.
+            The size of each poule, with larger poules appearing first.
 
         Raises
         ------
         TypeError
-            If num_entries or max_poule_size is not an integer.
+            If `num_entries` or `max_poule_size` is not an integer.
         ValueError
-            If num_entries is less than 2 or max_poule_size is less than 3.
-        RuntimeError
-            If a valid configuration of poule sizes cannot be found for the given inputs.
+            If `num_entries` is less than 2 or `max_poule_size` is less than 3.
         """
         validation.validate_int_at_least(num_entries, 2, 'num_entries', 'PouleRound', '_calculate_poule_sizes')
         validation.validate_int_at_least(max_poule_size, 3, 'max_poule_size', 'PouleRound', '_calculate_poule_sizes')
@@ -371,7 +382,6 @@ class PouleRound:
         # satisfies the inequality: num_poules * max_poule_size >= num_entries
         num_poules = math.ceil(num_entries / max_poule_size)
 
-        # Use divmod
         integer_quotient, remainder = divmod(num_entries, num_poules)
 
         # Only a difference of one in poule size in poules is allowed upon round initialization
@@ -385,34 +395,33 @@ class PouleRound:
 
     def _assign_entries_to_poules(self, entries: tuple[TournamentEntry, ...], poule_sizes: tuple[int, ...]) -> tuple[tuple[TournamentEntry, ...], ...]:
         """
-        Returns a tuple of tuples of entries that represent the entries in each poule.
+        Assigns entries to poules using snake distribution.
+
+        Entries are assigned in their supplied order. This method therefore
+        expects `entries` to already be in the intended seeding order.
         
         Parameters
         ----------
         entries : tuple[TournamentEntry, ...]
-            The entries to distribute into poules.
+            The validated entries in the order in which they should be distributed.
         poule_sizes : tuple[int, ...]
-            The sizes of each poule.
+            The target size of each poule in poule-index order.
 
         Returns
         -------
         tuple[tuple[TournamentEntry, ...], ...]
-            The entries for each poule in the poule round, distributed in a "snake" pattern.
+            The entries assigned to each poule in poule-index order.
 
         Raises
         ------
         TypeError
-            If entries is not a tuple, 
-            if any entry is not a TournamentEntry object, 
-            if poule_sizes is not a tuple, 
-            or if any poule size is not an integer.
+            If `entries` is not a tuple; an item is not a `TournamentEntry`; an
+            initial seed is not an integer; `poule_sizes` is not a tuple; or a
+            poule size is not an integer.
         ValueError
-            If entries contains less than 2 entries, 
-            if any entry's tournament ID does not match the poule round's tournament ID,
-            if poule_sizes contains less than 1 poule size, 
-            if the sum of poule_sizes does not equal the number of entries, 
-            if any poule size is less than 2,
-            or if any entry appears more than once in entries.
+            If `entries` violates the round's membership, uniqueness, or
+            initial-seed requirements; `poule_sizes` is empty; a poule size is
+            less than 2; or the poule sizes do not sum to the number of entries.
         """
         # Validate inputs
         self._validate_entries(entries, '_assign_entries_to_poules')
@@ -448,34 +457,43 @@ class PouleRound:
 
     def _generate_poules(self, entries: tuple[TournamentEntry, ...], max_poule_size: int = 7) -> tuple[Poule, ...]:
         """
-        Generates the poules from the given input entries.
+        Generates the poules for a collection of entries.
+
+        Entries are distributed in their supplied order, so they must already
+        be ordered by ascending initial seed.
 
         Parameters
         ----------
         entries : tuple[TournamentEntry, ...]
-            The entries to distribute into poules.
-        max_poule_size : int, default=7
-            The maximum allowable size for any poule.
+            The validated entries in ascending initial-seed order.
+        max_poule_size : int, optional
+            The maximum allowable poule size. Default is 7.
 
         Returns
         -------
         tuple[Poule, ...]
-            The poules belonging to this poule round.
+            The generated poules in poule-number order.
 
         Raises
         ------
         TypeError
-            If entries is not a tuple, if any entry is not a TournamentEntry object, or if max_poule_size is not an integer.
+            If `entries` is not a tuple; an item is not a `TournamentEntry`; an
+            initial seed is not an integer; or `max_poule_size` is not an
+            integer.
         ValueError
-            If entries contains less than 2 entries, or if max_size is less than 3, or if any entry's tournament ID does not match the poule round's tournament ID.
+            If `entries` violates the round's membership, uniqueness, or
+            initial-seed requirements; `max_poule_size` is less than 3; or no
+            official bout order exists for a generated poule size.
+        RuntimeError
+            If a generated poule has an unexpected number of matches.
         """
         self._validate_entries(entries, '_generate_poules')
         validation.validate_int_at_least(max_poule_size, 3, 'max_poule_size', 'PouleRound', '_generate_poules')
 
         poules = []
 
-        n = len(entries)
-        poule_sizes = self._calculate_poule_sizes(n, max_poule_size)
+        num_entries = len(entries)
+        poule_sizes = self._calculate_poule_sizes(num_entries, max_poule_size)
 
         entries_by_poule = self._assign_entries_to_poules(entries, poule_sizes)
 
@@ -509,30 +527,39 @@ class PouleRound:
 
         validation.validate_int_in_range(poule_index, 0, self.num_poules - 1, 'poule index', 'PouleRound', method_name)
 
-    def _validate_entries(self, entries: tuple[TournamentEntry, ...], method_name: str) -> None:
+    def _validate_entries(self, entries: tuple[TournamentEntry, ...], method_name: str | None = None) -> None:
         """
-        Validates the entries assigned to this poule round.
+        Validates round membership, uniqueness, and initial seeds for entries.
+
+        The initial seeds must be exactly the integers from 1 through the
+        number of entries, but the entries do not need to be supplied in seed order.
 
         Parameters
         ----------
         entries : tuple[TournamentEntry, ...]
             The tournament entries to validate.
-        method_name : str
-            The name of the method requesting the validation.
+        method_name : str | None, optional
+            The name of the method requesting the validation. 
+            If `None`, error messages identify `PouleRound` without naming 
+            a specific method. Default is `None`.
 
         Raises
         ------
         TypeError
-            If `method_name` is not a string, `entries` is not a tuple, or
-            an item in `entries` is not a TournamentEntry object.
+            If `method_name` is neither a string nor `None`, 
+            `entries` is not a tuple, an item is not a `TournamentEntry`, 
+            or an initial seed is not an integer.
         ValueError
             If fewer than two entries are provided, an entry belongs to another
-            tournament, or an entry appears more than once.
+            tournament or appears more than once, an initial seed is missing,
+            nonpositive, or repeated, or the initial seeds are not exactly the
+            integers from 1 through the number of entries.
         """
-        if not isinstance(method_name, str):
-            raise TypeError(f'method_name must be a string in PouleRound._validate_entries() - got {type(method_name).__name__}')
+        # Validate location input
+        if method_name is not None and not isinstance(method_name, str):
+            raise TypeError(f'method_name must be either a string or None in PouleRound._validate_entries() - got {type(method_name).__name__}')
 
-        location = f'PouleRound.{method_name}()'
+        location = 'PouleRound' if method_name is None else f'PouleRound.{method_name}()'
 
         # Validate entries
         if not isinstance(entries, tuple):
@@ -561,17 +588,16 @@ class PouleRound:
             if initial_seed is None:
                 raise ValueError(f'Entry {entry.id} at index {i} in {location} must have an initial seed')
 
-            validation.validate_positive_int(initial_seed, f'Initial seed for entry {entry.id} at index {i}', 'PouleRound', '_validate_entries')
+            validation.validate_positive_int(initial_seed, f'Initial seed for entry {entry.id} at index {i}', 'PouleRound', method_name)
 
             if initial_seed in seen_initial_seeds:
                 raise ValueError(f'Initial seed {initial_seed} is assigned more than once in {location}')
             
             seen_entry_ids.add(entry.id)
-            seen_initial_seeds.add(entry.initial_seed)
+            seen_initial_seeds.add(initial_seed)
 
         # Verify that all expected initial seeds are present
         expected_initial_seeds = set(range(1, len(entries) + 1))
 
         if seen_initial_seeds != expected_initial_seeds:
-            raise ValueError(f'Initial seeds in {location} must be a one-to-one mapping '
-                             f'with the integers from 1 through {len(entries)}')
+            raise ValueError(f'Initial seeds in {location} must be a one-to-one mapping with the integers from 1 through {len(entries)}')
