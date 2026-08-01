@@ -11,91 +11,88 @@ from poules.results.poule_entry_result import PouleEntryResult
 @dataclass(slots=True)
 class _PouleEntryStats:
     """
-    Stores mutable per-entry statistics while calculating a PouleResult.
-    
+    Accumulates one entry's statistics while calculating a PouleResult.
+
+    A new accumulator starts with all statistics at zero. Each call to `add_match_info()` 
+    records one completed poule bout and updates all four statistics together.
+
     Attributes
     ----------
-    num_matches : int, default=0
-        The number of completed poule bouts fenced by the entry.
-    num_victories : int, default=0
-        The number of completed poule bouts won by the entry.
-    touches_scored : int, default=0
-        The total number of touches scored by the entry in completed poule bouts.
-    touches_received : int, default=0
-        The total number of touches scored against the entry in completed poule bouts.
+    num_matches : int
+        The number of completed poule bouts accumulated. 
+        Initialized to 0.
+    num_victories : int
+        The number of completed poule victories accumulated. 
+        Initialized to 0.
+    touches_scored : int
+        The total number of touches scored in the accumulated bouts.
+        Initialized to 0.
+    touches_received : int
+        The total number of touches received in the accumulated bouts.
+        Initialized to 0.
     """
-    num_matches: int = 0
-    num_victories: int = 0
-    touches_scored: int = 0
-    touches_received: int = 0
-
-
-    # --- Initialization and Validation ---
-    def __post_init__(self) -> None:
-        """
-        Validates the provided attributes.
-        
-        Raises
-        ------
-        TypeError
-            If num_matches, num_victories, touches_scored, or touches_received is not an integer.
-        ValueError
-            If num_matches, num_victories, touches_scored, or touches_received is negative, 
-            if the number of victories is greater than the number of completed matches, or if 
-            touches scored or touches received are present when no matches have been done.
-        """
-        validation.validate_non_negative_int(self.num_matches, 'Number of matches', '_PouleEntryStats')
-        validation.validate_non_negative_int(self.num_victories, 'Number of victories', '_PouleEntryStats')
-        validation.validate_non_negative_int(self.touches_scored, 'Touches scored', '_PouleEntryStats')
-        validation.validate_non_negative_int(self.touches_received, 'Touches received', '_PouleEntryStats')
-
-        if self.num_victories > self.num_matches:
-            raise ValueError(f'The number of victories cannot exceed the number of matches in _PouleEntryStats - got {self.num_victories} victories and {self.num_matches} matches')
-        
-        if self.num_matches == 0:
-            if self.touches_scored > 0:
-                raise ValueError(f'Touches scored must be 0 when no matches have been completed in _PouleEntryStats - got {self.touches_scored}')
-            if self.touches_received > 0:
-                raise ValueError(f'Touches received must be 0 when no matches have been completed in _PouleEntryStats - got {self.touches_received}')
+    num_matches: int = field(default=0, init=False)
+    num_victories: int = field(default=0, init=False)
+    touches_scored: int = field(default=0, init=False)
+    touches_received: int = field(default=0, init=False)
 
 
     # --- Properties ---
     @property
     def stats(self) -> tuple[int, int, int, int]:
-        """Return statistics as matches, victories, touches scored, and touches received."""
-        return self.num_matches, self.num_victories, self.touches_scored, self.touches_received
+        """
+        Return the accumulated statistics as a tuple.
+
+        Returns
+        -------
+        tuple[int, int, int, int]
+            The number of matches, number of victories, 
+            touches scored, and touches received, in that order.
+        """
+        return (self.num_matches, self.num_victories, self.touches_scored, self.touches_received)
 
 
-    # --- Counter Methods ---
-    def add_match(self) -> None:
-        """Adds one match count to the total count of matches."""
+    # --- Stat Update Methods ---
+    def add_match_info(self, is_victory: bool, touches_scored: int, touches_received: int) -> None:
+        """
+        Add one completed poule bout to the accumulated statistics.
+
+        Parameters
+        ----------
+        is_victory : bool
+            Whether the entry won the bout.
+        touches_scored : int
+            The number of touches scored by the entry in the bout.
+        touches_received : int
+            The number of touches scored against the entry in the bout.
+
+        Raises
+        ------
+        TypeError
+            If `is_victory` is not a bool, or if either touch total is not an integer.
+        ValueError
+            If either touch total is negative, if the scores are tied, or if
+            `is_victory` is inconsistent with the scores.
+        """
+        if type(is_victory) is not bool:
+            raise TypeError(f'is_victory in _PouleEntryStats.add_match_info() must be a bool - got {type(is_victory).__name__}')
+
+        validation.validate_non_negative_int(touches_scored, 'touches scored', '_PouleEntryStats', 'add_match_info')
+        validation.validate_non_negative_int(touches_received, 'touches received', '_PouleEntryStats', 'add_match_info')
+        
+        if touches_scored == touches_received:
+            raise ValueError(f'Touches scored cannot equal touches received in _PouleEntryStats.add_match_info() - matches cannot end in ties')
+        
+        if is_victory and touches_scored < touches_received:
+            raise ValueError(f'If is_victory is True, touches scored cannot be less than touches received in _PouleEntryStats.add_match_info()')
+
+        if not is_victory and touches_scored > touches_received:
+            raise ValueError(f'If is_victory is False, touches scored cannot be greater than touches received in _PouleEntryStats.add_match_info()')
+
         self.num_matches += 1
-
-    def add_victory(self) -> None:
-        """Adds one victory count to the total count of victories."""
-        self.num_victories += 1
-
-    def add_touches_scored(self, touches: int) -> None:
-        """
-        Adds the specified number of touches to total touches scored count.
-        
-        Parameters
-        ----------
-        touches : int
-            The number of touches to add.
-        """
-        self.touches_scored += touches
-
-    def add_touches_received(self, touches: int) -> None:
-        """
-        Adds the specified number of touches to total touches received count.
-        
-        Parameters
-        ----------
-        touches : int
-            The number of touches to add.
-        """
-        self.touches_received += touches
+        self.num_victories += 1 if is_victory else 0
+        self.touches_scored += touches_scored
+        self.touches_received += touches_received
 
 
 @dataclass(frozen=True, slots=True)
@@ -184,18 +181,42 @@ class PouleResult:
     # --- Properties ---
     @property
     def entries(self) -> tuple[TournamentEntry, ...]:
-        """Returns the entries represented by this poule result."""
+        """
+        Return the entries represented by this poule result.
+
+        Returns
+        -------
+        tuple[TournamentEntry, ...]
+            The entries in the same order as `entry_results`.
+        """        
         return tuple(result.entry for result in self.entry_results)
     
     @property
     def ranked_results(self) -> tuple[PouleEntryResult, ...]:
-        """Returns the tuple of poule entry results in descending ranked order."""
+        """
+        Return the entry results in descending poule ranking order.
+
+        Results are ordered by victory ratio, indicator, and touches scored.
+        Exact ties are ordered alphabetically by display name for consistent
+        display; alphabetical order is not a seeding tiebreaker.
+
+        Returns
+        -------
+        tuple[PouleEntryResult, ...]
+            The entry results in descending poule ranking order.
+        """
         return self._calculate_ranked_results()
     
-    
-    # --- Display Methods ---
-    def get_ranked_results_display_names(self) -> tuple[str, ...]:
-        """Returns the tuple of display names of the ranked results in descending ranked order."""
+    @property
+    def ranked_results_display_names(self) -> tuple[str, ...]:
+        """
+        Return the display names in the same order as `ranked_results`.
+
+        Returns
+        -------
+        tuple[str, ...]
+            The entries' display names in descending poule ranking order.
+        """        
         ranked_results = self.ranked_results
         return tuple(result.display_name for result in ranked_results)
     
@@ -242,17 +263,11 @@ class PouleResult:
                 for entry_index, entry in enumerate(match.entries):
                     entry_stats = results_tracker[entry.id]
                     
-                    entry_stats.add_match()
-
-                    if entry_index == winner_index:
-                        entry_stats.add_victory()
-                    
-                    if entry_index == 0:
-                        entry_stats.add_touches_scored(match.score1)
-                        entry_stats.add_touches_received(match.score2)
-                    else: 
-                        entry_stats.add_touches_scored(match.score2)
-                        entry_stats.add_touches_received(match.score1)
+                    entry_stats.add_match_info(
+                        is_victory = True if entry_index == winner_index else False, 
+                        touches_scored = match.score1 if entry_index == 0 else match.score2, 
+                        touches_received = match.score2 if entry_index == 0 else match.score1
+                    )
 
         # Create a list of the derived PouleEntryResult statistics
         entry_results: list[PouleEntryResult] = []

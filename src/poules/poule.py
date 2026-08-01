@@ -254,7 +254,7 @@ class Poule:
     def calculate_ranked_results_display_names(self) -> tuple[str, ...]:
         """Returns the entries' display names in current poule ranking order."""
         poule_result = self.calculate_results()
-        return poule_result.get_ranked_results_display_names()
+        return poule_result.ranked_results_display_names
 
 
     # --- Match Generation Helper Methods ---
