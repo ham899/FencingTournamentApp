@@ -1,8 +1,11 @@
 import copy
 import pytest
 
+from dataclasses import FrozenInstanceError
+
 from entities.fencer import Fencer
 from entities.tournament_entry import TournamentEntry
+from factories import make_entries, make_poule_match, make_poule
 from matches.poule_match import PouleMatch
 from poules.poule_orders import POULE_BOUT_ORDER
 from poules.results.poule_result import PouleResult, _PouleEntryStats
@@ -30,27 +33,6 @@ POULE_ID1, POULE_ID2 = 1, 2
 TOURNY_ID1, TOURNY_ID2 = 1, 2
 
 INVALID_ID_TYPES = [None, 'ABC', 1.0, True, [], (1,), {}]
-
-
-# --- Helper Functions ---
-def make_poule_match(
-    entry1: TournamentEntry, 
-    entry2: TournamentEntry, 
-    *, 
-    match_id: int = MATCH_ID1, 
-    tournament_id: int = TOURNY_ID1, 
-    poule_id: int = POULE_ID1,
-    match_index: int = 0
-) -> PouleMatch:
-    """Creates a valid uncompleted PouleMatch for use in tests."""
-    return PouleMatch(
-        id=match_id, 
-        tournament_id=tournament_id, 
-        entry1=entry1, 
-        entry2=entry2, 
-        poule_id=poule_id, 
-        match_index=match_index
-    )
 
 
 # --- Fixtures ---
@@ -108,11 +90,30 @@ def incomplete_poule_matches(entries):
         fencer1_index, fencer2_index = fencer1_number - 1, fencer2_number - 1
         entry1, entry2 = entries[fencer1_index], entries[fencer2_index]
 
-        match = make_poule_match(entry1, entry2, match_id=MATCH_ID1+i, match_index=i)
+        match = PouleMatch(id=MATCH_ID1+i, tournament_id=TOURNY_ID1, entry1=entry1, entry2=entry2, poule_id=POULE_ID1, match_index=i)
 
         matches.append(match)
 
     return tuple(matches)
+
+@pytest.fixture
+def partially_completed_poule_matches(incomplete_poule_matches):
+    # Make a list of tuples holding the scores of the matches based on the paper example
+    match_scores = [
+        (3,5), (1,5), (5,4), (4,5), (5,2), (1,5), (5,2),
+        (5,4), (2,5), (3,5), (5,3), (5,0), (5,2), (5,1), 
+        (5,3), (5,1), (3,5), (3,5), (3,5), (5,1), (5,2)
+    ]
+
+    # Copy the incomplete poule matches
+    partially_completed_poule_matches = copy.deepcopy(incomplete_poule_matches)
+
+    # Record results for each match based on the set match scores
+    for i in range(10):
+        score1, score2 = match_scores[i]
+        partially_completed_poule_matches[i].record_score(score1, score2)
+
+    return partially_completed_poule_matches
     
 @pytest.fixture
 def completed_poule_matches(incomplete_poule_matches):
@@ -213,7 +214,7 @@ def test__poule_entry_stats_add_match_info_invalid_touches_scored_type(poule_ent
     with pytest.raises(TypeError):
         poule_entry_stats.add_match_info(True, invalid_touches_scored_type, 0)
 
-@pytest.mark.parametrize('invalid_touches_scored_value', [-100, -5, -1])
+@pytest.mark.parametrize('invalid_touches_scored_value', [-10, -5, -1])
 def test__poule_entry_stats_add_match_info_invalid_touches_scored_value(poule_entry_stats, invalid_touches_scored_value):
     with pytest.raises(ValueError):
         poule_entry_stats.add_match_info(False, invalid_touches_scored_value, 0)
@@ -223,7 +224,7 @@ def test__poule_entry_stats_add_match_info_invalid_touches_received_type(poule_e
     with pytest.raises(TypeError):
         poule_entry_stats.add_match_info(False, 0, invalid_touches_received_type)
 
-@pytest.mark.parametrize('invalid_touches_received_value', [-100, -5, -1])
+@pytest.mark.parametrize('invalid_touches_received_value', [-10, -5, -1])
 def test__poule_entry_stats_add_match_info_invalid_touches_received_value(poule_entry_stats, invalid_touches_received_value):
     with pytest.raises(ValueError):
         poule_entry_stats.add_match_info(True, 0, invalid_touches_received_value)
@@ -326,26 +327,6 @@ def test_poule_result_creation_valid_completed_matches(entries, completed_poule_
     assert poule_result.entry_results[6].touches_received == 26
     assert poule_result.entry_results[6].indicator == -7
 
-@pytest.mark.parametrize('invalid_poule_id_type', INVALID_ID_TYPES)
-def test_poule_result_creation_invalid_poule_id_type(entries, completed_poule_matches, invalid_poule_id_type):
-    with pytest.raises(TypeError):
-        PouleResult(entries, completed_poule_matches, invalid_poule_id_type, TOURNY_ID1)
-
-@pytest.mark.parametrize('invalid_poule_id_value', [-100, -10, -1, 0])
-def test_poule_result_creation_invalid_poule_id_negative(entries, completed_poule_matches, invalid_poule_id_value):
-    with pytest.raises(ValueError):
-        PouleResult(entries, completed_poule_matches, invalid_poule_id_value, TOURNY_ID1)
-
-@pytest.mark.parametrize('invalid_tournament_id_type', INVALID_ID_TYPES)
-def test_poule_result_creation_invalid_tournament_id_type(entries, completed_poule_matches, invalid_tournament_id_type):
-    with pytest.raises(TypeError):
-        PouleResult(entries, completed_poule_matches, POULE_ID1, invalid_tournament_id_type)
-
-@pytest.mark.parametrize('invalid_tournament_id_value', [-100, -10, -1, 0])
-def test_poule_result_creation_invalid_tournament_id_negative(entries, completed_poule_matches, invalid_tournament_id_value):
-    with pytest.raises(ValueError):
-        PouleResult(entries, completed_poule_matches, POULE_ID1, invalid_tournament_id_value)
-
 @pytest.mark.parametrize('invalid_entries_type', [None, False, 'Jack', 0.0, 1])
 def test_poule_result_creation_invalid_entries_type(invalid_entries_type, completed_poule_matches):
     with pytest.raises(TypeError):
@@ -402,6 +383,105 @@ def test_poule_result_creation_invalid_entries_has_duplicate_entry(invalid_entri
 def test_poule_result_creation_invalid_entries_fewer_than_two_entries_present(invalid_entries_too_few_entries, completed_poule_matches):
     with pytest.raises(ValueError):
         PouleResult(invalid_entries_too_few_entries, completed_poule_matches, POULE_ID1, TOURNY_ID1)
+
+@pytest.mark.parametrize('invalid_matches_type', [None, True, False, 1, 0.0, 'matches'])
+def test_poule_result_creation_invalid_matches_type(entries, invalid_matches_type):
+    with pytest.raises(TypeError):
+        PouleResult(entries, invalid_matches_type, POULE_ID1, TOURNY_ID1)
+
+@pytest.mark.parametrize('invalid_matches_item_type',
+                         [
+                             (
+                                 PouleMatch(id=1, 
+                                            tournament_id=TOURNY_ID1, 
+                                            entry1=TournamentEntry(ENTRY_ID1, TOURNY_ID1, Fencer(FENCER_ID1, FENCER_DISPLAY_NAME1)), 
+                                            entry2=TournamentEntry(ENTRY_ID2, TOURNY_ID1, Fencer(FENCER_ID2, FENCER_DISPLAY_NAME2)),
+                                            poule_id=POULE_ID1,
+                                            match_index=0), 
+                                 PouleMatch(id=2, 
+                                            tournament_id=TOURNY_ID1, 
+                                            entry1=TournamentEntry(ENTRY_ID1, TOURNY_ID1, Fencer(FENCER_ID1, FENCER_DISPLAY_NAME1)), 
+                                            entry2=TournamentEntry(ENTRY_ID3, TOURNY_ID1, Fencer(FENCER_ID3, FENCER_DISPLAY_NAME3)),
+                                            poule_id=POULE_ID1,
+                                            match_index=1), 
+                                True
+                             ),
+                             (
+                                 PouleMatch(id=1, 
+                                            tournament_id=TOURNY_ID1, 
+                                            entry1=TournamentEntry(ENTRY_ID1, TOURNY_ID1, Fencer(FENCER_ID1, FENCER_DISPLAY_NAME1)), 
+                                            entry2=TournamentEntry(ENTRY_ID2, TOURNY_ID1, Fencer(FENCER_ID2, FENCER_DISPLAY_NAME2)),
+                                            poule_id=POULE_ID1,
+                                            match_index=0), 
+                                 'Henry',
+                                 PouleMatch(id=2, 
+                                            tournament_id=TOURNY_ID1, 
+                                            entry1=TournamentEntry(ENTRY_ID2, TOURNY_ID1, Fencer(FENCER_ID2, FENCER_DISPLAY_NAME2)), 
+                                            entry2=TournamentEntry(ENTRY_ID3, TOURNY_ID1, Fencer(FENCER_ID3, FENCER_DISPLAY_NAME3)),
+                                            poule_id=POULE_ID1,
+                                            match_index=2)
+                             ),
+                             (
+                                 0.0,
+                                 PouleMatch(id=2, 
+                                            tournament_id=TOURNY_ID1, 
+                                            entry1=TournamentEntry(ENTRY_ID1, TOURNY_ID1, Fencer(FENCER_ID1, FENCER_DISPLAY_NAME1)), 
+                                            entry2=TournamentEntry(ENTRY_ID3, TOURNY_ID1, Fencer(FENCER_ID3, FENCER_DISPLAY_NAME3)),
+                                            poule_id=POULE_ID1,
+                                            match_index=1), 
+                                 PouleMatch(id=3, 
+                                            tournament_id=TOURNY_ID1, 
+                                            entry1=TournamentEntry(ENTRY_ID2, TOURNY_ID1, Fencer(FENCER_ID2, FENCER_DISPLAY_NAME2)), 
+                                            entry2=TournamentEntry(ENTRY_ID3, TOURNY_ID1, Fencer(FENCER_ID3, FENCER_DISPLAY_NAME3)),
+                                            poule_id=POULE_ID1,
+                                            match_index=2)
+                             )
+                         ]
+)
+def test_poule_result_creation_invalid_matches_item_type(entries, invalid_matches_item_type):
+    with pytest.raises(TypeError):
+        PouleResult(entries[:3], invalid_matches_item_type, POULE_ID1, TOURNY_ID1)
+
+def test_poule_result_creation_invalid_matches_too_few_matches():
+    pass
+
+def test_poule_result_creation_invalid_matches_too_many_matches():
+    pass
+
+def tests_poule_result_creation_invalid_matches_match_wrong_tournament_id():
+    pass
+
+def tests_poule_result_creation_invalid_matches_match_wrong_poule_id():
+    pass
+
+def tests_poule_result_creation_invalid_matches_match_wrong_entry():
+    pass
+
+def tests_poule_result_creation_invalid_matches_match_duplicate_present():
+    pass
+
+def tests_poule_result_creation_invalid_matches_match_duplicate_entries():
+    pass
+
+@pytest.mark.parametrize('invalid_poule_id_type', INVALID_ID_TYPES)
+def test_poule_result_creation_invalid_poule_id_type(entries, completed_poule_matches, invalid_poule_id_type):
+    with pytest.raises(TypeError):
+        PouleResult(entries, completed_poule_matches, invalid_poule_id_type, TOURNY_ID1)
+
+@pytest.mark.parametrize('invalid_poule_id_value', [-10, -1, 0])
+def test_poule_result_creation_invalid_poule_id_value(entries, completed_poule_matches, invalid_poule_id_value):
+    with pytest.raises(ValueError):
+        PouleResult(entries, completed_poule_matches, invalid_poule_id_value, TOURNY_ID1)
+
+@pytest.mark.parametrize('invalid_tournament_id_type', INVALID_ID_TYPES)
+def test_poule_result_creation_invalid_tournament_id_type(entries, completed_poule_matches, invalid_tournament_id_type):
+    with pytest.raises(TypeError):
+        PouleResult(entries, completed_poule_matches, POULE_ID1, invalid_tournament_id_type)
+
+@pytest.mark.parametrize('invalid_tournament_id_value', [-10, -1, 0])
+def test_poule_result_creation_invalid_tournament_id_value(entries, completed_poule_matches, invalid_tournament_id_value):
+    with pytest.raises(ValueError):
+        PouleResult(entries, completed_poule_matches, POULE_ID1, invalid_tournament_id_value)
 
 
 # --- Property Tests ---
