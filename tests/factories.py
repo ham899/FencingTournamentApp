@@ -12,7 +12,7 @@ NAME_POOL = (
     'Emily',
     'Michael',
     'Sarah',
-    'David',
+    'Dave',
     'Jill',
     'Parsa',
     'Chantelle',
@@ -73,12 +73,12 @@ def make_entries(n: int, tournament_id: int, *, initial_seed: bool = False, de_s
     """Creates a tuple of valid TournamentEntry objects for use in tests."""
     return tuple(
         make_tournament_entry(
-            id = i, 
+            id = i + 1, 
             tournament_id = tournament_id,
-            fencer = make_fencer(i, NAME_POOL[i]), 
-            initial_seed = i if initial_seed else None, 
-            de_seed = i if de_seed else None
-        ) for i in range(1, n + 1)
+            fencer = make_fencer(i + 1, NAME_POOL[i]), 
+            initial_seed = i + 1 if initial_seed else None, 
+            de_seed = i + 1 if de_seed else None
+        ) for i in range(n)
     )
 
 def make_poule_match(
@@ -111,13 +111,13 @@ def make_poule_matches(
         poule_id: int, 
         tournament_id: int,
         *,
-        scores: tuple[int, int] = None) -> tuple[PouleMatch, ...]:
+        scores: tuple[tuple[int, int], ...] = None) -> tuple[PouleMatch, ...]:
     """Creates a tuple of PouleMatch objects based on the official bout order."""
     bout_order = POULE_BOUT_ORDER[len(entries)]
 
     matches = []
 
-    for i, fencer_number1, fencer_number2 in enumerate(bout_order):
+    for i, (fencer_number1, fencer_number2) in enumerate(bout_order):
         entry1 = entries[fencer_number1 - 1]
         entry2 = entries[fencer_number2 - 1]
 
@@ -129,8 +129,8 @@ def make_poule_matches(
                 entry2 = entry2, 
                 poule_id = poule_id, 
                 match_index = i,
-                score1 = scores[i][0] if scores is None else None,
-                score2 = scores[i][1] if scores is None else None
+                score1 = scores[i][0] if scores is not None else None,
+                score2 = scores[i][1] if scores is not None else None
             )
         )
 
@@ -142,13 +142,13 @@ def make_poule(
         poule_number: int, 
         entries: tuple[TournamentEntry, ...],
         *,
-        scores: tuple[int, int] = None) -> Poule:
+        scores: tuple[tuple[int, int], ...] = None) -> Poule:
     """Creates a valid Poule for use in tests."""
     poule = Poule(id, tournament_id, poule_number, entries=entries)
 
     # Record scores if provided
     if scores:
-        for i, score1, score2 in enumerate(scores):
+        for i, (score1, score2) in enumerate(scores):
             poule.record_match_result(i, score1, score2)
     
     return poule 
