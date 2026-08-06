@@ -202,6 +202,15 @@ def test_poule_result_creation_invalid_matches_match_wrong_entry(num_entries, ma
     with pytest.raises(ValueError, match='which is not a valid entry ID in this poule result'):
         PouleResult(entries, matches, POULE_ID1, TOURNY_ID1)
 
+def test_poule_result_creation_invalid_match_contains_same_entry_twice():
+    entries = factories.make_entries(3, TOURNY_ID1, initial_seed=True)
+    matches = list(factories.make_poule_matches(entries, POULE_ID1, TOURNY_ID1))
+
+    matches[0].entry2 = matches[0].entry1
+
+    with pytest.raises(ValueError, match='cannot contain the same entry twice'):
+        PouleResult(entries, tuple(matches), POULE_ID1, TOURNY_ID1)
+
 @pytest.mark.parametrize(('index', 'num_entries'), [(1, 3), (3, 4), (6, 5), (7, 6), (10, 7)])
 def test_poule_result_creation_invalid_matches_match_duplicate_present(index, num_entries):
     entries = factories.make_entries(n=num_entries, tournament_id=TOURNY_ID1, initial_seed=True)
