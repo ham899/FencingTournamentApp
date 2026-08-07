@@ -1,105 +1,130 @@
+import copy
 import pytest
-import random
 
-from constants import (
-    MATCH_ID1,
-    POULE_ID1,
-    TOURNY_ID1,
-)
+from itertools import combinations
 
+import factories
+
+from constants import POULE_ID1, TOURNY_ID1, TOURNY_ID2
+
+from entities.fencer import Fencer
+from entities.tournament_entry import TournamentEntry
 from poules.poule import Poule
+from poules.poule_orders import POULE_BOUT_ORDER
 
 
 # --- Constants ---
 POULE_NUMBER1 = 1
-INVALID_ID_TYPES = [None, 'ABC', 1.0, True, ['F81C3'], (1,), {}]
 
 
 # --- Fixtures ---
 @pytest.fixture
-def entries(entry1, entry2, 
-            entry3, entry4, 
-            entry5, entry6, 
-            entry7):
-    return (entry1, entry2, 
-            entry3, entry4, 
-            entry5, entry6, 
-            entry7)
+def entries(entry1, entry2, entry3, entry4, entry5, entry6, entry7):
+    return (entry1, entry2, entry3, entry4, entry5, entry6, entry7)
 
 @pytest.fixture
-def poule(entries): return Poule(POULE_ID1, TOURNY_ID1, POULE_NUMBER1, entries)
+def poule(entries): 
+    return Poule(POULE_ID1, TOURNY_ID1, POULE_NUMBER1, entries)
 
 
-# --- Method Tests ---
-def test_poule__create_match(poule):
-    match = poule._create_match(match_id=MATCH_ID1, match_index=0, match_pair=(1, 2), entries=poule.entries)
-    
-    assert match.id == 1
-    assert match.match_index == 0
-    
-    assert match.poule_id == POULE_ID1
-    assert match.tournament_id == TOURNY_ID1
-    
-    assert match.entries == (poule.entries[0], poule.entries[1])
+# --- Match Generation Tests ---
+@pytest.mark.parametrize('size', [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+def test_poule_generate_matches(size):
+    entries = factories.make_entries(size, TOURNY_ID1, initial_seed=True)
+
+    poule = Poule(POULE_ID1, TOURNY_ID1, POULE_NUMBER1, entries)
+
+    assert poule.size == size
+
+    bout_order = POULE_BOUT_ORDER[poule.size]
+
+    # Verify that all entry pairs are present exactly once in the generated matches
+    expected_entry_pairs = {frozenset((entry1.id, entry2.id)) for entry1, entry2 in combinations(entries, 2)}
+    generated_entry_pairs = {frozenset((match.entry1.id, match.entry2.id)) for match in poule.matches}
+
+    assert len(poule.matches) == len(bout_order)
+    assert generated_entry_pairs == expected_entry_pairs
+
+    # Verify that the generated match sequence follows the official bout order
+    for i, (fencer_number1, fencer_number2) in enumerate(bout_order):
+        index1, index2 = fencer_number1 - 1, fencer_number2 - 1
+
+        match = poule.matches[i]
+
+        entry_pair = (poule.entries[index1], poule.entries[index2])
+
+        assert match.id == i + 1
+        assert match.match_index == i
+        assert match.poule_id == poule.id
+        assert match.tournament_id == poule.tournament_id
+        assert match.entries == entry_pair
+
+
+
+
+# --- Predicate Method Tests ---
+def test_poule_has_not_started_initially(poule):
+    assert not poule.has_started()
+
+def test_poule_has_started(poule):
+    poule.record_match_result(5, 5, 2)
+
+    assert poule.has_started()
+
+def test_poule_is_not_complete_initially(poule):
+    assert not poule.is_complete()
+
+def test_poule_is_not_complete_with_remaining_matches(poule):
+    for _ in range(poule.number_matches // 2):
+        poule.record_on_piste_match_result(5, 2)
+
+    assert not poule.is_complete()
+
+def test_poule_is_complete(poule):
+    for _ in range(poule.number_matches):
+        poule.record_on_piste_match_result(3, 5)
+
+    assert poule.is_complete()
+
+def test_poule_has_entry_valid_returns_true(poule):
+    valid_entry_in_poule = copy.deepcopy(poule.entries[0])
+
+    assert poule.has_entry(valid_entry_in_poule)
+
+def test_poule_has_entry_valid_returns_false(poule):
+    valid_entry_not_in_poule = TournamentEntry(8, TOURNY_ID1, Fencer(8, 'Robert'), initial_seed=8)
+
+    assert not poule.has_entry(valid_entry_not_in_poule)
+
+@pytest.mark.parametrize('invalid_entry_type', [None, False, True, 0, 1.0, 'Rob', Fencer(8, 'Robert'), [], (), {}])
+def test_poule_has_entry_invalid_entry_type(poule, invalid_entry_type):
+    with pytest.raises(TypeError):
+        poule.has_entry(invalid_entry_type)
+
+def test_poule_has_entry_invalid_entry_wrong_tournament(poule):
+    invalid_entry_wrong_tournament = TournamentEntry(8, TOURNY_ID2, Fencer(8, 'Robert'), initial_seed=8)
+
+    with pytest.raises(ValueError):
+        poule.has_entry(invalid_entry_wrong_tournament)
         
-    assert match.is_incomplete()
-    assert match.winner() is None
 
-@pytest.mark.parametrize('invalid_match_id_type', INVALID_ID_TYPES)
-def test_poule__create_match_invalid_match_id_type(poule, invalid_match_id_type):
+# --- Match Access Method Tests ---
+@pytest.mark.parametrize('index', [0, 5, 10, 15, 20])
+def test_poule_get_match_at(poule, index):
+    assert poule.get_match_at(index) is poule.matches[index]
+
+@pytest.mark.parametrize('invalid_index_type', [None, False, True, 0.0, 1.0, 'first', (), [], {}])
+def test_poule_get_match_at_invalid_index_type(poule, invalid_index_type):
     with pytest.raises(TypeError):
-        poule._create_match(match_id=invalid_match_id_type, match_index=0, match_pair=(1, 2), entries=poule.entries)
+        poule.get_match_at(invalid_index_type)
 
-@pytest.mark.parametrize('invalid_match_id_value', [-10, -1, 0])
-def test_poule__create_match_invalid_match_id_value(poule, invalid_match_id_value):
+@pytest.mark.parametrize('invalid_index_value', [-100, -1, 21, 100])
+def test_poule_get_match_at_invalid_index_value(poule, invalid_index_value):
     with pytest.raises(ValueError):
-        poule._create_match(match_id=invalid_match_id_value, match_index=0, match_pair=(1, 2), entries=poule.entries)
+        poule.get_match_at(invalid_index_value)
 
-@pytest.mark.parametrize('invalid_match_index_type', [None, 'second', 1.0, True, False, [], (1,), {}])
-def test_poule__create_match_invalid_match_index_type(poule, invalid_match_index_type):
-    with pytest.raises(TypeError):
-        poule._create_match(match_id=MATCH_ID1, match_index=invalid_match_index_type, match_pair=(1, 2), entries=poule.entries)
-
-@pytest.mark.parametrize('invalid_match_index_value', [-10, -1, 21, 22, 100]) # Assumes a poule of size 7 based on current fixture size
-def test_poule__create_match_invalid_match_index_value(poule, invalid_match_index_value):
-    with pytest.raises(ValueError):
-        poule._create_match(match_id=MATCH_ID1, match_index=invalid_match_index_value, match_pair=(1, 2), entries=poule.entries)
-
-@pytest.mark.parametrize('invalid_match_pair_type', [None, 'Ron vs. Bill', 0, 1.0, True, False, [], [1,2], {}])
-def test_poule__create_match_invalid_match_pair_type(poule, invalid_match_pair_type):
-    with pytest.raises(TypeError):
-        poule._create_match(match_id=MATCH_ID1, match_index=0, match_pair=invalid_match_pair_type, entries=poule.entries)
-
-@pytest.mark.parametrize('invalid_match_pair_invalid_element_type', [(None, 1), (1, 'Bob'), (1, 1.0), (False, True), ([], 1), (2, {}), ((1,), 2)])
-def test_poule__create_match_invalid_match_tuple_pair_types(poule, invalid_match_pair_invalid_element_type):
-    with pytest.raises(TypeError):
-        poule._create_match(match_id=MATCH_ID1, match_index=0, match_pair=invalid_match_pair_invalid_element_type, entries=poule.entries)
-
-@pytest.mark.parametrize('invalid_match_pair_length', [(1,), (1, 2, 3), (1, 2, 3, 4)])
-def test_poule__create_match_invalid_match_tuple_pair_length(poule, invalid_match_pair_length):
-    with pytest.raises(ValueError):
-        poule._create_match(match_id=MATCH_ID1, match_index=0, match_pair=invalid_match_pair_length, entries=poule.entries)
-
-@pytest.mark.parametrize('invalid_match_pair_values', [(0, 1), (1, 8), (2, 9), (99, 100), (3, -1), (-1, -2)]) # Assumes a poule of size 7 based on current fixture size
-def test_poule__create_match_invalid_match_tuple_pair_values_out_of_bounds(poule, invalid_match_pair_values):
-    with pytest.raises(ValueError):
-        poule._create_match(match_id=MATCH_ID1, match_index=0, match_pair=invalid_match_pair_values, entries=poule.entries)
-
-def test_poule_generate_matches(poule):
-    assert poule.size == 7
-    
-    # Match 1: (1,4)
-    assert poule.matches[0].entries == (poule.entries[0], poule.entries[3])
-
-    # Match 2: (2,5)
-    assert poule.matches[1].entries == (poule.entries[1], poule.entries[4])
-    
-    # Match 3: (3,6)
-    assert poule.matches[2].entries == (poule.entries[2], poule.entries[5])
-
-def test_poule_get_on_piste_match(poule):
-    # First match in poule of 7: (1,4)
-    on_piste_match = poule.get_on_piste_match()
+def test_poule_get_on_piste_match_first_match(poule):
+    on_piste_match = poule.get_on_piste_match() # First match in poule of 7: (1,4)
 
     assert on_piste_match.id == 1
     assert on_piste_match.poule_id == POULE_ID1
@@ -107,35 +132,53 @@ def test_poule_get_on_piste_match(poule):
     assert on_piste_match.entries == (poule.entries[0], poule.entries[3])
 
     assert not on_piste_match.is_complete()
-    assert on_piste_match.winner() == None
+    assert on_piste_match.winner() is None
 
-    # Perform all matches
+def test_poule_get_on_piste_match_match_done_out_of_order(poule):
+    poule.record_match_result(5, 5, 2)
+
+    assert poule.get_on_piste_match() is poule.matches[0]
+
+def test_poule_get_on_piste_match_no_on_piste_match(poule):
     for _ in range(poule.number_matches):
         poule.record_on_piste_match_result(5, 0)
 
     assert poule.get_on_piste_match() is None
 
-def test_poule_get_on_deck_match(poule):
+def test_poule_get_on_deck_match_first_on_deck_match(poule):
     # Second match in poule of 7: (2,5)
     next_match = poule.get_on_deck_match()
 
     assert next_match.id == 2
-    assert next_match.poule_id == POULE_ID1
+    assert next_match.poule_id == poule.id
 
     assert next_match.entries == (poule.entries[1], poule.entries[4])
 
     assert not next_match.is_complete()
-    assert next_match.winner() == None
+    assert next_match.winner() is None
 
-    # Complete all matches up to the last match
+def test_poule_get_on_deck_match_skips_completed_match(poule):
+    poule.record_match_result(1, 5, 0)
+
+    assert poule.get_on_deck_match() is poule.matches[2]
+
+def test_poule_get_on_deck_match_when_no_match_on_deck(poule):
     for _ in range(poule.number_matches - 1):
         poule.record_on_piste_match_result(5, 0)
 
     assert poule.get_on_deck_match() is None
 
+def test_poule_get_on_deck_match_when_poule_complete(poule):
+    for _ in range(poule.number_matches):
+        poule.record_on_piste_match_result(5, 0)
+
+    assert poule.get_on_deck_match() is None
+
+
+# --- Match Result Recording Tests ---
 def test_poule_record_match_result(poule):
     index = 5
-    poule.record_match_result(index=index, score1=2, score2=3)
+    poule.record_match_result(index, 2, 3)
     
     # Check that first match is still incomplete
     match_1 = poule.matches[0]
@@ -159,147 +202,204 @@ def test_poule_record_match_result(poule):
     assert match_2.score2 == 3
     
     assert match_2.is_complete()
-    assert match_2.winner() == match_2.entry2
+    assert match_2.winner() is match_2.entry2
 
-def test_poule_record_match_result_invalid(poule):
-    # Invalid match index
+@pytest.mark.parametrize('invalid_index_type', [None, False, True, 0.0, 1.0, 'first', [], (), {}])
+def test_poule_record_match_result_invalid_index_type(poule, invalid_index_type):
     with pytest.raises(TypeError):
-        poule.record_match_result(index='ten', score1=5, score2=2)
+        poule.record_match_result(invalid_index_type, 5, 2)
+
+@pytest.mark.parametrize('invalid_index_value', [-100, -1, 21, 100])
+def test_poule_record_match_result_invalid_index_value(poule, invalid_index_value):
     with pytest.raises(ValueError):
-        poule.record_match_result(index=-1, score1=5, score2=2)
-    with pytest.raises(ValueError):
-        poule.record_match_result(index=poule.number_matches, score1=2, score2=4)
+        poule.record_match_result(invalid_index_value, 5, 2)
+
+@pytest.mark.parametrize('invalid_score_type', [None, False, True, 0.0, 5.0, 'two', [], (), {}])
+def test_poule_record_match_result_invalid_score_type(poule, invalid_score_type):
+    index = 3
     
-    # Invalid scores
     with pytest.raises(TypeError):
-        poule.record_match_result(index=2, score1='five', score2=2)
-    with pytest.raises(TypeError):
-        poule.record_match_result(index=2, score1=5, score2='two')
-    with pytest.raises(ValueError):
-        poule.record_match_result(index=2, score1=-1, score2=5)
-    with pytest.raises(ValueError):
-        poule.record_match_result(index=1, score1=2, score2=-1)
+        poule.record_match_result(index, invalid_score_type, 2)
 
-def test_poule_record_current_match_result(poule):    
+    with pytest.raises(TypeError):
+        poule.record_match_result(index, 5, invalid_score_type)
+
+@pytest.mark.parametrize('invalid_score_value', [-100, -6, 6, 100])
+def test_poule_record_match_result_invalid_score_value(poule, invalid_score_value):
+    index = 5
+    
+    with pytest.raises(ValueError):
+        poule.record_match_result(index, invalid_score_value, 2)
+
+    with pytest.raises(ValueError):
+        poule.record_match_result(index, 5, invalid_score_value)
+
+def test_poule_record_on_piste_match_result(poule):  
+    score1, score2 = 2, 5
+
     for i in range(poule.number_matches):
         # Check match info before recording the result
-        m = poule.get_on_piste_match()
-        assert m.id == i+1
-        assert m.match_index == i
-        assert m.poule_id == POULE_ID1
-        assert m.tournament_id == TOURNY_ID1
-        assert m.is_incomplete()
-        assert m.winner() is None
+        match = poule.get_on_piste_match()
+        
+        assert match.id == i+1
+        assert match.match_index == i
+        assert match.poule_id == POULE_ID1
+        assert match.tournament_id == TOURNY_ID1
+        assert match.is_incomplete()
+        assert match.winner() is None
 
-        # Record a score using randomization
-        score1 = random.randint(0,5)
-        score2 = random.randint(0,5)
-        while score1 == score2:
-            score2 = random.randint(0,5)
+        # Record score
         poule.record_on_piste_match_result(score1=score1, score2=score2)
 
         # Check match info after recording the result
-        m = poule.matches[i]
-        assert m.id == i+1
-        assert m.match_index == i
-        assert m.poule_id == POULE_ID1
-        assert m.tournament_id == TOURNY_ID1
-        assert m.is_complete()
-        assert m.winner() is not None
+        match = poule.matches[i]
+        
+        assert match.id == i+1
+        assert match.match_index == i
+        assert match.poule_id == POULE_ID1
+        assert match.tournament_id == TOURNY_ID1
+        assert match.is_complete()
+        assert match.winner() is match.entry2
 
-def test_poule_record_current_match_result_invalid_poule_completed(poule):
+def test_poule_record_on_piste_match_result_invalid_poule_is_completed(poule):
     for _ in range(poule.number_matches):
         poule.record_on_piste_match_result(5,2)
 
     with pytest.raises(RuntimeError):
         poule.record_on_piste_match_result(5,2)
 
-def test_poule_is_complete(poule):
-    # Complete all matches
-    for _ in range(poule.number_matches):
-        poule.record_on_piste_match_result(3,4)
 
-    assert poule.is_complete() == True
+# --- Result Calculation Tests ---
+def test_poule_calculate_results_intermediate_result(poule):
+    poule.record_on_piste_match_result(3, 5)
 
-def test_poule_calculate_results(entries):
-    # Test a poule of 3
-    poule = Poule(id=1, tournament_id=1, poule_number=1, entries=entries[:3])
+    results = poule.calculate_results()
 
-    # Record first match: (1,2)
-    poule.record_on_piste_match_result(score1=5, score2=1)
+    entry1_result = results.entry_results[0]
+    entry4_result = results.entry_results[3]
 
-    # Get current poule results
-    poule_results = poule.calculate_results()
-    assert poule_results.poule_id == poule.id
-    
-    # Validate John's current results
-    assert poule_results.entry_results[0].num_matches == 1
-    assert poule_results.entry_results[0].num_victories == 1
-    assert poule_results.entry_results[0].touches_scored == 5
-    assert poule_results.entry_results[0].touches_received == 1
-    # Validate Steve's current results
-    assert poule_results.entry_results[1].num_matches == 1
-    assert poule_results.entry_results[1].num_victories == 0
-    assert poule_results.entry_results[1].touches_scored == 1
-    assert poule_results.entry_results[1].touches_received == 5
-    # Validate Hannah's current results
-    assert poule_results.entry_results[2].num_matches == 0
-    assert poule_results.entry_results[2].num_victories == 0
-    assert poule_results.entry_results[2].touches_scored == 0
-    assert poule_results.entry_results[2].touches_received == 0
+    assert entry1_result.num_matches == 1
+    assert entry1_result.num_victories == 0
+    assert entry1_result.touches_scored == 3
+    assert entry1_result.touches_received == 5
 
-    # Record second match: (1,3)
-    poule.record_on_piste_match_result(score1=2, score2=5)
+    assert entry4_result.num_matches == 1
+    assert entry4_result.num_victories == 1
+    assert entry4_result.touches_scored == 5
+    assert entry4_result.touches_received == 3
 
-    # Get current poule results
-    poule_results = poule.calculate_results()
-    assert poule_results.poule_id == poule.id
+def test_poule_calculate_results_entire_poule_complete(poule):
+    # Match 1: (1,4)
+    poule.record_on_piste_match_result(3, 5)
 
-    # Validate John's current results
-    assert poule_results.entry_results[0].num_matches == 2
-    assert poule_results.entry_results[0].num_victories == 1
-    assert poule_results.entry_results[0].touches_scored == 7
-    assert poule_results.entry_results[0].touches_received == 6
-    # Validate Steve's current results
-    assert poule_results.entry_results[1].num_matches == 1
-    assert poule_results.entry_results[1].num_victories == 0
-    assert poule_results.entry_results[1].touches_scored == 1
-    assert poule_results.entry_results[1].touches_received == 5
-    # Validate Hannah's current results
-    assert poule_results.entry_results[2].num_matches == 1
-    assert poule_results.entry_results[2].num_victories == 1
-    assert poule_results.entry_results[2].touches_scored == 5
-    assert poule_results.entry_results[2].touches_received == 2
+    # Match 2: (2,5)
+    poule.record_on_piste_match_result(1, 5)
+
+    # Match 3: (3,6)
+    poule.record_on_piste_match_result(5, 4)
+
+    # Match 4: (7,1)
+    poule.record_on_piste_match_result(4, 5)
+
+    # Match 5: (5,4)
+    poule.record_on_piste_match_result(5, 2)
+
+    # Match 6: (2,3)
+    poule.record_on_piste_match_result(1, 5)
+
+    # Match 7: (6,7)
+    poule.record_on_piste_match_result(5, 2)
+
+    # Match 8: (5,1)
+    poule.record_on_piste_match_result(5, 4)
+
+    # Match 9: (4,3)
+    poule.record_on_piste_match_result(2, 5)
+
+    # Match 10: (6,2)
+    poule.record_on_piste_match_result(3, 5)
+
+    # Match 11: (5,7)
+    poule.record_on_piste_match_result(5, 3)
+
+    # Match 12: (3,1)
+    poule.record_on_piste_match_result(5, 0)
+
+    # Match 13: (4,6)
+    poule.record_on_piste_match_result(5, 2)
+
+    # Match 14: (7,2)
+    poule.record_on_piste_match_result(5, 1)
+
+    # Match 15: (3,5)
+    poule.record_on_piste_match_result(5, 3)
+
+    # Match 16: (1,6)
+    poule.record_on_piste_match_result(5, 1)
+
+    # Match 17: (2,4)
+    poule.record_on_piste_match_result(3, 5)
+
+    # Match 18: (7,3)
+    poule.record_on_piste_match_result(3, 5)
+
+    # Match 19: (6,5)
+    poule.record_on_piste_match_result(3, 5)
+
+    # Match 20: (1,2)
+    poule.record_on_piste_match_result(5, 1)
+
+    # Match 21: (4,7)
+    poule.record_on_piste_match_result(5, 2)
+
+    # Check final results
+    expected_final_results = (
+        (3, 0.5, 22, 21, 1), 
+        (1, 1 / 6, 12, 28, -16), 
+        (6, 1.0, 30, 13, 17), 
+        (4, 2 / 3, 24, 20, 4), 
+        (5, 5 / 6, 28, 18, 10), 
+        (1, 1 / 6, 18, 27, -9), 
+        (1, 1 / 6, 19, 26, -7)
+    )
+
+    final_results = poule.calculate_results()
+
+    assert final_results.poule_id == poule.id
+    assert final_results.tournament_id == poule.tournament_id
+
+    for i, entry_result in enumerate(final_results.entry_results):
+        assert entry_result.num_matches == 6
+        assert entry_result.num_victories == expected_final_results[i][0]
+        assert entry_result.victory_ratio == expected_final_results[i][1]
+        assert entry_result.touches_scored == expected_final_results[i][2]
+        assert entry_result.touches_received == expected_final_results[i][3]
+        assert entry_result.indicator == expected_final_results[i][4]
 
 
-    # Record final match: (2,3)
-    poule.record_on_piste_match_result(score1=4, score2=5)
+    # Validate final ranking display name order
+    expected_final_results_names = ('Hannah', 'Michael', 'Emily', 'John', 'Dave', 'Sarah', 'Steve')
 
-    # Get final results
-    poule_results = poule.calculate_results()
-    assert poule_results.poule_id == poule.id
-    
-    # Validate John's final results
-    assert poule_results.entry_results[0].num_matches == 2
-    assert poule_results.entry_results[0].num_victories == 1
-    assert poule_results.entry_results[0].touches_scored == 7
-    assert poule_results.entry_results[0].touches_received == 6
-    # Validate Steve's final results
-    assert poule_results.entry_results[1].num_matches == 2
-    assert poule_results.entry_results[1].num_victories == 0
-    assert poule_results.entry_results[1].touches_scored == 5
-    assert poule_results.entry_results[1].touches_received == 10
-    # Validate Hannah's final results
-    assert poule_results.entry_results[2].num_matches == 2
-    assert poule_results.entry_results[2].num_victories == 2
-    assert poule_results.entry_results[2].touches_scored == 10
-    assert poule_results.entry_results[2].touches_received == 6
+    assert poule.calculate_ranked_results_display_names() == expected_final_results_names
 
-    # Validate final ranking
-    assert poule_results.ranked_results_display_names == ('Hannah', 'John', 'Steve')
 
-def test_poule_calculate_results_names_only(entries):
-    poule = Poule(id=POULE_ID1, tournament_id=TOURNY_ID1, poule_number=POULE_NUMBER1, entries=entries[:3])
+def test_poule_calculate_ranked_results(entry1, entry2, entry3):
+    entries = (entry1, entry2, entry3)
+
+    poule = Poule(POULE_ID1, TOURNY_ID1, POULE_NUMBER1, entries)
+
+    poule.record_on_piste_match_result(5,1)
+    poule.record_on_piste_match_result(2,5)
+    poule.record_on_piste_match_result(4,5)
+
+    ranked_results = poule.calculate_ranked_results()
+
+    assert tuple(result.display_name for result in ranked_results) == ('Hannah', 'John', 'Steve')
+
+def test_poule_calculate_results_names_only_poule_of_size_three(entry1, entry2, entry3):
+    entries = (entry1, entry2, entry3)
+
+    poule = Poule(POULE_ID1, TOURNY_ID1, POULE_NUMBER1, entries)
 
     poule.record_on_piste_match_result(5,1)
     poule.record_on_piste_match_result(2,5)
