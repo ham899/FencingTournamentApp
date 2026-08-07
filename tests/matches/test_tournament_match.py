@@ -562,8 +562,8 @@ def test_tournament_match_opponent_entry_of_index_invalid_index(poule_match, de_
         de_match.opponent_entry_of_index(-1)
 
 def test_tournament_match_entries(poule_match, de_match):
-    assert poule_match.entries() == (poule_match.entry1, poule_match.entry2)
-    assert de_match.entries() == (de_match.entry1, de_match.entry2)
+    assert poule_match.entries == (poule_match.entry1, poule_match.entry2)
+    assert de_match.entries == (de_match.entry1, de_match.entry2)
 
 
 # --- Result Query Method Tests ---
