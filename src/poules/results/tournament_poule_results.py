@@ -1,7 +1,6 @@
 from random import Random
 
 from dataclasses import dataclass, field, InitVar
-from collections.abc import Iterable
 
 import validation
 
@@ -22,9 +21,9 @@ class TournamentPouleResults:
     ----------
     tournament_id : int
         The unique identifier of the tournament.
-    poules : Iterable[Poule]
-        The poules from which to calculate the result snapshots. The poules
-        themselves are not stored.
+    poules : tuple[Poule, ...]
+        The poules from which to calculate the result snapshots. 
+        The poules themselves are not stored.
     random_seed : int | None, optional
         The seed used to resolve complete ranking ties. If `None`, ties are
         resolved nondeterministically.
@@ -41,25 +40,25 @@ class TournamentPouleResults:
         The entry results in descending ranking order.
     """
     tournament_id: int
-    poules: InitVar[Iterable[Poule]]
+    poules: InitVar[tuple[Poule, ...]]
     random_seed: int | None = None
 
     poule_results: tuple[PouleResult, ...] = field(init=False)
     round_results: tuple[PouleEntryResult, ...] = field(init=False)
 
     # --- Initialization and Validation Methods ---
-    def __post_init__(self, poules: Iterable[Poule]) -> None:
+    def __post_init__(self, poules: tuple[Poule, ...]) -> None:
         """
         Parameters
         ----------
-        poules : Iterable[Poule]
+        poules : tuple[Poule, ...]
             The poules for which to hold the results for.
 
         Raises
         ------
         TypeError
             If the tournament ID is not an integer, if `random_seed` is neither an
-            integer nor `None`, if `poules` is not an iterable, or if an item in
+            integer nor `None`, if `poules` is not a tuple, or if an item in
             `poules` is not a `Poule`.
         ValueError
             If the tournament ID is non-positive, if `random_seed` is negative, if
@@ -68,11 +67,6 @@ class TournamentPouleResults:
         """
         validation.validate_positive_int(self.tournament_id, 'tournament ID', 'TournamentPouleResults')
         validation.validate_optional_non_negative_int(self.random_seed, 'random_seed', 'TournamentPouleResults')
-
-        if not isinstance(poules, Iterable):
-            raise TypeError(f'The given set of poules must be a valid iterable object - got {type(poules).__name__}')
-        
-        poules = tuple(poules) # Convert poules to a tuple before validating
 
         self._validate_poules(poules)
 
@@ -114,7 +108,7 @@ class TournamentPouleResults:
     # --- Validation Helper Methods ---
     def _validate_poules(self, poules: tuple[Poule, ...]) -> None:
         """
-        Validates that a given iterable of poules can belong in this poule round.
+        Validates that a given poules can belong in this poule round.
         
         Parameters
         ----------
@@ -126,8 +120,8 @@ class TournamentPouleResults:
         TypeError
             If `poules` is not a tuple, or if any entry in `poules` is not a `Poule` object.
         ValueError
-            If `poules` is an empty iterable, if any poule's tournament ID does not match the poule round's tournament ID, 
-            or if any poule occurs more than once in the iterable.
+            If `poules` is an empty tuple, if any poule's tournament ID does not match the poule round's tournament ID, 
+            or if any poule occurs more than once in the tuple.
         """
         if not isinstance(poules, tuple):
             raise TypeError(f'The given set of poules must be in a tuple - got {type(poules).__name__}')
