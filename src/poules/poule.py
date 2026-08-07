@@ -1,4 +1,3 @@
-from collections.abc import Iterable
 from dataclasses import dataclass, field
 
 import validation
@@ -47,7 +46,7 @@ class Poule:
         ------
         TypeError
             If an ID or the poule number is not an integer, `entries` is not
-            iterable, or an item is not a `TournamentEntry` object.
+            a tuple, or an item is not a `TournamentEntry` object.
         ValueError
             If an ID or the poule number is not positive, fewer than two entries
             are provided, an entry is repeated or belongs to another tournament,
@@ -59,13 +58,6 @@ class Poule:
         validation.validate_positive_int(self.id, 'ID', 'Poule')
         validation.validate_positive_int(self.tournament_id, 'Tournament ID', 'Poule')
         validation.validate_positive_int(self.poule_number, 'Poule number', 'Poule')
-
-        # Allow the entries input to be an iterable object
-        if not isinstance(self.entries, Iterable):
-            raise TypeError(f'Entries must be an iterable - got {type(self.entries).__name__}')
-
-        # Store entries as a tuple to prevent accidental membership or order changes.
-        self.entries = tuple(self.entries)
                 
         # Validate the entries provided and generate the poule matches given the validated entries
         self.matches = self._generate_matches(self.entries)
