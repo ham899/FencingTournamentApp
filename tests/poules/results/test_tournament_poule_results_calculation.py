@@ -276,9 +276,9 @@ def test_tournament_poule_results_complete_poules(results_complete):
         assert poule_result.ranked_results_display_names == expected_results_name_order[i]
 
     expected_poule_round_results = (
-        ('Catherine', 'Hannah', 'Sarah', 'Jill', 'Joanna', 'Jack', 'Jane',
-         'Emily', 'Isabella', 'Edward', 'John', 'Jessica', 'Albert', 'Stephen',
-         'Parsa', 'Dave', 'Steve', 'Robert', 'Michael', 'Peter', 'Chantelle')
+        'Catherine', 'Hannah', 'Sarah', 'Jill', 'Joanna', 'Jack', 'Jane',
+        'Emily', 'Isabella', 'Edward', 'John', 'Jessica', 'Albert', 'Stephen',
+        'Parsa', 'Dave', 'Steve', 'Robert', 'Michael', 'Peter', 'Chantelle'
     ) # Note: Jack/Joanna and Albert/Stephen are exact ties. Their displayed order is produced by RANDOM_SEED = 36.
 
     assert results_complete.round_results_display_names == expected_poule_round_results
