@@ -22,10 +22,6 @@ class PouleRound:
     
     Attributes
     ----------
-    id : int
-        The poule round's identifier within the tournament.
-    tournament_id : int
-        The identifier of the tournament containing the poule round.
     round_number : int
         The poule round's one-based position within the tournament.
     entries : tuple[TournamentEntry, ...]
@@ -35,11 +31,9 @@ class PouleRound:
     poules : tuple[Poule, ...]
         The generated poules in poule-number order.
     """
-    id: int
-    tournament_id: int
     round_number: int
+    
     entries: tuple[TournamentEntry, ...]
-
     poules: tuple[Poule, ...] = field(init=False)
 
 
@@ -51,20 +45,16 @@ class PouleRound:
         Raises
         ------
         TypeError
-            If `id`, `tournament_id`, or `round_number` is not an integer;
-            `entries` is not a tuple; an item is not a `TournamentEntry`; or an
-            initial seed is not an integer.
+            If `round_number` is not an integer, if `entries` is not a tuple, 
+            if an item is not a `TournamentEntry`, or if an initial seed is not an integer.
         ValueError
-            If `id`, `tournament_id`, or `round_number` is not positive; fewer
-            than two entries are provided; an entry belongs to another
-            tournament or appears more than once; an initial seed is missing,
-            nonpositive, or repeated; or the initial seeds are not exactly the
-            integers from 1 through the number of entries.
+            If `round_number` is not positive, if fewer than two entries are provided, 
+            if an entry belongs to another tournament or appears more than once, 
+            if an initial seed is missing, non-positive, or repeated, 
+            or if the initial seeds are not exactly the integers from 1 through the number of entries.
         """
-        validation.validate_positive_int(self.id, 'PouleRound ID', 'PouleRound')
-        validation.validate_positive_int(self.tournament_id, 'Tournament ID', 'PouleRound')
-        validation.validate_positive_int(self.round_number, 'Round Number', 'PouleRound')
-
+        validation.validate_positive_int(self.round_number, 'Round number', 'PouleRound')
+        
         self._validate_entries(self.entries)
 
         self.entries = tuple(sorted(self.entries, key=lambda entry: entry.initial_seed))
@@ -74,6 +64,11 @@ class PouleRound:
 
     # --- Properties ---
     @property
+    def tournament_id(self) -> int:
+        """Return the tournament ID shared by the entries in this round."""
+        return self.entries[0].tournament_id
+
+    @property
     def num_poules(self) -> int:
         """Returns the number of poules in this round."""
         return len(self.poules)
@@ -82,6 +77,11 @@ class PouleRound:
     def num_entries(self) -> int:
         """Returns the number of entries in this round."""
         return len(self.entries)
+    
+    @property
+    def label(self) -> str:
+        """Return a descriptive label identifying the poule round."""
+        return f'PouleRound in round {self.round_number} in tournament {self.tournament_id}'
 
 
     # --- Dunder Methods ---
@@ -90,7 +90,7 @@ class PouleRound:
         if not isinstance(other, PouleRound):
             return False
         
-        return self.id == other.id and self.tournament_id == other.tournament_id
+        return self.round_number == other.round_number and self.tournament_id == other.tournament_id
 
     # --- Predicate Methods ---
     def has_started(self) -> bool:
@@ -157,8 +157,7 @@ class PouleRound:
         """
         Returns the match that should currently be on piste in the specified poule.
 
-        If a match in the poule is already in progress, it is returned. Otherwise,
-        the first not-started match in the official bout order is returned.
+        The first incomplete match in the official bout order is returned.
 
         Parameters
         ----------
@@ -188,7 +187,7 @@ class PouleRound:
         """
         Returns the next match waiting to fence in the specified poule.
 
-        The on-piste match is excluded, and the first remaining not-started 
+        The on-piste match is excluded, and the first remaining incomplete 
         match in the official bout order is returned.
         
         Parameters
@@ -292,7 +291,7 @@ class PouleRound:
         ValueError
             If `random_seed` is negative.
         """
-        return TournamentPouleResults(self.tournament_id, self.poules, random_seed=random_seed)
+        return TournamentPouleResults(poules=self.poules, random_seed=random_seed)
     
     def calculate_ranked_results(self, random_seed: int | None = None) -> tuple[PouleEntryResult, ...]:
         """
@@ -496,7 +495,13 @@ class PouleRound:
         entries_by_poule = self._assign_entries_to_poules(entries, poule_sizes)
 
         for poule_number, poule_entries in enumerate(entries_by_poule, start=1):
-            poules.append(Poule(id=poule_number, tournament_id=self.tournament_id, poule_number=poule_number, entries=poule_entries))
+            poules.append(
+                Poule(
+                    poule_number=poule_number, 
+                    round_number=self.round_number, 
+                    entries=poule_entries
+                )
+            )
 
         return tuple(poules)
 
