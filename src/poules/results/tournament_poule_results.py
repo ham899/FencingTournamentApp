@@ -19,8 +19,6 @@ class TournamentPouleResults:
 
     Parameters
     ----------
-    tournament_id : int
-        The unique identifier of the tournament.
     poules : tuple[Poule, ...]
         The poules from which to calculate the result snapshots. 
         The poules themselves are not stored.
@@ -30,8 +28,6 @@ class TournamentPouleResults:
 
     Attributes
     ----------
-    tournament_id : int
-        The unique identifier of the tournament these results belong to.
     random_seed : int | None
         The seed supplied for resolving complete ranking ties.
     poule_results : tuple[PouleResult, ...]
@@ -39,7 +35,6 @@ class TournamentPouleResults:
     round_results : tuple[PouleEntryResult, ...]
         The entry results in descending ranking order.
     """
-    tournament_id: int
     poules: InitVar[tuple[Poule, ...]]
     random_seed: int | None = None
 
@@ -57,15 +52,12 @@ class TournamentPouleResults:
         Raises
         ------
         TypeError
-            If the tournament ID is not an integer, if `random_seed` is neither an
-            integer nor `None`, if `poules` is not a tuple, or if an item in
-            `poules` is not a `Poule`.
+            If `random_seed` is neither an integer nor `None`, 
+            if `poules` is not a tuple, or if an item in `poules` is not a `Poule`.
         ValueError
-            If the tournament ID is non-positive, if `random_seed` is negative, if
-            no poules are provided, if a poule belongs to another tournament, or if
-            a poule ID occurs more than once.
+            If `random_seed` is negative, if no poules are provided, 
+            or if a poule number occurs more than once.
         """
-        validation.validate_positive_int(self.tournament_id, 'tournament ID', 'TournamentPouleResults')
         validation.validate_optional_non_negative_int(self.random_seed, 'random_seed', 'TournamentPouleResults')
 
         self._validate_poules(poules)
@@ -77,9 +69,24 @@ class TournamentPouleResults:
 
     # --- Properties ---
     @property
+    def tournament_id(self) -> int:
+        """Return the tournament ID shared by these poule results."""
+        return self.poule_results[0].tournament_id
+    
+    @property
+    def round_number(self) -> int:
+        """Return the round number shared by these poule results."""
+        return self.poule_results[0].round_number
+
+    @property
     def round_results_display_names(self) -> tuple[str, ...]:
         """Return the ranked entry results as fencer display names."""
         return tuple(entry_result.display_name for entry_result in self.round_results)
+
+    @property
+    def label(self) -> str:
+        """Return a descriptive label identifying these results."""
+        return f'PouleRoundResults for round {self.round_number} in tournament {self.tournament_id}'
 
 
     # --- Result Calculation Helper Methods ---
@@ -120,7 +127,7 @@ class TournamentPouleResults:
         TypeError
             If `poules` is not a tuple, or if any entry in `poules` is not a `Poule` object.
         ValueError
-            If `poules` is an empty tuple, if any poule's tournament ID does not match the poule round's tournament ID, 
+            If `poules` is an empty tuple, if a poule's tournament ID differs from the other poules, 
             or if any poule occurs more than once in the tuple.
         """
         if not isinstance(poules, tuple):
@@ -129,16 +136,23 @@ class TournamentPouleResults:
         if not poules:
             raise ValueError(f'The given set of poules cannot be empty - got {len(poules)}')
 
-        seen_poule_ids: set[int] = set()
+        seen_poule_numbers: set[int] = set()
 
         for i, poule in enumerate(poules):
             if not isinstance(poule, Poule):
                 raise TypeError(f'Entry at index {i} must be a Poule object - got {type(poule).__name__}')
 
-            if poule.tournament_id != self.tournament_id:
-                raise ValueError(f'Poule {poule.id} at index {i} has a tournament ID {poule.tournament_id} that does not match the poule round\'s tournament ID {self.tournament_id}')
+            if i == 0:
+                tournament_id: int = poule.tournament_id
+                round_number: int = poule.round_number
+
+            if poule.tournament_id != tournament_id:
+                raise ValueError(f'Poule {poule.poule_number} at index {i} has a tournament ID {poule.tournament_id} that does not match the other poules\'s tournament IDs {tournament_id}')
             
-            if poule.id in seen_poule_ids:
-                raise ValueError(f'Poule ID {poule.id} occurs more than once.')
+            if poule.round_number != round_number:
+                raise ValueError(f'Poule {poule.poule_number} at index {i} has a round number {poule.round_number} that does not match the other poules\'s round numbers {round_number}')
+
+            if poule.poule_number in seen_poule_numbers:
+                raise ValueError(f'Poule number {poule.poule_number} occurs more than once.')
             
-            seen_poule_ids.add(poule.id)
+            seen_poule_numbers.add(poule.poule_number)
