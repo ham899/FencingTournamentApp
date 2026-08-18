@@ -19,10 +19,10 @@ class PouleEntryResult:
     ----------
     entry : TournamentEntry
         The tournament entry whose poule results are represented.
-    poule_id : int
-        The unique identifier of the poule containing the entry.
-    tournament_id : int
-        The unique identifier of the tournament containing the poule.
+    poule_number : int
+        The poule's one-based position within its round.
+    round_number : int
+        The poule round's one-based position within the tournament.
     num_matches : int
         The number of completed poule bouts fenced by the entry.
     num_victories : int
@@ -33,8 +33,10 @@ class PouleEntryResult:
         The total number of touches scored against the entry in completed poule bouts.
     """
     entry: TournamentEntry
-    poule_id: int
-    tournament_id: int
+    
+    poule_number: int
+    round_number: int
+    
     num_matches: int
     num_victories: int
     touches_scored: int
@@ -49,40 +51,49 @@ class PouleEntryResult:
         Raises
         ------
         TypeError
-            If `entry` is not a TournamentEntry, or if `poule_id`, `tournament_id`, `num_matches`, `num_victories`, 
-            `touches_scored`, or `touches_received` is not an integer.
+            If `entry` is not a `TournamentEntry`, or if `poule_number`, `round_number`, 
+            `num_matches`, `num_victories`, `touches_scored`, or `touches_received` is not an integer.
         ValueError
-            If `poule_id` or `tournament_id` is not positive, if the entry belongs
-            to another tournament, if a result statistic is negative, if the number
-            of victories exceeds the number of matches, or if touches are recorded
-            when no matches have been completed.
+            If `poule_number` or `round_number` is not positive, if a result statistic is negative, 
+            if the number of victories exceeds the number of matches, 
+            or if touches are recorded when no matches have been completed.
         """
-        # Validate the provided tournament and poule IDs first before the entry
-        validation.validate_positive_int(self.tournament_id, 'tournament ID', 'PouleEntryResult')
-        validation.validate_positive_int(self.poule_id, 'poule ID', 'PouleEntryResult')
-        
         # Validate the provided entry
         self._validate_entry(self.entry)
 
+        # Validate the poule number and round number
+        validation.validate_positive_int(self.round_number, 'Round number', 'PouleEntryResult')
+        validation.validate_positive_int(self.poule_number, 'Poule number', 'PouleEntryResult')
+        
         # Validate the provided entry results
         validation.validate_non_negative_int(self.num_matches, 'number of matches', 'PouleEntryResult')
         validation.validate_non_negative_int(self.num_victories, 'number of victories', 'PouleEntryResult')
         validation.validate_non_negative_int(self.touches_scored, 'touches scored', 'PouleEntryResult')
         validation.validate_non_negative_int(self.touches_received, 'touches received', 'PouleEntryResult')
 
-        # Validate that result statistics are possible
+        # Validate that the result statistics are possible
         if self.num_victories > self.num_matches:
-            raise ValueError(f'Number of victories cannot be greater than the number of matches in PouleEntryResult - got {self.num_victories} victories and {self.num_matches} matches')
+            raise ValueError(f'Number of victories cannot be greater than the number of matches in {self.label} - got {self.num_victories} victories and {self.num_matches} matches')
         
         if self.num_matches == 0:
             if self.touches_scored > 0:
-                raise ValueError(f'Touches scored cannot be greater than 0 when the entry has completed no matches - got {self.touches_scored} touches scored and {self.num_matches} matches')
+                raise ValueError(f'Touches scored cannot be greater than 0 when the entry has completed no matches in {self.label} - got {self.touches_scored} touches scored and {self.num_matches} matches')
             
             if self.touches_received > 0:
-                raise ValueError(f'Touches received cannot be greater than 0 when the entry has completed no matches - got {self.touches_received} touches received and {self.num_matches} matches')
+                raise ValueError(f'Touches received cannot be greater than 0 when the entry has completed no matches in {self.label} - got {self.touches_received} touches received and {self.num_matches} matches')
 
 
     # --- Properties ---
+    @property
+    def label(self) -> str:
+        """Return a descriptive label for the object."""
+        return f'PouleEntryResult for {self.display_name} in poule {self.poule_number} of round {self.round_number} in tournament {self.tournament_id}'
+
+    @property
+    def tournament_id(self) -> int:
+        """Returns the tournament ID of this result."""
+        return self.entry.tournament_id
+
     @property
     def display_name(self) -> str:
         """Returns the display name of the entry."""
@@ -102,7 +113,7 @@ class PouleEntryResult:
     # --- Validation Helper Methods ---
     def _validate_entry(self, entry: TournamentEntry) -> None:
         """
-        Validate the result data and ensure its statistics are consistent.
+        Validate the tournament entry represented by this result.
 
         Parameters
         ----------
@@ -112,14 +123,11 @@ class PouleEntryResult:
         Raises
         ------
         TypeError
-            If entry is not a TournamentEntry, or if the entry's tournament ID is not an integer.
+            If `entry` is not a `TournamentEntry`, or if its tournament ID is not an integer.
         ValueError
-            If the entry's tournament ID is not positive or does not match this result's tournament_id.
+            If the entry's tournament ID is not positive.
         """
         if not isinstance(entry, TournamentEntry):
             raise TypeError(f'Entry must be TournamentEntry in PouleEntryResult - got {type(entry).__name__}')
         
         validation.validate_positive_int(entry.tournament_id, 'Entry tournament ID', 'PouleEntryResult')
-
-        if entry.tournament_id != self.tournament_id:
-            raise ValueError(f'Entry tournament ID {entry.tournament_id} does not match the provided tournament ID {self.tournament_id} in this PouleEntryResult')
