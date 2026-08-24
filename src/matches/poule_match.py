@@ -1,11 +1,11 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import validation
 
 from matches.tournament_match import TournamentMatch
 
 
-@dataclass(eq=False, kw_only=True)
+@dataclass(eq=False)
 class PouleMatch(TournamentMatch):
     """
     Represent a poule match between two tournament entries.
@@ -34,7 +34,7 @@ class PouleMatch(TournamentMatch):
     poule_number: int
     round_number: int
 
-    score_to_win: int = 5
+    score_to_win: int = field(default=5, kw_only=True)
 
 
     # --- Initialization and Validation ---

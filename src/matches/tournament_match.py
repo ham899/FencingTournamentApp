@@ -8,7 +8,7 @@ from entities.tournament_entry import TournamentEntry
 from matches.match import Match
 
 
-@dataclass(eq=False, kw_only=True)
+@dataclass(eq=False)
 class TournamentMatch(Match, ABC):
     """
     Represent the shared behaviour of a match between two tournament entries.
