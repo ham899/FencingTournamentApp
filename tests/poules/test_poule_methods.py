@@ -5,7 +5,6 @@ from itertools import combinations
 
 import factories
 
-from constants import POULE_ID1, TOURNY_ID1, TOURNY_ID2
 
 from entities.fencer import Fencer
 from entities.tournament_entry import TournamentEntry
@@ -14,7 +13,7 @@ from poules.poule_orders import POULE_BOUT_ORDER
 
 
 # --- Constants ---
-POULE_NUMBER1 = 1
+from constants import TOURNY_ID1, TOURNY_ID2
 
 
 # --- Fixtures ---
@@ -24,7 +23,7 @@ def entries(entry1, entry2, entry3, entry4, entry5, entry6, entry7):
 
 @pytest.fixture
 def poule(entries): 
-    return Poule(POULE_ID1, TOURNY_ID1, POULE_NUMBER1, entries)
+    return Poule(1, 1, entries)
 
 
 # --- Match Generation Tests ---
@@ -32,7 +31,7 @@ def poule(entries):
 def test_poule_generate_matches(size):
     entries = factories.make_entries(size, TOURNY_ID1, initial_seed=True)
 
-    poule = Poule(POULE_ID1, TOURNY_ID1, POULE_NUMBER1, entries)
+    poule = Poule(1, 1, entries)
 
     assert poule.size == size
 
@@ -53,9 +52,9 @@ def test_poule_generate_matches(size):
 
         entry_pair = (poule.entries[index1], poule.entries[index2])
 
-        assert match.id == i + 1
+        assert match.match_number == i + 1
         assert match.match_index == i
-        assert match.poule_id == poule.id
+        assert match.poule_number == poule.poule_number
         assert match.tournament_id == poule.tournament_id
         assert match.entries == entry_pair
 
@@ -126,13 +125,13 @@ def test_poule_get_match_at_invalid_index_value(poule, invalid_index_value):
 def test_poule_get_on_piste_match_first_match(poule):
     on_piste_match = poule.get_on_piste_match() # First match in poule of 7: (1,4)
 
-    assert on_piste_match.id == 1
-    assert on_piste_match.poule_id == POULE_ID1
+    assert on_piste_match.match_number == 1
+    assert on_piste_match.poule_number == 1
 
     assert on_piste_match.entries == (poule.entries[0], poule.entries[3])
 
     assert not on_piste_match.is_complete()
-    assert on_piste_match.winner() is None
+    assert on_piste_match.winner is None
 
 def test_poule_get_on_piste_match_match_done_out_of_order(poule):
     poule.record_match_result(5, 5, 2)
@@ -149,13 +148,13 @@ def test_poule_get_on_deck_match_first_on_deck_match(poule):
     # Second match in poule of 7: (2,5)
     next_match = poule.get_on_deck_match()
 
-    assert next_match.id == 2
-    assert next_match.poule_id == poule.id
+    assert next_match.match_number == 2
+    assert next_match.poule_number == poule.poule_number
 
     assert next_match.entries == (poule.entries[1], poule.entries[4])
 
     assert not next_match.is_complete()
-    assert next_match.winner() is None
+    assert next_match.winner is None
 
 def test_poule_get_on_deck_match_skips_completed_match(poule):
     poule.record_match_result(1, 5, 0)
@@ -183,26 +182,26 @@ def test_poule_record_match_result(poule):
     # Check that first match is still incomplete
     match_1 = poule.matches[0]
     
-    assert match_1.id == 1
-    assert match_1.poule_id == POULE_ID1
+    assert match_1.match_number == 1
+    assert match_1.poule_number == 1
 
     assert match_1.score1 is None
     assert match_1.score2 is None
     
     assert not match_1.is_complete()
-    assert match_1.winner() is None
+    assert match_1.winner is None
     
     # Check that the `index+1` match is complete
     match_2 = poule.matches[index]
 
-    assert match_2.id == index + 1
-    assert match_2.poule_id == POULE_ID1
+    assert match_2.match_number == index + 1
+    assert match_2.poule_number == 1
     
     assert match_2.score1 == 2
     assert match_2.score2 == 3
     
     assert match_2.is_complete()
-    assert match_2.winner() is match_2.entry2
+    assert match_2.winner is match_2.entry2
 
 @pytest.mark.parametrize('invalid_index_type', [None, False, True, 0.0, 1.0, 'first', [], (), {}])
 def test_poule_record_match_result_invalid_index_type(poule, invalid_index_type):
@@ -241,12 +240,12 @@ def test_poule_record_on_piste_match_result(poule):
         # Check match info before recording the result
         match = poule.get_on_piste_match()
         
-        assert match.id == i+1
+        assert match.match_number == i + 1
         assert match.match_index == i
-        assert match.poule_id == POULE_ID1
+        assert match.poule_number == 1
         assert match.tournament_id == TOURNY_ID1
         assert match.is_incomplete()
-        assert match.winner() is None
+        assert match.winner is None
 
         # Record score
         poule.record_on_piste_match_result(score1=score1, score2=score2)
@@ -254,12 +253,12 @@ def test_poule_record_on_piste_match_result(poule):
         # Check match info after recording the result
         match = poule.matches[i]
         
-        assert match.id == i+1
+        assert match.match_number == i + 1
         assert match.match_index == i
-        assert match.poule_id == POULE_ID1
+        assert match.poule_number == 1
         assert match.tournament_id == TOURNY_ID1
         assert match.is_complete()
-        assert match.winner() is match.entry2
+        assert match.winner is match.entry2
 
 def test_poule_record_on_piste_match_result_invalid_poule_is_completed(poule):
     for _ in range(poule.number_matches):
@@ -365,7 +364,7 @@ def test_poule_calculate_results_entire_poule_complete(poule):
 
     final_results = poule.calculate_results()
 
-    assert final_results.poule_id == poule.id
+    assert final_results.poule_number == poule.poule_number
     assert final_results.tournament_id == poule.tournament_id
 
     for i, entry_result in enumerate(final_results.entry_results):
@@ -386,7 +385,7 @@ def test_poule_calculate_results_entire_poule_complete(poule):
 def test_poule_calculate_ranked_results(entry1, entry2, entry3):
     entries = (entry1, entry2, entry3)
 
-    poule = Poule(POULE_ID1, TOURNY_ID1, POULE_NUMBER1, entries)
+    poule = Poule(1, 1, entries)
 
     poule.record_on_piste_match_result(5,1)
     poule.record_on_piste_match_result(2,5)
@@ -399,7 +398,7 @@ def test_poule_calculate_ranked_results(entry1, entry2, entry3):
 def test_poule_calculate_results_names_only_poule_of_size_three(entry1, entry2, entry3):
     entries = (entry1, entry2, entry3)
 
-    poule = Poule(POULE_ID1, TOURNY_ID1, POULE_NUMBER1, entries)
+    poule = Poule(1, 1, entries)
 
     poule.record_on_piste_match_result(5,1)
     poule.record_on_piste_match_result(2,5)

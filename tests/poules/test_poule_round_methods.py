@@ -2,17 +2,13 @@ import pytest
 
 import factories
 
-from constants import TOURNY_ID1, POULE_ID1, POULE_ID2, POULE_ID3
-
 from poules.poule_round import PouleRound
 
+
 # --- Constants ---
+from constants import TOURNY_ID1
+
 RANDOM_SEED = 36
-
-POULE_ROUND_ID = 1
-POULE_ROUND_NUMBER = 1
-
-POULE_IDS = (POULE_ID1, POULE_ID2, POULE_ID3)
 
 INVALID_INDEX_TYPES = [None, False, True, 0.0, 1.0, 'first', [], (), {}]
 
@@ -31,7 +27,7 @@ def entries():
 
 @pytest.fixture
 def poule_round(entries):
-    return PouleRound(POULE_ROUND_ID, TOURNY_ID1, POULE_ROUND_NUMBER, entries)
+    return PouleRound(1, entries)
 
 @pytest.fixture
 def poule1_scores():
@@ -301,13 +297,13 @@ def test_poule_round_calculate_results(poule_round, poule_scores, expected_poule
     assert len(results_7.poule_results) == 3
 
     for i, poule_result in enumerate(results_7.poule_results):
-        assert poule_result.poule_id == POULE_IDS[i]
+        assert poule_result.poule_number == i + 1
         assert poule_result.tournament_id == TOURNY_ID1
 
         assert len(poule_result.entry_results) == 7
 
         for j, entry_result in enumerate(poule_result.entry_results):
-            assert entry_result.poule_id == POULE_IDS[i]
+            assert entry_result.poule_number == i + 1
             assert entry_result.tournament_id == TOURNY_ID1
 
             assert entry_result.entry.display_name == expected_results_7[i][j][0]
@@ -360,13 +356,13 @@ def test_poule_round_calculate_results(poule_round, poule_scores, expected_poule
     assert len(results_final.poule_results) == 3
     
     for i, poule_result in enumerate(results_final.poule_results):
-        assert poule_result.poule_id == POULE_IDS[i]
+        assert poule_result.poule_number == i + 1
         assert poule_result.tournament_id == TOURNY_ID1
 
         assert len(poule_result.entry_results) == 7
 
         for j, entry_result in enumerate(poule_result.entry_results):
-            assert entry_result.poule_id == POULE_IDS[i]
+            assert entry_result.poule_number == i + 1
             assert entry_result.tournament_id == TOURNY_ID1
 
             assert entry_result.entry.display_name == expected_final_results[i][j][0]

@@ -2,9 +2,11 @@ import pytest
 
 import factories
 
-from constants import POULE_ID1, TOURNY_ID1
-
 from poules.results.poule_result import PouleResult
+
+
+# --- Constants ---
+from constants import TOURNY_ID1
 
 
 # --- Fixtures ---
@@ -14,7 +16,7 @@ def entries(entry1, entry2, entry3, entry4, entry5, entry6, entry7):
 
 @pytest.fixture
 def incomplete_poule_matches(entries):
-    return factories.make_poule_matches(entries, POULE_ID1, TOURNY_ID1)
+    return factories.make_poule_matches(entries, 1, 1)
 
 @pytest.fixture
 def partially_completed_poule_matches(entries):
@@ -23,7 +25,7 @@ def partially_completed_poule_matches(entries):
         (5,4), (2,5)
     )
 
-    return factories.make_poule_matches(entries, POULE_ID1, TOURNY_ID1, scores=match_scores)
+    return factories.make_poule_matches(entries, 1, 1, scores=match_scores)
     
 @pytest.fixture
 def completed_poule_matches(entries):
@@ -33,12 +35,12 @@ def completed_poule_matches(entries):
         (5,3), (5,1), (3,5), (3,5), (3,5), (5,1), (5,2)
     )
 
-    return factories.make_poule_matches(entries, POULE_ID1, TOURNY_ID1, scores=match_scores)
+    return factories.make_poule_matches(entries, 1, 1, scores=match_scores)
 
 
 # --- Tests ---
 def test_poule_result_creation_valid_incomplete_matches(entries, incomplete_poule_matches):
-    result = PouleResult(entries, incomplete_poule_matches, POULE_ID1, TOURNY_ID1)
+    result = PouleResult(entries, incomplete_poule_matches, 1, 1)
 
     assert result.entries == entries
 
@@ -51,7 +53,7 @@ def test_poule_result_creation_valid_incomplete_matches(entries, incomplete_poul
         assert result.entry_results[i].indicator == 0
 
 def test_poule_result_ranked_results_incomplete_matches(entries, incomplete_poule_matches):
-    result = PouleResult(entries, incomplete_poule_matches, POULE_ID1, TOURNY_ID1)
+    result = PouleResult(entries, incomplete_poule_matches, 1, 1)
 
     expected_results = (result.entry_results[6], 
                         result.entry_results[3], 
@@ -64,12 +66,12 @@ def test_poule_result_ranked_results_incomplete_matches(entries, incomplete_poul
     assert result.ranked_results == expected_results
 
 def test_poule_result_ranked_results_display_names_property_incomplete_matches(entries, incomplete_poule_matches):
-    result = PouleResult(entries, incomplete_poule_matches, POULE_ID1, TOURNY_ID1)
+    result = PouleResult(entries, incomplete_poule_matches, 1, 1)
     
     assert result.ranked_results_display_names == ('Dave', 'Emily', 'Hannah', 'John', 'Michael', 'Sarah', 'Steve')
 
 def test_poule_result_creation_valid_partially_completed_matches(entries, partially_completed_poule_matches):
-    result = PouleResult(entries, partially_completed_poule_matches, POULE_ID1, TOURNY_ID1)
+    result = PouleResult(entries, partially_completed_poule_matches, 1, 1)
 
     assert result.entries == entries
 
@@ -123,7 +125,7 @@ def test_poule_result_creation_valid_partially_completed_matches(entries, partia
     assert result.entry_results[6].indicator == -4
 
 def test_poule_result_ranked_results_property_partially_completed_matches(entries, partially_completed_poule_matches):
-    result = PouleResult(entries, partially_completed_poule_matches, POULE_ID1, TOURNY_ID1)
+    result = PouleResult(entries, partially_completed_poule_matches, 1, 1)
 
     expected_results = (result.entry_results[2], 
                         result.entry_results[4], 
@@ -136,12 +138,12 @@ def test_poule_result_ranked_results_property_partially_completed_matches(entrie
     assert result.ranked_results == expected_results
 
 def test_poule_result_ranked_results_display_names_property_partially_completed_matches(entries, partially_completed_poule_matches):
-    result = PouleResult(entries, partially_completed_poule_matches, POULE_ID1, TOURNY_ID1)
+    result = PouleResult(entries, partially_completed_poule_matches, 1, 1)
     
     assert result.ranked_results_display_names == ('Hannah', 'Michael', 'Sarah', 'John', 'Emily', 'Dave', 'Steve')
 
 def test_poule_result_creation_valid_completed_matches(entries, completed_poule_matches):
-    result = PouleResult(entries, completed_poule_matches, POULE_ID1, TOURNY_ID1)
+    result = PouleResult(entries, completed_poule_matches, 1, 1)
 
     assert result.entries == entries
 
@@ -195,7 +197,7 @@ def test_poule_result_creation_valid_completed_matches(entries, completed_poule_
     assert result.entry_results[6].indicator == -7
 
 def test_poule_result_ranked_results_property_completed_matches(entries, completed_poule_matches):
-    result = PouleResult(entries, completed_poule_matches, POULE_ID1, TOURNY_ID1)
+    result = PouleResult(entries, completed_poule_matches, 1, 1)
 
     expected_results = (result.entry_results[2], 
                         result.entry_results[4], 
@@ -208,14 +210,14 @@ def test_poule_result_ranked_results_property_completed_matches(entries, complet
     assert result.ranked_results == expected_results
 
 def test_poule_result_ranked_results_display_names_property_completed_matches(entries, completed_poule_matches):
-    result = PouleResult(entries, completed_poule_matches, POULE_ID1, TOURNY_ID1)
+    result = PouleResult(entries, completed_poule_matches, 1, 1)
     
     assert result.ranked_results_display_names == ('Hannah', 'Michael', 'Emily', 'John', 'Dave', 'Sarah', 'Steve')
 
 def test_poule_result_creation_valid_completed_matches_reversed_match_order(entries, completed_poule_matches):
     reversed_matches = tuple(reversed(completed_poule_matches))
 
-    result = PouleResult(entries, reversed_matches, POULE_ID1, TOURNY_ID1)
+    result = PouleResult(entries, reversed_matches, 1, 1)
 
     assert result.entries == entries
 
@@ -269,18 +271,18 @@ def test_poule_result_creation_valid_completed_matches_reversed_match_order(entr
     assert result.entry_results[6].indicator == -7
 
 def test_poule_result_ranked_results_uses_touches_scored_tiebreaker(entries):
-    entries = factories.make_entries(n=3, tournament_id=TOURNY_ID1, initial_seed=True)
+    entries = factories.make_entries(3, TOURNY_ID1, initial_seed=True)
     
     match_scores = ((5, 3), (2, 5), (5, 4))
 
     matches = factories.make_poule_matches(
         entries,
-        POULE_ID1,
-        TOURNY_ID1,
+        1,
+        1,
         scores=match_scores
     )
 
-    result = PouleResult(entries, matches, POULE_ID1, TOURNY_ID1)
+    result = PouleResult(entries, matches, 1, 1)
     assert result.entry_results[0].victory_ratio == 0.5
     assert result.entry_results[0].indicator == -1
     assert result.entry_results[0].touches_scored == 7
@@ -306,10 +308,10 @@ def test_poule_result_calculates_forfeited_match(entries, incomplete_poule_match
     forfeited_match = incomplete_poule_matches[0]
     forfeited_match.forfeit(forfeiting_index)
 
-    result = PouleResult(entries, incomplete_poule_matches, POULE_ID1, TOURNY_ID1)
+    result = PouleResult(entries, incomplete_poule_matches, 1, 1)
 
-    winner_entry = forfeited_match.entry_at_index(1 - forfeiting_index)
-    loser_entry = forfeited_match.entry_at_index(forfeiting_index)
+    winner_entry = forfeited_match.entry_at(1 - forfeiting_index)
+    loser_entry = forfeited_match.entry_at(forfeiting_index)
     
     winner_result = result.entry_results[entries.index(winner_entry)]
     loser_result = result.entry_results[entries.index(loser_entry)]
@@ -336,13 +338,13 @@ def test_poule_result_calculates_forfeited_match(entries, incomplete_poule_match
             assert entry_result.touches_received == 0
 
 def test_poule_result_is_snapshot_of_matches(entries, incomplete_poule_matches):
-    original_result = PouleResult(entries, incomplete_poule_matches, POULE_ID1, TOURNY_ID1)
+    original_result = PouleResult(entries, incomplete_poule_matches, 1, 1)
     
     completed_match = incomplete_poule_matches[0]
 
     completed_match.record_score(5, 3)
 
-    new_result = PouleResult(entries, incomplete_poule_matches, POULE_ID1, TOURNY_ID1)
+    new_result = PouleResult(entries, incomplete_poule_matches, 1, 1)
 
     original_entry1_result = original_result.entry_results[entries.index(completed_match.entry1)]
     original_entry2_result = original_result.entry_results[entries.index(completed_match.entry2)]

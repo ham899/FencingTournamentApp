@@ -2,20 +2,19 @@ import pytest
 
 import factories
 
-from constants import TOURNY_ID1, POULE_ID1, POULE_ID2, POULE_ID3
-
 from poules.results.tournament_poule_results import TournamentPouleResults
 
+
 # --- Constants ---
+from constants import TOURNY_ID1
+
 RANDOM_SEED = 36
-POULE_NUMBER1, POULE_NUMBER2, POULE_NUMBER3 = 1, 2, 3
-POULE_IDS = (POULE_ID1, POULE_ID2, POULE_ID3)
 
 
 # --- Fixtures ---
 @pytest.fixture
 def entries_21():
-    return factories.make_entries(n=21, tournament_id=TOURNY_ID1, initial_seed=True)
+    return factories.make_entries(21, TOURNY_ID1, initial_seed=True)
 
 @pytest.fixture
 def entries_poule1(entries_21):
@@ -31,15 +30,15 @@ def entries_poule3(entries_21):
 
 @pytest.fixture
 def poule1_incomplete(entries_poule1):
-    return factories.make_poule(POULE_ID1, TOURNY_ID1, POULE_NUMBER1, entries_poule1)
+    return factories.make_poule(1, 1, entries_poule1)
 
 @pytest.fixture
 def poule2_incomplete(entries_poule2):
-    return factories.make_poule(POULE_ID2, TOURNY_ID1, POULE_NUMBER2, entries_poule2)
+    return factories.make_poule(2, 1, entries_poule2)
 
 @pytest.fixture
 def poule3_incomplete(entries_poule3):
-    return factories.make_poule(POULE_ID3, TOURNY_ID1, POULE_NUMBER3, entries_poule3)
+    return factories.make_poule(3, 1, entries_poule3)
 
 @pytest.fixture
 def poules_incomplete(poule1_incomplete, poule2_incomplete, poule3_incomplete):
@@ -47,25 +46,25 @@ def poules_incomplete(poule1_incomplete, poule2_incomplete, poule3_incomplete):
 
 @pytest.fixture
 def results_incomplete(poules_incomplete):
-    return TournamentPouleResults(TOURNY_ID1, poules_incomplete, RANDOM_SEED)
+    return TournamentPouleResults(poules_incomplete, RANDOM_SEED)
 
 @pytest.fixture
 def poule1_partial(entries_poule1):
     match_results = ((5,3), (5,1), (0,5), (4,5), (2,5), (5,0), (5,0))
     
-    return factories.make_poule(POULE_ID1, TOURNY_ID1, POULE_NUMBER1, entries_poule1, scores=match_results)
+    return factories.make_poule(1, 1, entries_poule1, scores=match_results)
 
 @pytest.fixture
 def poule2_partial(entries_poule2):
     match_results = ((3,5), (2,5), (5,4), (5,0), (4,5), (1,5), (3,5))
     
-    return factories.make_poule(POULE_ID2, TOURNY_ID1, POULE_NUMBER2, entries_poule2, scores=match_results)
+    return factories.make_poule(2, 1, entries_poule2, scores=match_results)
 
 @pytest.fixture
 def poule3_partial(entries_poule3):
     match_results = ((5,0), (5,3), (4,5), (2,5), (5,2), (5,3), (5,4))
     
-    return factories.make_poule(POULE_ID3, TOURNY_ID1, POULE_NUMBER3, entries_poule3, scores=match_results)
+    return factories.make_poule(3, 1, entries_poule3, scores=match_results)
 
 @pytest.fixture
 def poules_partially_complete(poule1_partial, poule2_partial, poule3_partial):
@@ -73,7 +72,7 @@ def poules_partially_complete(poule1_partial, poule2_partial, poule3_partial):
 
 @pytest.fixture
 def results_partially_complete(poules_partially_complete):
-    return TournamentPouleResults(TOURNY_ID1, poules_partially_complete, RANDOM_SEED)
+    return TournamentPouleResults(poules_partially_complete, RANDOM_SEED)
 
 @pytest.fixture
 def poule1_complete(entries_poule1):
@@ -81,7 +80,7 @@ def poule1_complete(entries_poule1):
                      (5,2), (4,5), (5,3), (5,3), (1,5), (2,5), (3,5), 
                      (4,5), (0,5), (5,4), (2,5), (5,4), (3,5), (5,1))
     
-    return factories.make_poule(POULE_ID1, TOURNY_ID1, POULE_NUMBER1, entries_poule1, scores=match_results)
+    return factories.make_poule(1, 1, entries_poule1, scores=match_results)
 
 @pytest.fixture
 def poule2_complete(entries_poule2):
@@ -89,7 +88,7 @@ def poule2_complete(entries_poule2):
                      (5,1), (5,4), (5,3), (5,2), (5,2), (5,1), (5,2), 
                      (5,3), (5,4), (2,5), (3,5), (0,5), (5,4), (4,5))
     
-    return factories.make_poule(POULE_ID2, TOURNY_ID1, POULE_NUMBER2, entries_poule2, scores=match_results)
+    return factories.make_poule(2, 1, entries_poule2, scores=match_results)
 
 @pytest.fixture
 def poule3_complete(entries_poule3):
@@ -97,7 +96,7 @@ def poule3_complete(entries_poule3):
                      (2,5), (3,5), (5,3), (5,4), (0,5), (2,5), (0,5), 
                      (5,4), (5,4), (5,1), (5,2), (5,1), (5,4), (4,5))
     
-    return factories.make_poule(POULE_ID3, TOURNY_ID1, POULE_NUMBER3, entries_poule3, scores=match_results)
+    return factories.make_poule(3, 1, entries_poule3, scores=match_results)
 
 @pytest.fixture
 def poules_complete(poule1_complete, poule2_complete, poule3_complete):
@@ -105,7 +104,7 @@ def poules_complete(poule1_complete, poule2_complete, poule3_complete):
 
 @pytest.fixture
 def results_complete(poules_complete):
-    return TournamentPouleResults(TOURNY_ID1, poules_complete, RANDOM_SEED)
+    return TournamentPouleResults(poules_complete, RANDOM_SEED)
 
 
 # --- Result Calculation Tests ---
@@ -128,14 +127,14 @@ def test_tournament_poule_results_incomplete_poules(results_incomplete):
     assert len(results_incomplete.poule_results) == 3
 
     for i, poule_result in enumerate(results_incomplete.poule_results):
-        assert poule_result.poule_id == POULE_IDS[i]
+        assert poule_result.poule_number == i + 1
         assert poule_result.tournament_id == TOURNY_ID1
 
         assert len(poule_result.entry_results) == 7
 
         for j, entry_result in enumerate(poule_result.entry_results):
             assert entry_result.entry.display_name == poule_name_order[i][j]
-            assert entry_result.poule_id == POULE_IDS[i]
+            assert entry_result.poule_number == i + 1
             assert entry_result.tournament_id == TOURNY_ID1
 
             assert entry_result.num_matches == 0
@@ -189,13 +188,13 @@ def test_tournament_poule_results_partially_complete_poules(results_partially_co
     assert len(results_partially_complete.poule_results) == 3
 
     for i, poule_result in enumerate(results_partially_complete.poule_results):
-        assert poule_result.poule_id == POULE_IDS[i]
+        assert poule_result.poule_number == i + 1
         assert poule_result.tournament_id == TOURNY_ID1
 
         assert len(poule_result.entry_results) == 7
 
         for j, entry_result in enumerate(poule_result.entry_results):
-            assert entry_result.poule_id == POULE_IDS[i]
+            assert entry_result.poule_number == i + 1
             assert entry_result.tournament_id == TOURNY_ID1
 
             assert entry_result.entry.display_name == expected_results[i][j][0]
@@ -256,13 +255,13 @@ def test_tournament_poule_results_complete_poules(results_complete):
     assert len(results_complete.poule_results) == 3
 
     for i, poule_result in enumerate(results_complete.poule_results):
-        assert poule_result.poule_id == POULE_IDS[i]
+        assert poule_result.poule_number == i + 1
         assert poule_result.tournament_id == TOURNY_ID1
 
         assert len(poule_result.entry_results) == 7
 
         for j, entry_result in enumerate(poule_result.entry_results):
-            assert entry_result.poule_id == POULE_IDS[i]
+            assert entry_result.poule_number == i + 1
             assert entry_result.tournament_id == TOURNY_ID1
 
             assert entry_result.entry.display_name == expected_results[i][j][0]
@@ -312,11 +311,11 @@ def test_tournament_poule_results_ranks_by_victory_ratio_not_number_of_victories
     # Poule 2 bout order: [(1,4), (2,3), (1,3), (2,4), (3,4), (1,2)]
     scores_poule2 = ((5, 1), (1, 5), (3, 5), (5, 4), (3, 5), (5, 2))
 
-    poule1 = factories.make_poule(POULE_ID1, TOURNY_ID1, POULE_NUMBER1, entries_poule1, scores=scores_poule1)
+    poule1 = factories.make_poule(1, 1, entries_poule1, scores=scores_poule1)
     
-    poule2 = factories.make_poule(POULE_ID2, TOURNY_ID1,POULE_NUMBER2, entries_poule2, scores=scores_poule2)
+    poule2 = factories.make_poule(2, 1, entries_poule2, scores=scores_poule2)
 
-    results = TournamentPouleResults(TOURNY_ID1, (poule1, poule2), RANDOM_SEED)
+    results = TournamentPouleResults((poule1, poule2), RANDOM_SEED)
 
     assert len(results.poule_results) == 2
     assert len(results.poule_results[0].entry_results) == 6
@@ -361,10 +360,10 @@ def test_tournament_poule_results_uses_indicator_after_equal_victory_ratios():
     # Poule 2 bout order: [(1,2)]
     scores_poule2 = ((5, 2),)
 
-    poule1 = factories.make_poule(POULE_ID1, TOURNY_ID1, POULE_NUMBER1, entries_poule1, scores=scores_poule1)
-    poule2 = factories.make_poule(POULE_ID2, TOURNY_ID1, POULE_NUMBER2, entries_poule2, scores=scores_poule2)
+    poule1 = factories.make_poule(1, 1, entries_poule1, scores=scores_poule1)
+    poule2 = factories.make_poule(2, 1, entries_poule2, scores=scores_poule2)
 
-    results = TournamentPouleResults(TOURNY_ID1, (poule1, poule2), RANDOM_SEED)
+    results = TournamentPouleResults((poule1, poule2), RANDOM_SEED)
 
     assert len(results.poule_results) == 2
     assert len(results.poule_results[0].entry_results) == 3
@@ -398,10 +397,10 @@ def test_tournament_poule_results_uses_touches_scored_after_ratio_and_indicator(
     entries_poule1 = (entries[0], entries[3])
     entries_poule2 = (entries[1], entries[2])
 
-    poule1 = factories.make_poule(POULE_ID1, TOURNY_ID1, POULE_NUMBER1, entries_poule1, scores=((5, 3),))
-    poule2 = factories.make_poule(POULE_ID2, TOURNY_ID1, POULE_NUMBER2, entries_poule2, scores=((4, 2),))
+    poule1 = factories.make_poule(1, 1, entries_poule1, scores=((5, 3),))
+    poule2 = factories.make_poule(2, 1, entries_poule2, scores=((4, 2),))
 
-    results = TournamentPouleResults(TOURNY_ID1, (poule1, poule2), RANDOM_SEED)
+    results = TournamentPouleResults((poule1, poule2), RANDOM_SEED)
 
     assert len(results.poule_results) == 2
     assert len(results.poule_results[0].entry_results) == 2
@@ -430,9 +429,9 @@ def test_tournament_poule_results_uses_touches_scored_after_ratio_and_indicator(
 
 def test_tournament_poule_results_is_score_snapshot():
     entries = factories.make_entries(n=2, tournament_id=TOURNY_ID1, initial_seed=True)
-    poule = factories.make_poule(POULE_ID1, TOURNY_ID1, POULE_NUMBER1, entries, scores=((5, 2),))
+    poule = factories.make_poule(1, 1, entries, scores=((5, 2),))
 
-    original_results = TournamentPouleResults(TOURNY_ID1, (poule,), RANDOM_SEED)
+    original_results = TournamentPouleResults((poule,), RANDOM_SEED)
 
     poule.record_match_result(0, 1, 5)
 
@@ -446,7 +445,7 @@ def test_tournament_poule_results_is_score_snapshot():
     assert original_results.round_results[1].touches_scored == 2
     assert original_results.round_results[1].touches_received == 5    
 
-    updated_results = TournamentPouleResults(TOURNY_ID1, (poule,), RANDOM_SEED)
+    updated_results = TournamentPouleResults((poule,), RANDOM_SEED)
 
     assert updated_results.round_results[0].entry == entries[1]
     assert updated_results.round_results[0].num_victories == 1

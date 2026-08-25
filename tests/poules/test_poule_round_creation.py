@@ -3,14 +3,11 @@ import pytest
 
 import factories
 
-from constants import TOURNY_ID1, TOURNY_ID2
-
 from poules.poule_round import PouleRound
 
 
 # --- Constants ---
-POULE_ROUND_ID1, POULE_ROUND_ID2 = 1, 2
-POULE_ROUND_NUMBER1, POULE_ROUND_NUMBER2 = 1, 2
+from constants import TOURNY_ID1, TOURNY_ID2
 
 
 # --- Fixtures ---
@@ -20,7 +17,7 @@ def entries():
 
 @pytest.fixture
 def poule_round(entries):
-    return PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, entries)
+    return PouleRound(1, entries)
 
 
 # --- Initialization and Validation Tests ---
@@ -31,11 +28,10 @@ def test_poule_round_creation_valid_21(entries):
     expected_poule3 = (entries[2], entries[3], entries[8], entries[9], entries[14], entries[15], entries[20])
     expected_poules = (expected_poule1, expected_poule2, expected_poule3)
 
-    poule_round = PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, entries)
+    poule_round = PouleRound(1, entries)
     
-    assert poule_round.id == POULE_ROUND_ID1
+    assert poule_round.round_number == 1
     assert poule_round.tournament_id == TOURNY_ID1
-    assert poule_round.round_number == POULE_ROUND_NUMBER1
     assert poule_round.entries == entries
 
     assert isinstance(poule_round.entries, tuple)
@@ -45,7 +41,7 @@ def test_poule_round_creation_valid_21(entries):
     assert poule_round.num_poules == 3
 
     for i, poule in enumerate(poule_round.poules):
-        assert poule.id == i + 1
+        assert poule.poule_number == i + 1
         assert poule.tournament_id == poule_round.tournament_id
         assert poule.poule_number == i + 1
         assert poule.entries == expected_poules[i]
@@ -61,11 +57,10 @@ def test_poule_round_creation_valid_17():
 
     expected_poules = (expected_poule1, expected_poule2, expected_poule3)
 
-    poule_round = PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, entries)
+    poule_round = PouleRound(1, entries)
     
-    assert poule_round.id == POULE_ROUND_ID1
+    assert poule_round.round_number == 1
     assert poule_round.tournament_id == TOURNY_ID1
-    assert poule_round.round_number == POULE_ROUND_NUMBER1
     assert poule_round.entries == entries
 
     assert isinstance(poule_round.entries, tuple)
@@ -75,7 +70,7 @@ def test_poule_round_creation_valid_17():
     assert poule_round.num_poules == 3
 
     for i, poule in enumerate(poule_round.poules):
-        assert poule.id == i + 1
+        assert poule.poule_number == i + 1
         assert poule.tournament_id == poule_round.tournament_id
         assert poule.poule_number == i + 1
         assert poule.entries == expected_poules[i]
@@ -94,11 +89,10 @@ def test_poule_round_creation_valid_38():
 
     expected_poules = (expected_poule1, expected_poule2, expected_poule3, expected_poule4, expected_poule5, expected_poule6)
 
-    poule_round = PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, entries)
+    poule_round = PouleRound(1, entries)
     
-    assert poule_round.id == POULE_ROUND_ID1
+    assert poule_round.round_number == 1
     assert poule_round.tournament_id == TOURNY_ID1
-    assert poule_round.round_number == POULE_ROUND_NUMBER1
     assert poule_round.entries == entries
 
     assert isinstance(poule_round.entries, tuple)
@@ -108,7 +102,7 @@ def test_poule_round_creation_valid_38():
     assert poule_round.num_poules == 6
 
     for i, poule in enumerate(poule_round.poules):
-        assert poule.id == i + 1
+        assert poule.poule_number == i + 1
         assert poule.tournament_id == poule_round.tournament_id
         assert poule.poule_number == i + 1
         assert poule.entries == expected_poules[i]
@@ -117,7 +111,7 @@ def test_poule_round_creation_valid_38():
 def test_poule_round_creation_valid_two_entries():
     entries = factories.make_entries(2, TOURNY_ID1, initial_seed=True)
 
-    poule_round = PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, entries)
+    poule_round = PouleRound(1, entries)
 
     assert poule_round.entries == entries
     assert poule_round.num_entries == 2
@@ -128,41 +122,21 @@ def test_poule_round_creation_valid_two_entries():
 @pytest.mark.parametrize('invalid_round_id_type', [None, '1UI3', False, True, 1.0, [], (), {}])
 def test_poule_round_creation_invalid_round_id_type(entries, invalid_round_id_type):
     with pytest.raises(TypeError):
-        PouleRound(invalid_round_id_type, TOURNY_ID1, POULE_ROUND_NUMBER1, entries)
+        PouleRound(invalid_round_id_type, entries)
 
 @pytest.mark.parametrize('invalid_round_id_value', [-100, -1, 0])
 def test_poule_round_creation_invalid_round_id_value(entries, invalid_round_id_value):
     with pytest.raises(ValueError):
-        PouleRound(invalid_round_id_value, TOURNY_ID1, POULE_ROUND_NUMBER1, entries)
-
-@pytest.mark.parametrize('invalid_tournament_id_type', [None, '1UI3', False, True, 1.0, [], (), {}])
-def test_poule_round_creation_invalid_tournament_id_type(entries, invalid_tournament_id_type):
-    with pytest.raises(TypeError):
-        PouleRound(POULE_ROUND_ID1, invalid_tournament_id_type, POULE_ROUND_NUMBER1, entries)
-
-@pytest.mark.parametrize('invalid_tournament_id_value', [-100, -1, 0])
-def test_poule_round_creation_invalid_tournament_id_value(entries, invalid_tournament_id_value):
-    with pytest.raises(ValueError):
-        PouleRound(POULE_ROUND_ID1, invalid_tournament_id_value, POULE_ROUND_NUMBER1, entries)
-
-@pytest.mark.parametrize('invalid_round_number_type', [None, 'three', False, True, 1.0, [], (), {}])
-def test_poule_round_creation_invalid_poule_round_number_type(entries, invalid_round_number_type):
-    with pytest.raises(TypeError):
-        PouleRound(POULE_ROUND_ID1, TOURNY_ID1, invalid_round_number_type, entries)
-
-@pytest.mark.parametrize('invalid_round_number_value', [-100, -1, 0])
-def test_poule_round_creation_invalid_poule_round_number_value(entries, invalid_round_number_value):
-    with pytest.raises(ValueError):
-        PouleRound(POULE_ROUND_ID1, TOURNY_ID1, invalid_round_number_value, entries)
+        PouleRound(invalid_round_id_value, entries)
 
 @pytest.mark.parametrize('invalid_entries_type', [None, False, True, 0, 1.0, 'John', {}])
 def test_poule_round_creation_invalid_entries_type(invalid_entries_type):
     with pytest.raises(TypeError):
-        PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, invalid_entries_type)
+        PouleRound(1, invalid_entries_type)
 
 def test_poule_round_creation_invalid_entries_list(entries):
     with pytest.raises(TypeError):
-        PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, list(entries))
+        PouleRound(1, list(entries))
 
 @pytest.mark.parametrize(
         ('index', 'invalid_entry_type'), 
@@ -184,24 +158,24 @@ def test_poule_round_creation_invalid_entries_invalid_entry_type(entries, index,
     entries = tuple(entries)
 
     with pytest.raises(TypeError):
-        PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, entries)
+        PouleRound(1, entries)
 
 @pytest.mark.parametrize('index', [0, 7, 10, 20])
 def test_poule_round_creation_invalid_entries_invalid_entry_tournament_id(entries, index):
     entries[index].tournament_id = TOURNY_ID2
 
     with pytest.raises(ValueError):
-        PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, entries)
+        PouleRound(1, entries)
 
 def test_poule_round_creation_invalid_entries_empty():
     with pytest.raises(ValueError):
-        PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, ())
+        PouleRound(1, ())
 
 def test_poule_round_creation_invalid_entries_only_one_entry():
     entries = factories.make_entries(1, TOURNY_ID1, initial_seed=True)
 
     with pytest.raises(ValueError):
-        PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, entries)
+        PouleRound(1, entries)
 
 def test_poule_round_creation_invalid_entries_duplicate_entry(entries):
     duplicate_entry = copy.deepcopy(entries[7])
@@ -210,44 +184,44 @@ def test_poule_round_creation_invalid_entries_duplicate_entry(entries):
     entries = entries + (duplicate_entry,)
 
     with pytest.raises(ValueError):
-        PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, entries)
+        PouleRound(1, entries)
 
 def test_poule_round_creation_invalid_entries_entry_missing_initial_seed(entries):
     entries[5].set_initial_seed(None)
 
     with pytest.raises(ValueError):
-        PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, entries)
+        PouleRound(1, entries)
 
 @pytest.mark.parametrize('invalid_seed_type', ['five', False, True, 5.0])
 def test_poule_round_creation_invalid_entries_entry_initial_seed_type(entries, invalid_seed_type):
     entries[8].initial_seed = invalid_seed_type
 
     with pytest.raises(TypeError):
-        PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, entries)
+        PouleRound(1, entries)
 
 @pytest.mark.parametrize('invalid_seed_value', [-5, -1, 0])
 def test_poule_round_creation_invalid_entries_entry_initial_seed_value(entries, invalid_seed_value):
     entries[11].initial_seed = invalid_seed_value
 
     with pytest.raises(ValueError):
-        PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, entries)
+        PouleRound(1, entries)
 
 def test_poule_round_creation_invalid_entries_entry_duplicate_initial_seed(entries):
     entries[15].initial_seed = entries[4].initial_seed
 
     with pytest.raises(ValueError):
-        PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, entries)
+        PouleRound(1, entries)
 
 def test_poule_round_creation_invalid_entries_entry_initial_seed_outside_expected_range(entries):
     entries[-1].set_initial_seed(22)
 
     with pytest.raises(ValueError):
-        PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, entries)
+        PouleRound(1, entries)
 
 def test_poule_round_creation_sorts_entries_by_initial_seed(entries):
     reversed_entries = tuple(reversed(entries))
 
-    poule_round = PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, reversed_entries)
+    poule_round = PouleRound(1, reversed_entries)
 
     assert poule_round.entries == entries
 
@@ -263,8 +237,8 @@ def test_poule_round_creation_sorts_entries_by_initial_seed(entries):
 
 # --- Equality Tests ---
 def test_poule_round_equality_same_attributes(entries):
-    poule_round1 = PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, entries)
-    poule_round2 = PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, entries)
+    poule_round1 = PouleRound(1, entries)
+    poule_round2 = PouleRound(1, entries)
 
     assert poule_round1 == poule_round2
 
@@ -273,14 +247,14 @@ def test_poule_round_inequality_different_objects(poule_round, not_a_poule_round
     assert poule_round != not_a_poule_round
 
 def test_poule_round_inequality_different_round_id(entries):
-    poule_round1 = PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, entries)
-    poule_round2 = PouleRound(POULE_ROUND_ID2, TOURNY_ID1, POULE_ROUND_NUMBER2, entries)
+    poule_round1 = PouleRound(1, entries)
+    poule_round2 = PouleRound(2, entries)
 
     assert poule_round1 != poule_round2
 
 def test_poule_round_inequality_different_tournament_id(entries):
-    poule_round1 = PouleRound(POULE_ROUND_ID1, TOURNY_ID1, POULE_ROUND_NUMBER1, entries)
-    poule_round2 = PouleRound(POULE_ROUND_ID1, TOURNY_ID2, POULE_ROUND_NUMBER1, factories.make_entries(7, TOURNY_ID2, initial_seed=True))
+    poule_round1 = PouleRound(1, entries)
+    poule_round2 = PouleRound(1, factories.make_entries(7, TOURNY_ID2, initial_seed=True))
 
     assert poule_round1 != poule_round2
 

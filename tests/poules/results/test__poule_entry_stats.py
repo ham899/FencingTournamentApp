@@ -6,6 +6,7 @@ from poules.results.poule_result import _PouleEntryStats
 # --- Constants ---
 INVALID_SCORE_VALUES = [-15, -10, -5, -1]
 
+
 # --- Fixtures ---
 @pytest.fixture
 def entry_stats():
@@ -87,7 +88,6 @@ def test__poule_entry_stats_add_match_info_valid_cumulative(entry_stats):
     assert entry_stats.num_victories == 2
     assert entry_stats.touches_scored == 14
     assert entry_stats.touches_received == 12
-
 
 @pytest.mark.parametrize(
         ('is_victory', 'touches_scored', 'touches_received', 'exception_type'),
