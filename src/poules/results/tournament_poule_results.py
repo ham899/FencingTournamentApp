@@ -147,10 +147,10 @@ class TournamentPouleResults:
                 round_number: int = poule.round_number
 
             if poule.tournament_id != tournament_id:
-                raise ValueError(f'Poule {poule.poule_number} at index {i} has a tournament ID {poule.tournament_id} that does not match the other poules\'s tournament IDs {tournament_id}')
+                raise ValueError(f'Poule {poule.poule_number} at index {i} has a tournament ID {poule.tournament_id} that does not match the other poules\' tournament IDs {tournament_id}')
             
             if poule.round_number != round_number:
-                raise ValueError(f'Poule {poule.poule_number} at index {i} has a round number {poule.round_number} that does not match the other poules\'s round numbers {round_number}')
+                raise ValueError(f'Poule {poule.poule_number} at index {i} has a round number {poule.round_number} that does not match the other poules\' round numbers {round_number}')
 
             if poule.poule_number in seen_poule_numbers:
                 raise ValueError(f'Poule number {poule.poule_number} occurs more than once.')
