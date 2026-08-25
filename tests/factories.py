@@ -29,16 +29,19 @@ def make_entries(n: int, tournament_id: int, *, initial_seed: bool = False, de_s
         ) for i in range(n)
     )
 
-def make_poule_match(match_id: int, tournament_id: int, entry1: TournamentEntry, entry2: TournamentEntry, poule_id: int, match_index: int,
+def make_poule_match(entry1: TournamentEntry, entry2: TournamentEntry, 
+                     match_number: int, poule_number: int, round_number: int,
                      *, score1: int | None = None, score2: int | None = None) -> PouleMatch:
     """Creates a valid uncompleted PouleMatch for use in tests."""
+    if (score1 is None and score2 is not None) or (score1 is not None and score2 is None):
+        raise ValueError(f'The provided scores must either both be None or both be not None - got score1={score1} and score2={score2}')
+
     poule_match = PouleMatch(
-        id = match_id, 
-        tournament_id = tournament_id, 
-        entry1 = entry1, 
-        entry2 = entry2, 
-        poule_id = poule_id, 
-        match_index = match_index
+        entry1 = entry1,
+        entry2 = entry2,
+        match_number = match_number,
+        poule_number = poule_number,
+        round_number = round_number
     )
 
     if score1 is not None and score2 is not None:
@@ -46,7 +49,7 @@ def make_poule_match(match_id: int, tournament_id: int, entry1: TournamentEntry,
     
     return poule_match
 
-def make_poule_matches(entries: tuple[TournamentEntry, ...], poule_id: int, tournament_id: int,
+def make_poule_matches(entries: tuple[TournamentEntry, ...], poule_number: int, round_number: int,
                        *, scores: tuple[tuple[int, int], ...] = None) -> tuple[PouleMatch, ...]:
     """Creates a tuple of PouleMatch objects based on the official bout order."""
     
@@ -60,12 +63,13 @@ def make_poule_matches(entries: tuple[TournamentEntry, ...], poule_id: int, tour
 
         matches.append(
             make_poule_match(
-                match_id = i + 1, 
-                tournament_id = tournament_id, 
                 entry1 = entry1, 
-                entry2 = entry2, 
-                poule_id = poule_id, 
-                match_index = i,
+                entry2 = entry2,
+
+                match_number = i + 1,
+                poule_number = poule_number,
+                round_number = round_number, 
+
                 score1 = scores[i][0] if scores is not None and i < len(scores) else None,
                 score2 = scores[i][1] if scores is not None and i < len(scores) else None
             )
@@ -73,10 +77,10 @@ def make_poule_matches(entries: tuple[TournamentEntry, ...], poule_id: int, tour
 
     return tuple(matches)
 
-def make_poule(id: int, tournament_id: int, poule_number: int, entries: tuple[TournamentEntry, ...], 
+def make_poule(poule_number: int, round_number: int, entries: tuple[TournamentEntry, ...], 
                *, scores: tuple[tuple[int, int], ...] = None) -> Poule:
     """Creates a valid Poule for use in tests."""
-    poule = Poule(id, tournament_id, poule_number, entries=entries)
+    poule = Poule(poule_number, round_number, entries)
 
     # Record scores if provided
     if scores:
