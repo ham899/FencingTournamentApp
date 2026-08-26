@@ -60,11 +60,6 @@ class PouleMatch(TournamentMatch):
 
     # --- Properties ---
     @property
-    def match_type(self) -> str:
-        """Return the match type."""
-        return 'poule'
-    
-    @property
     def label(self) -> str:
         """Return a descriptive label identifying the match."""
         return (
@@ -72,7 +67,12 @@ class PouleMatch(TournamentMatch):
             f'of round {self.round_number} '
             f'in tournament {self.tournament_id}'
         )
-    
+
+    @property
+    def match_type(self) -> str:
+        """Return the match type."""
+        return 'poule'
+        
     @property
     def match_index(self) -> int:
         """Return the match's zero-based position within its poule."""
