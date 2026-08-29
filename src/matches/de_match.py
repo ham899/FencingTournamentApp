@@ -83,19 +83,6 @@ class DEMatch(TournamentMatch):
     def stage_index(self) -> int:
         """Return the match's zero-based stage position within the tournament."""
         return self.stage_number - 1
-
-    @property
-    def next_match_index(self) -> int:
-        """
-        Returns the index the match would have in the following DE round. 
-        The bracket should only use this value when a following round exists.
-        """
-        return self.match_index // 2
-    
-    @property
-    def next_match_number(self) -> int:
-        """Return the match position within the next round in the bracket."""
-        return self.next_match_index + 1
     
 
     # --- Dunder Methods ---
