@@ -7,7 +7,7 @@ from entities.tournament_entry import TournamentEntry
 from matches.poule_match import PouleMatch
 from poules.poule import Poule
 from poules.results.poule_entry_result import PouleEntryResult
-from poules.results.tournament_poule_results import PouleStageResults
+from poules.results.poule_stage_results import PouleStageResults
 from utils import snake_numbers
 
 
