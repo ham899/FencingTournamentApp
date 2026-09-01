@@ -348,10 +348,9 @@ class TournamentMatch(Match, ABC):
         ------
         TypeError
             If ``entry_name`` is not a string, if ``entry`` is not a ``TournamentEntry``, 
-            if an identifier or supplied seed is not an integer, 
-            or if the entry does not contain a ``Fencer``.
+            if an identifier is not an integer, or if the entry does not contain a ``Fencer``.
         ValueError
-            If an identifier or supplied seed is not positive.
+            If an identifier is not positive.
         """
         if not isinstance(entry_name, str):
             raise TypeError(f'The provided entry_name must be a string - got {type(entry_name).__name__}')
@@ -364,9 +363,6 @@ class TournamentMatch(Match, ABC):
         
         if not isinstance(entry.fencer, Fencer):
             raise TypeError(f'{entry_name} must have a Fencer object - got {type(entry.fencer).__name__}.')
-        
-        validation.validate_optional_positive_int(entry.initial_seed, f'{entry_name} Initial Seed', 'TournamentMatch', '_validate_entry')
-        validation.validate_optional_positive_int(entry.de_seed, f'{entry_name} DE Seed', 'TournamentMatch', '_validate_entry')
 
     def _validate_entry_pair(self, entry1: TournamentEntry, entry2: TournamentEntry) -> None:
         """
