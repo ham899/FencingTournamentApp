@@ -20,9 +20,9 @@ class PouleEntryResult:
     entry : TournamentEntry
         The tournament entry whose poule results are represented.
     poule_number : int
-        The poule's one-based position within its round.
-    round_number : int
-        The poule round's one-based position within the tournament.
+        The poule's one-based position within its stage.
+    stage_number : int
+        The poule stage's one-based position within the tournament.
     num_matches : int
         The number of completed poule bouts fenced by the entry.
     num_victories : int
@@ -35,7 +35,7 @@ class PouleEntryResult:
     entry: TournamentEntry
     
     poule_number: int
-    round_number: int
+    stage_number: int
     
     num_matches: int
     num_victories: int
@@ -51,18 +51,18 @@ class PouleEntryResult:
         Raises
         ------
         TypeError
-            If `entry` is not a `TournamentEntry`, or if `poule_number`, `round_number`, 
+            If `entry` is not a `TournamentEntry`, or if `poule_number`, `stage_number`, 
             `num_matches`, `num_victories`, `touches_scored`, or `touches_received` is not an integer.
         ValueError
-            If `poule_number` or `round_number` is not positive, if a result statistic is negative, 
+            If `poule_number` or `stage_number` is not positive, if a result statistic is negative, 
             if the number of victories exceeds the number of matches, 
             or if touches are recorded when no matches have been completed.
         """
         # Validate the provided entry
         self._validate_entry(self.entry)
 
-        # Validate the poule number and round number
-        validation.validate_positive_int(self.round_number, 'Round number', 'PouleEntryResult')
+        # Validate the poule number and stage number
+        validation.validate_positive_int(self.stage_number, 'Stage number', 'PouleEntryResult')
         validation.validate_positive_int(self.poule_number, 'Poule number', 'PouleEntryResult')
         
         # Validate the provided entry results
@@ -87,7 +87,7 @@ class PouleEntryResult:
     @property
     def label(self) -> str:
         """Return a descriptive label for the object."""
-        return f'PouleEntryResult for {self.display_name} in poule {self.poule_number} of round {self.round_number} in tournament {self.tournament_id}'
+        return f'PouleEntryResult for {self.display_name} in poule {self.poule_number} of stage {self.stage_number} in tournament {self.tournament_id}'
 
     @property
     def tournament_id(self) -> int:

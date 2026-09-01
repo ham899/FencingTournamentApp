@@ -12,7 +12,7 @@ from poules.results.poule_result import PouleResult
 @dataclass(eq=False)
 class Poule:
     """
-    Represents a poule and its ordered matches within a tournament.
+    Represent a poule and its ordered matches within a tournament.
 
     The order of `entries` determines each entry's fencer number in the poule.
     The matches are automatically generated using the official bout order.
@@ -20,16 +20,16 @@ class Poule:
     Attributes
     ----------
     poule_number : int
-        The poule's one-based position within the round.
-    round_number : int
-        The round's one-based overall position within the tournament.
+        The poule's one-based position within the stage.
+    stage_number : int
+        The stage's one-based overall position within the tournament.
     entries : tuple[TournamentEntry, ...]
         The tournament entries in fencer-number order.
     matches : tuple[PouleMatch, ...]
         The poule matches in official bout order.
     """
     poule_number: int
-    round_number: int
+    stage_number: int
     entries: tuple[TournamentEntry, ...]
     matches: tuple[PouleMatch, ...] = field(init=False)
 
@@ -37,25 +37,25 @@ class Poule:
     # --- Initialization and Validation Methods ---
     def __post_init__(self) -> None:
         """
-        Validates the poule and generates its ordered match schedule.
+        Validate the poule and generate its ordered match schedule.
 
         Raises
         ------
         TypeError
-            If the poule number or round number is not an integer, 
+            If the poule number or stage number is not an integer, 
             if `entries` is not a tuple, 
             or if an item is not a `TournamentEntry` object.
         ValueError
-            If the poule number or round number is not positive, 
+            If the poule number or stage number is not positive, 
             if fewer than two entries are provided, 
             if an entry is repeated or belongs to another tournament,
             or no bout order exists for the poule size.
         RuntimeError
             If the generated schedule has the wrong number of matches.
         """
-        # Validate the poule and round numbers
+        # Validate the poule and stage numbers
         validation.validate_positive_int(self.poule_number, 'Poule number', 'Poule')
-        validation.validate_positive_int(self.round_number, 'Round number', 'Poule')
+        validation.validate_positive_int(self.stage_number, 'Stage number', 'Poule')
                 
         # Validate the entries provided and generate the poule matches given the validated entries
         self.matches = self._generate_matches(self.entries)
@@ -87,7 +87,7 @@ class Poule:
     @property
     def label(self) -> str:
         """Return a descriptive label identifying the poule."""
-        return f'Poule {self.poule_number} of round {self.round_number} in tournament {self.tournament_id}'
+        return f'Poule {self.poule_number} in stage {self.stage_number} in tournament {self.tournament_id}'
 
 
     # --- Dunder Methods ---
@@ -98,7 +98,7 @@ class Poule:
         
         return (
             self.tournament_id == other.tournament_id and 
-            self.round_number == other.round_number and
+            self.stage_number == other.stage_number and
             self.poule_number == other.poule_number
         )
 
@@ -246,7 +246,7 @@ class Poule:
             poule_entries = self.entries, 
             poule_matches = self.matches, 
             poule_number = self.poule_number, 
-            round_number = self.round_number
+            stage_number = self.stage_number
         )
 
     def calculate_ranked_results(self) -> tuple[PouleEntryResult, ...]:
@@ -315,7 +315,7 @@ class Poule:
         return PouleMatch(
             match_number = match_number, 
             poule_number = self.poule_number,
-            round_number = self.round_number,
+            stage_number = self.stage_number,
             entry1 = entry1,
             entry2 = entry2
         )

@@ -104,7 +104,7 @@ class PouleResult:
     of truth. Entry results preserve the order of the supplied entries.
 
     All entries and matches must belong to the same tournament, and every match
-    must belong to the specified round and poule. The supplied entry and match tuples 
+    must belong to the specified stage and poule. The supplied entry and match tuples 
     are not stored directly. Each generated entry result retains its corresponding entry, 
     while the matches are used only during initialization. The snapshot's fields cannot be 
     reassigned after initialization.
@@ -117,27 +117,27 @@ class PouleResult:
     poule_matches : tuple[PouleMatch, ...]
         The complete round-robin schedule from which results are derived. Each
         match must belong to the tournament shared by the entries and to the
-        specified round and poule.
+        specified stage and poule.
     poule_number : int
-        The poule's one-based position within its round.
-    round_number : int
-        The poule round's one-based position within the tournament.
+        The poule's one-based position within its stage.
+    stage_number : int
+        The poule stage's one-based position within the tournament.
 
     Attributes
     ----------
     entry_results : tuple[PouleEntryResult, ...]
         The calculated result for each entry, in the order the entries were supplied.
     poule_number : int
-        The poule's one-based position within its round.
-    round_number : int
-        The poule round's one-based position within the tournament.
+        The poule's one-based position within its stage.
+    stage_number : int
+        The poule stage's one-based position within the tournament.
     """
     poule_entries: InitVar[tuple[TournamentEntry, ...]]
     poule_matches: InitVar[tuple[PouleMatch, ...]]
 
     entry_results: tuple[PouleEntryResult, ...] = field(init=False)
     poule_number: int
-    round_number: int
+    stage_number: int
     
     
     # --- Initialization and Validation Methods ---
@@ -155,23 +155,23 @@ class PouleResult:
         Raises
         ------
         TypeError
-            If the poule number or round number is not an integer, if
+            If the poule number or stage number is not an integer, if
             `poule_entries` or `poule_matches` is not a tuple, if either tuple
             contains an object of the wrong type, or if an entry ID or
             tournament ID is not an integer.
         ValueError
-            If the poule number, round number, an entry ID, or a tournament ID
+            If the poule number, stage number, an entry ID, or a tournament ID
             is not positive; fewer than two entries are provided; entry IDs are
             not unique; the entries do not all belong to the same tournament;
             the matches do not form the required round-robin schedule; a match
-            belongs to another tournament, round, or poule; a match contains an
+            belongs to another tournament, stage, or poule; a match contains an
             invalid or repeated entry; match numbers are duplicated or are not
             consecutive from one; or an entry pairing occurs more than once.
         RuntimeError
             If a completed match does not have a valid winner index.
         """
         validation.validate_positive_int(self.poule_number, 'Poule number', 'PouleResult')
-        validation.validate_positive_int(self.round_number, 'Round number', 'PouleResult')
+        validation.validate_positive_int(self.stage_number, 'Stage number', 'PouleResult')
 
         self._validate_entries(poule_entries)
         tournament_id = poule_entries[0].tournament_id
@@ -285,7 +285,7 @@ class PouleResult:
                 PouleEntryResult(
                     entry = entry, 
                     poule_number = self.poule_number, 
-                    round_number = self.round_number, 
+                    stage_number = self.stage_number, 
                     num_matches = num_matches, 
                     num_victories = num_victories, 
                     touches_scored = touches_scored, 
@@ -385,7 +385,7 @@ class PouleResult:
             If matches is not a tuple, or if matches contains an item that is not a `PouleMatch`.
         ValueError
             If no matches are provided, the matches do not form a complete round-robin schedule, 
-            a match belongs to another tournament, round, or poule, a match contains the same entry twice, 
+            a match belongs to another tournament, stage, or poule, a match contains the same entry twice, 
             a match contains an entry outside the supplied entries, match numbers are duplicated or
             are not consecutive from one, or an entry pairing occurs more than once.
         """
@@ -411,8 +411,8 @@ class PouleResult:
             if match.poule_number != self.poule_number:
                 raise ValueError(f'The poule match at index {i} in matches does not have the same poule number {match.poule_number} as the poule number of this result container {self.poule_number}')
 
-            if match.round_number != self.round_number:
-                raise ValueError(f'The poule match at index {i} in matches does not have the same round number {match.round_number} as the round number of this result container {self.round_number}')
+            if match.stage_number != self.stage_number:
+                raise ValueError(f'The poule match at index {i} in matches does not have the same stage number {match.stage_number} as the stage number of this result container {self.stage_number}')
 
             if match.tournament_id != tournament_id:
                 raise ValueError(f'The poule match at index {i} belongs to tournament {match.tournament_id}, but the entries belong to tournament {tournament_id}')

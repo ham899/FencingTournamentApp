@@ -10,9 +10,9 @@ from poules.results.poule_result import PouleResult
 
 
 @dataclass(frozen=True, slots=True)
-class TournamentPouleResults:
+class PouleStageResults:
     """
-    Represents a fixed snapshot of a tournament's poule-round results.
+    Represents a fixed snapshot of a tournament's poule-stage results.
 
     The snapshot contains the result of each poule and the overall ranked
     results. Its fields cannot be reassigned after initialization.
@@ -32,14 +32,14 @@ class TournamentPouleResults:
         The seed supplied for resolving complete ranking ties.
     poule_results : tuple[PouleResult, ...]
         The calculated result snapshot for each poule.
-    round_results : tuple[PouleEntryResult, ...]
+    stage_results : tuple[PouleEntryResult, ...]
         The entry results in descending ranking order.
     """
     poules: InitVar[tuple[Poule, ...]]
     random_seed: int | None = None
 
     poule_results: tuple[PouleResult, ...] = field(init=False)
-    round_results: tuple[PouleEntryResult, ...] = field(init=False)
+    stage_results: tuple[PouleEntryResult, ...] = field(init=False)
 
     # --- Initialization and Validation Methods ---
     def __post_init__(self, poules: tuple[Poule, ...]) -> None:
@@ -64,7 +64,7 @@ class TournamentPouleResults:
 
         object.__setattr__(self, 'poule_results', tuple(poule.calculate_results() for poule in poules))
 
-        object.__setattr__(self, 'round_results', self._calculate_round_results())
+        object.__setattr__(self, 'stage_results', self._calculate_stage_results())
 
 
     # --- Properties ---
@@ -74,25 +74,25 @@ class TournamentPouleResults:
         return self.poule_results[0].tournament_id
     
     @property
-    def round_number(self) -> int:
-        """Return the round number shared by these poule results."""
-        return self.poule_results[0].round_number
+    def stage_number(self) -> int:
+        """Return the stage number shared by these poule results."""
+        return self.poule_results[0].stage_number
 
     @property
-    def round_results_display_names(self) -> tuple[str, ...]:
+    def stage_results_display_names(self) -> tuple[str, ...]:
         """Return the ranked entry results as fencer display names."""
-        return tuple(entry_result.display_name for entry_result in self.round_results)
+        return tuple(entry_result.display_name for entry_result in self.stage_results)
 
     @property
     def label(self) -> str:
         """Return a descriptive label identifying these results."""
-        return f'PouleRoundResults for round {self.round_number} in tournament {self.tournament_id}'
+        return f'PouleStageResults for stage {self.stage_number} in tournament {self.tournament_id}'
 
 
     # --- Result Calculation Helper Methods ---
-    def _calculate_round_results(self) -> tuple[PouleEntryResult, ...]:
+    def _calculate_stage_results(self) -> tuple[PouleEntryResult, ...]:
         """
-        Calculates and ranks the overall results for the poule round.
+        Calculates and ranks the overall results for the poule stage.
 
         Entries are ranked by victory ratio, indicator, and touches scored.
         Entries tied on all three criteria are ordered randomly.
@@ -102,20 +102,20 @@ class TournamentPouleResults:
         tuple[PouleEntryResult, ...]
             The entry results in descending ranking order.
         """   
-        round_results: list[PouleEntryResult] = [entry_result for poule_result in self.poule_results for entry_result in poule_result.entry_results]
+        stage_results: list[PouleEntryResult] = [entry_result for poule_result in self.poule_results for entry_result in poule_result.entry_results]
 
         rng = Random(self.random_seed)
-        rng.shuffle(round_results)
+        rng.shuffle(stage_results)
 
-        round_results.sort(key=lambda entry_result: (entry_result.victory_ratio, entry_result.indicator, entry_result.touches_scored), reverse=True)
+        stage_results.sort(key=lambda entry_result: (entry_result.victory_ratio, entry_result.indicator, entry_result.touches_scored), reverse=True)
     
-        return tuple(round_results)
+        return tuple(stage_results)
     
     
     # --- Validation Helper Methods ---
     def _validate_poules(self, poules: tuple[Poule, ...]) -> None:
         """
-        Validates that a given poules can belong in this poule round.
+        Validates that a given poules can belong in this poule stage.
         
         Parameters
         ----------
@@ -127,7 +127,8 @@ class TournamentPouleResults:
         TypeError
             If `poules` is not a tuple, or if any entry in `poules` is not a `Poule` object.
         ValueError
-            If `poules` is an empty tuple, if a poule's tournament ID differs from the other poules, 
+            If `poules` is an empty tuple, 
+            if a poule's tournament ID or stage number differs from the other poules, 
             or if any poule occurs more than once in the tuple.
         """
         if not isinstance(poules, tuple):
@@ -144,13 +145,13 @@ class TournamentPouleResults:
 
             if i == 0:
                 tournament_id: int = poule.tournament_id
-                round_number: int = poule.round_number
+                stage_number: int = poule.stage_number
 
             if poule.tournament_id != tournament_id:
                 raise ValueError(f'Poule {poule.poule_number} at index {i} has a tournament ID {poule.tournament_id} that does not match the other poules\' tournament IDs {tournament_id}')
             
-            if poule.round_number != round_number:
-                raise ValueError(f'Poule {poule.poule_number} at index {i} has a round number {poule.round_number} that does not match the other poules\' round numbers {round_number}')
+            if poule.stage_number != stage_number:
+                raise ValueError(f'Poule {poule.poule_number} at index {i} has a stage number {poule.stage_number} that does not match the other poules\' stage numbers {stage_number}')
 
             if poule.poule_number in seen_poule_numbers:
                 raise ValueError(f'Poule number {poule.poule_number} occurs more than once.')

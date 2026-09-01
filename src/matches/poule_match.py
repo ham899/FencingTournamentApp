@@ -13,9 +13,9 @@ class PouleMatch(TournamentMatch):
     Both entries are required. ``entry1`` represents the fencer to the
     referee's right, and ``entry2`` represents the fencer to the referee's left.
 
-    The match, poule, and round numbers are all one-based. ``round_number``
-    represents the round's overall position within the tournament, regardless
-    of whether that round is a poule round or another type of round.
+    The match, poule, and stage numbers are all one-based. ``stage_number``
+    represents the stage's overall position within the tournament, regardless
+    of whether that stage is a poule stage or another type of stage.
 
     A forfeit is recorded by assigning ``score_to_win`` to the non-forfeiting entry and zero to the forfeiting entry.
 
@@ -24,15 +24,15 @@ class PouleMatch(TournamentMatch):
     match_number : int
         The match's one-based position within the poule's official bout order.
     poule_number : int
-        The poule's one-based position within its round.
-    round_number : int
-        The match's one-based round position within the tournament.
+        The poule's one-based position within its stage.
+    stage_number : int
+        The match's one-based stage position within the tournament.
     score_to_win : int, default=5
         The conventional target score and maximum permitted recorded score for either entry.
     """
     match_number: int
     poule_number: int
-    round_number: int
+    stage_number: int
 
     score_to_win: int = field(default=5, kw_only=True)
 
@@ -45,7 +45,7 @@ class PouleMatch(TournamentMatch):
         Raises
         ------
         TypeError
-            If ``match_number``, ``poule_number``, ``round_number``, or ``score_to_win`` is 
+            If ``match_number``, ``poule_number``, ``stage_number``, or ``score_to_win`` is 
             not an integer, or if an entry or one of its validated attributes has an invalid type.
         ValueError
             If any number is not positive, if either entry contains an invalid value, if the entries are equal, 
@@ -53,7 +53,7 @@ class PouleMatch(TournamentMatch):
         """
         validation.validate_positive_int(self.match_number, 'Match number', 'PouleMatch')
         validation.validate_positive_int(self.poule_number, 'Poule number', 'PouleMatch')
-        validation.validate_positive_int(self.round_number, 'Round number', 'PouleMatch')
+        validation.validate_positive_int(self.stage_number, 'Stage number', 'PouleMatch')
         
         super().__post_init__()
 
@@ -64,7 +64,7 @@ class PouleMatch(TournamentMatch):
         """Return a descriptive label identifying the match."""
         return (
             f'Match {self.match_number} in poule {self.poule_number} '
-            f'of round {self.round_number} '
+            f'of stage {self.stage_number} '
             f'in tournament {self.tournament_id}'
         )
 
@@ -80,21 +80,21 @@ class PouleMatch(TournamentMatch):
     
     @property
     def poule_index(self) -> int:
-        """Return the poule's zero-based position within its round."""
+        """Return the poule's zero-based position within its stage."""
         return self.poule_number - 1
     
     @property
-    def round_index(self) -> int:
-        """Return the round's zero-based position within the tournament."""
-        return self.round_number - 1
+    def stage_index(self) -> int:
+        """Return the stage's zero-based position within the tournament."""
+        return self.stage_number - 1
 
 
-    # --- Dunder Methods ---
+    # --- Equality ---
     def __eq__(self, other: object) -> bool:
         """
         Return whether ``other`` represents the same scheduled poule match.
 
-        Equality is based on tournament ID, round number, poule number, and
+        Equality is based on tournament ID, stage number, poule number, and
         match number. Entries and recorded results are not considered.
         """
         if not isinstance(other, PouleMatch):
@@ -102,7 +102,7 @@ class PouleMatch(TournamentMatch):
 
         return (
             self.tournament_id == other.tournament_id and 
-            self.round_number == other.round_number and
+            self.stage_number == other.stage_number and
             self.poule_number == other.poule_number and 
             self.match_number == other.match_number
         )
