@@ -31,8 +31,8 @@ class PouleStage:
     poules : tuple[Poule, ...]
         The generated poules in poule-number order.
     """
-    seeded_entries: tuple[SeededEntry, ...]
     stage_number: int
+    seeded_entries: tuple[SeededEntry, ...]
     poules: tuple[Poule, ...] = field(init=False)
 
 
