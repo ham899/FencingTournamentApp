@@ -63,18 +63,19 @@ def test_tournament_match_creation_invalid_entries_equal_entries(entry1):
 
 def test_tournament_match_creation_invalid_entries_same_fencer():
     fencer = factories.make_fencer(1, 'John')
-    entry1 = factories.make_tournament_entry(1, fencer, TOURNY_ID1)    
-    entry2 = factories.make_tournament_entry(2, fencer, TOURNY_ID1)
+    entry1 = factories.make_tournament_entry(1, TOURNY_ID1, fencer)    
+    entry2 = factories.make_tournament_entry(2, TOURNY_ID1, fencer)
 
     with pytest.raises(ValueError):
         PouleMatch(entry1, entry2, 1, 1, 1)
 
 def test_tournament_match_creation_invalid_entries_different_tournament_ids():
-    entry1 = factories.make_tournament_entry(1, factories.make_fencer(1, 'John'), TOURNY_ID1)    
-    entry2 = factories.make_tournament_entry(2, factories.make_fencer(2, 'Jill'), TOURNY_ID2)
+    entry1 = factories.make_tournament_entry(1, TOURNY_ID1, factories.make_fencer(1, 'John'))
+    entry2 = factories.make_tournament_entry(2, TOURNY_ID2, factories.make_fencer(2, 'Jill'))
 
     with pytest.raises(ValueError):
         PouleMatch(entry1, entry2, 1, 1, 1)
+
 
 # --- Predicate Method Tests ---
 def test_tournament_match_has_entry_true(entry1, poule_match):

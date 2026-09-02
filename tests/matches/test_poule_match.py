@@ -147,8 +147,8 @@ def test_poule_match_inequality_different_stage_number(entry1, entry2, entry3, e
     assert match1 != match2
 
 def test_poule_match_inequality_different_tournament_id(entry1, entry2):
-    entry3 = factories.make_tournament_entry(3, factories.make_fencer(3, 'Jim'), TOURNY_ID2)
-    entry4 = factories.make_tournament_entry(4, factories.make_fencer(4, 'Alfred'), TOURNY_ID2)
+    entry3 = factories.make_tournament_entry(3, TOURNY_ID2, factories.make_fencer(3, 'Jim'))
+    entry4 = factories.make_tournament_entry(4, TOURNY_ID2, factories.make_fencer(4, 'Alfred'))
 
     match1 = PouleMatch(entry1, entry2, match_number=1, poule_number=1, stage_number=1)
     match2 = PouleMatch(entry3, entry4, match_number=1, poule_number=1, stage_number=1)
