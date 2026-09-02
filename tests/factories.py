@@ -1,11 +1,12 @@
 # tests/factories.py
 
 from entities.fencer import Fencer
+from entities.seeded_entry import SeededEntry
+from entities.tournament_entry import TournamentEntry
 from matches.poule_match import PouleMatch
 from poules.poule import Poule
 from poules.poule_orders import POULE_BOUT_ORDER
 from sample_names import SAMPLE_NAMES
-from entities.tournament_entry import TournamentEntry
 
 
 def make_fencer(id: int, name: str) -> Fencer:
@@ -21,14 +22,29 @@ def make_entries(n: int, tournament_id: int) -> tuple[TournamentEntry, ...]:
     return tuple(
         make_tournament_entry(
             id = i + 1, 
-            tournament_id = tournament_id,
-            fencer = make_fencer(id=i + 1, name=SAMPLE_NAMES[i])
+            tournament_id=tournament_id,
+            fencer = make_fencer(id = i + 1, name=SAMPLE_NAMES[i])
         ) for i in range(n)
+    )
+
+def make_seeded_entries(n: int, tournament_id: int) -> tuple[SeededEntry, ...]:
+    """Create a tuple of valid SeededEntry objects for use in tests."""
+    entries = make_entries(n, tournament_id)
+
+    return tuple(
+        SeededEntry(
+            entry=entry,
+            seed = i + 1
+        ) for i, entry in enumerate(entries)
     )
 
 def make_entry_at_number(number: int, tournament_id: int) -> TournamentEntry:
     """Gets a specific tournament entry from make_entries()."""
     return make_entries(number, tournament_id)[-1]
+
+def make_seeded_entry_at_number(number: int, tournament_id: int) -> SeededEntry:
+    """Gets a specific seeded entry from make_seeded_entries()."""
+    return make_seeded_entries(number, tournament_id)[-1]
 
 def make_poule_match(entry1: TournamentEntry, entry2: TournamentEntry, match_number: int, poule_number: int, stage_number: int, 
                      *, score1: int | None = None, score2: int | None = None) -> PouleMatch:
