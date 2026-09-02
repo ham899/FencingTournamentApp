@@ -5,7 +5,7 @@ from dataclasses import FrozenInstanceError
 
 import factories
 
-from poules.results.tournament_poule_results import TournamentPouleResults
+from poules.results.poule_stage_results import PouleStageResults
 
 
 # --- Constants ---
@@ -17,7 +17,7 @@ RANDOM_SEED = 36
 # --- Fixtures ---
 @pytest.fixture
 def entries_21():
-    return factories.make_entries(n=21, tournament_id=TOURNY_ID1, initial_seed=True)
+    return factories.make_entries(n=21, tournament_id=TOURNY_ID1)
 
 @pytest.fixture
 def entries_poule1(entries_21):
@@ -100,42 +100,42 @@ def poules_complete(poule1_complete, poule2_complete, poule3_complete):
 
 # --- Initialization and Validation Tests ---
 def test_tournament_poule_results_creation_valid_incomplete_poules(entries_21, poules_incomplete):
-    results = TournamentPouleResults(poules_incomplete, RANDOM_SEED)
+    results = PouleStageResults(poules_incomplete, RANDOM_SEED)
 
     assert results.tournament_id == TOURNY_ID1
     assert results.random_seed == RANDOM_SEED
     assert isinstance(results.poule_results, tuple)
-    assert isinstance(results.round_results, tuple)
+    assert isinstance(results.stage_results, tuple)
     assert len(results.poule_results) == len(poules_incomplete)
-    assert len(results.round_results) == len(entries_21)
+    assert len(results.stage_results) == len(entries_21)
 
 def test_tournament_poule_results_creation_valid_single_poule(poule1_incomplete):
-    results = TournamentPouleResults((poule1_incomplete,), RANDOM_SEED)
+    results = PouleStageResults((poule1_incomplete,), RANDOM_SEED)
 
     assert len(results.poule_results) == 1
 
 def test_tournament_poule_results_creation_valid_partially_complete_poules(entries_21, poules_partially_complete):
-    results = TournamentPouleResults(poules_partially_complete, RANDOM_SEED)
+    results = PouleStageResults(poules_partially_complete, RANDOM_SEED)
 
     assert results.tournament_id == TOURNY_ID1
     assert results.random_seed == RANDOM_SEED
     assert isinstance(results.poule_results, tuple)
-    assert isinstance(results.round_results, tuple)
+    assert isinstance(results.stage_results, tuple)
     assert len(results.poule_results) == len(poules_partially_complete)
-    assert len(results.round_results) == len(entries_21)
+    assert len(results.stage_results) == len(entries_21)
 
 def test_tournament_poule_results_creation_valid_complete_poules(entries_21, poules_complete):
-    results = TournamentPouleResults(poules_complete, RANDOM_SEED)
+    results = PouleStageResults(poules_complete, RANDOM_SEED)
 
     assert results.tournament_id == TOURNY_ID1
     assert results.random_seed == RANDOM_SEED
     assert isinstance(results.poule_results, tuple)
-    assert isinstance(results.round_results, tuple)
+    assert isinstance(results.stage_results, tuple)
     assert len(results.poule_results) == len(poules_complete)
-    assert len(results.round_results) == len(entries_21)
+    assert len(results.stage_results) == len(entries_21)
 
 def test_tournament_poule_results_frozen_attributes(poules_complete):
-    results = TournamentPouleResults(poules_complete, RANDOM_SEED)
+    results = PouleStageResults(poules_complete, RANDOM_SEED)
 
     with pytest.raises(FrozenInstanceError):
         results.random_seed = RANDOM_SEED // 2
@@ -144,23 +144,23 @@ def test_tournament_poule_results_frozen_attributes(poules_complete):
         results.poule_results = None
 
     with pytest.raises(FrozenInstanceError):
-        results.round_results = None
+        results.stage_results = None
 
 @pytest.mark.parametrize('invalid_poules_type', [None, 'my_poules', True, False, 0, 1.0, [], {}])
 def test_tournament_poule_results_creation_invalid_poules_type(invalid_poules_type):
     with pytest.raises(TypeError):
-        TournamentPouleResults(invalid_poules_type, RANDOM_SEED)
+        PouleStageResults(invalid_poules_type, RANDOM_SEED)
 
 @pytest.mark.parametrize('invalid_poule_type', [None, 'Henry', False, 0, True, 10.0, [], (), {}, object()])
 def test_tournament_poule_results_creation_invalid_poules_non_poule_item(poules_incomplete, invalid_poule_type):
     invalid_poules_poule_type = poules_incomplete + (invalid_poule_type,)
     
     with pytest.raises(TypeError):
-        TournamentPouleResults(invalid_poules_poule_type, RANDOM_SEED)
+        PouleStageResults(invalid_poules_poule_type, RANDOM_SEED)
 
 def test_tournament_poule_results_creation_invalid_poules_empty():
     with pytest.raises(ValueError, match='poules cannot be empty'):
-        TournamentPouleResults((), RANDOM_SEED)
+        PouleStageResults((), RANDOM_SEED)
 
 def test_tournament_poule_results_creation_invalid_poules_poule_wrong_tournament(poules_incomplete):
     invalid_poule_wrong_tournament = factories.make_poule(4, TOURNY_ID2, factories.make_entries(28, TOURNY_ID2)[21:])
@@ -168,7 +168,7 @@ def test_tournament_poule_results_creation_invalid_poules_poule_wrong_tournament
     invalid_poules_poule_wrong_tournament = poules_incomplete + (invalid_poule_wrong_tournament,)
 
     with pytest.raises(ValueError, match=r"has a tournament ID \d that does not match the other poules' tournament IDs \d"):
-        TournamentPouleResults(invalid_poules_poule_wrong_tournament, RANDOM_SEED)
+        PouleStageResults(invalid_poules_poule_wrong_tournament, RANDOM_SEED)
 
 def test_tournament_poule_results_creation_invalid_poules_duplicate_poule(poules_incomplete):
     duplicate_poule = copy.deepcopy(poules_incomplete[1])
@@ -176,24 +176,24 @@ def test_tournament_poule_results_creation_invalid_poules_duplicate_poule(poules
     invalid_poules_duplicate_poule = poules_incomplete + (duplicate_poule,)
 
     with pytest.raises(ValueError, match='occurs more than once'):
-        TournamentPouleResults(invalid_poules_duplicate_poule, RANDOM_SEED)
+        PouleStageResults(invalid_poules_duplicate_poule, RANDOM_SEED)
 
 @pytest.mark.parametrize('invalid_random_seed_type', ['twelve', False, 42.0, True, [66], (37,), {}])
 def test_tournament_poule_results_creation_invalid_random_seed_type(poules_incomplete, invalid_random_seed_type):
     with pytest.raises(TypeError):
-        TournamentPouleResults(poules_incomplete, invalid_random_seed_type)
+        PouleStageResults(poules_incomplete, invalid_random_seed_type)
 
 @pytest.mark.parametrize('invalid_random_seed_value', [-36, -6, -1])
 def test_tournament_poule_results_creation_invalid_random_seed_value(poules_incomplete, invalid_random_seed_value):
     with pytest.raises(ValueError):
-        TournamentPouleResults(poules_incomplete, invalid_random_seed_value)
+        PouleStageResults(poules_incomplete, invalid_random_seed_value)
 
 def test_tournament_poule_results_creation_valid_default_random_seed(poules_incomplete):
-    results = TournamentPouleResults(poules_incomplete)
+    results = PouleStageResults(poules_incomplete)
 
     assert results.random_seed is None
 
 def test_tournament_poule_results_creation_valid_zero_random_seed(poules_incomplete):
-    results = TournamentPouleResults(poules_incomplete, 0)
+    results = PouleStageResults(poules_incomplete, 0)
 
     assert results.random_seed == 0
