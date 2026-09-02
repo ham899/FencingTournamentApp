@@ -29,7 +29,7 @@ def poule(entries):
 # --- Match Generation Tests ---
 @pytest.mark.parametrize('size', [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
 def test_poule_generate_matches(size):
-    entries = factories.make_entries(size, TOURNY_ID1, initial_seed=True)
+    entries = factories.make_entries(size, TOURNY_ID1)
 
     poule = Poule(1, 1, entries)
 
@@ -91,7 +91,7 @@ def test_poule_has_entry_valid_returns_true(poule):
     assert poule.has_entry(valid_entry_in_poule)
 
 def test_poule_has_entry_valid_returns_false(poule):
-    valid_entry_not_in_poule = TournamentEntry(8, TOURNY_ID1, Fencer(8, 'Robert'), initial_seed=8)
+    valid_entry_not_in_poule = TournamentEntry(8, TOURNY_ID1, Fencer(8, 'Robert'))
 
     assert not poule.has_entry(valid_entry_not_in_poule)
 
@@ -101,7 +101,7 @@ def test_poule_has_entry_invalid_entry_type(poule, invalid_entry_type):
         poule.has_entry(invalid_entry_type)
 
 def test_poule_has_entry_invalid_entry_wrong_tournament(poule):
-    invalid_entry_wrong_tournament = TournamentEntry(8, TOURNY_ID2, Fencer(8, 'Robert'), initial_seed=8)
+    invalid_entry_wrong_tournament = TournamentEntry(8, TOURNY_ID2, Fencer(8, 'Robert'))
 
     with pytest.raises(ValueError):
         poule.has_entry(invalid_entry_wrong_tournament)

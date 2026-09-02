@@ -19,7 +19,7 @@ def test_poule_entry_result_creation_valid_zeros(entry1):
     poule_entry_result = PouleEntryResult(
         entry = entry1, 
         poule_number = 1, 
-        round_number = 1, 
+        stage_number = 1, 
         num_matches = 0, 
         num_victories = 0,
         touches_scored = 0, 
@@ -29,7 +29,7 @@ def test_poule_entry_result_creation_valid_zeros(entry1):
     assert poule_entry_result.entry == entry1
 
     assert poule_entry_result.poule_number == 1
-    assert poule_entry_result.round_number == 1
+    assert poule_entry_result.stage_number == 1
     assert poule_entry_result.tournament_id == TOURNY_ID1
 
     assert poule_entry_result.num_matches == 0
@@ -54,7 +54,7 @@ def test_poule_entry_result_creation_valid(entry1, num_matches, num_victories, t
     poule_entry_result = PouleEntryResult(
         entry = entry1, 
         poule_number = 1, 
-        round_number = 1, 
+        stage_number = 1, 
         num_matches = num_matches, 
         num_victories = num_victories, 
         touches_scored = touches_scored, 
@@ -63,7 +63,7 @@ def test_poule_entry_result_creation_valid(entry1, num_matches, num_victories, t
     
     assert poule_entry_result.entry == entry1
     assert poule_entry_result.poule_number == 1
-    assert poule_entry_result.round_number == 1
+    assert poule_entry_result.stage_number == 1
     assert poule_entry_result.tournament_id == TOURNY_ID1
 
     assert poule_entry_result.num_matches == num_matches
@@ -76,7 +76,7 @@ def test_poule_entry_result_fields_cannot_be_reassigned(entry1, entry2):
     poule_entry_result = PouleEntryResult(
         entry = entry1, 
         poule_number = 1, 
-        round_number = 1, 
+        stage_number = 1, 
         num_matches = 0, 
         num_victories = 0,
         touches_scored = 0, 
@@ -90,7 +90,7 @@ def test_poule_entry_result_fields_cannot_be_reassigned(entry1, entry2):
         poule_entry_result.poule_number = 1
 
     with pytest.raises(FrozenInstanceError):
-        poule_entry_result.round_number = 1
+        poule_entry_result.stage_number = 1
 
     with pytest.raises(FrozenInstanceError):
         poule_entry_result.num_matches = 5
@@ -126,15 +126,15 @@ def test_poule_entry_result_creation_invalid_poule_number_value(entry1, invalid_
     with pytest.raises(ValueError):
         PouleEntryResult(entry1, invalid_poule_number_value, 1, 0, 0, 0, 0)
 
-@pytest.mark.parametrize('invalid_round_number_type', INVALID_INT_TYPES)
-def test_poule_entry_result_creation_invalid_round_number_type(entry1, invalid_round_number_type):
+@pytest.mark.parametrize('invalid_stage_number_type', INVALID_INT_TYPES)
+def test_poule_entry_result_creation_invalid_stage_number_type(entry1, invalid_stage_number_type):
     with pytest.raises(TypeError):
-        PouleEntryResult(entry1, 1, invalid_round_number_type, 0, 0, 0, 0)
+        PouleEntryResult(entry1, 1, invalid_stage_number_type, 0, 0, 0, 0)
 
-@pytest.mark.parametrize('invalid_round_number_value', NON_POSITIVE_INTS)
-def test_poule_entry_result_creation_invalid_round_number_value(entry1, invalid_round_number_value):
+@pytest.mark.parametrize('invalid_stage_number_value', NON_POSITIVE_INTS)
+def test_poule_entry_result_creation_invalid_stage_number_value(entry1, invalid_stage_number_value):
     with pytest.raises(ValueError):
-        PouleEntryResult(entry1, 1, invalid_round_number_value, 0, 0, 0, 0)
+        PouleEntryResult(entry1, 1, invalid_stage_number_value, 0, 0, 0, 0)
 
 @pytest.mark.parametrize('invalid_num_matches_type', INVALID_INT_TYPES)
 def test_poule_entry_result_creation_invalid_num_matches_type(entry1, invalid_num_matches_type):
@@ -298,14 +298,14 @@ def test_poule_entry_result_inequality_same_entry_different_poules(entry1, num_m
     assert poule_entry_result_1 != poule_entry_result_2
 
 @pytest.mark.parametrize(('num_matches', 'num_victories', 'touches_scored', 'touches_received'), [(0, 0, 0, 0), (5, 3, 15, 10), (6, 6, 30, 0)])
-def test_poule_entry_result_inequality_same_entry_same_poule_different_round(entry1, entry2, num_matches, num_victories, touches_scored, touches_received):
+def test_poule_entry_result_inequality_same_entry_same_poule_different_stage(entry1, entry2, num_matches, num_victories, touches_scored, touches_received):
     poule_entry_result_1 = PouleEntryResult(entry1, 1, 1, num_matches, num_victories, touches_scored, touches_received)
     poule_entry_result_2 = PouleEntryResult(entry2, 1, 2, num_matches, num_victories, touches_scored, touches_received)
 
     assert poule_entry_result_1 != poule_entry_result_2
 
 @pytest.mark.parametrize(('num_matches', 'num_victories', 'touches_scored', 'touches_received'), [(0, 0, 0, 0), (5, 3, 15, 10), (6, 6, 30, 0)])
-def test_poule_entry_result_inequality_same_entry_same_poule_same_round_different_tournament(entry1, fencer2, num_matches, num_victories, touches_scored, touches_received):
+def test_poule_entry_result_inequality_same_entry_same_poule_same_stage_different_tournament(entry1, fencer2, num_matches, num_victories, touches_scored, touches_received):
     entry2 = TournamentEntry(2, TOURNY_ID2, fencer2)
     
     poule_entry_result_1 = PouleEntryResult(entry1, 1, 1, num_matches, num_victories, touches_scored, touches_received)

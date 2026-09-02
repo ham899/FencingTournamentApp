@@ -271,14 +271,14 @@ def test_poule_result_creation_valid_completed_matches_reversed_match_order(entr
     assert result.entry_results[6].indicator == -7
 
 def test_poule_result_ranked_results_uses_touches_scored_tiebreaker(entries):
-    entries = factories.make_entries(3, TOURNY_ID1, initial_seed=True)
+    entries = factories.make_entries(3, TOURNY_ID1)
     
     match_scores = ((5, 3), (2, 5), (5, 4))
 
     matches = factories.make_poule_matches(
-        entries,
-        1,
-        1,
+        entries=entries,
+        poule_number=1,
+        stage_number=1,
         scores=match_scores
     )
 

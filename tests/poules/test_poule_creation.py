@@ -35,7 +35,7 @@ def test_poule_creation_valid(entries):
     poule = Poule(1, 1, entries)
     
     assert poule.poule_number == 1
-    assert poule.round_number == 1
+    assert poule.stage_number == 1
     assert poule.tournament_id == TOURNY_ID1
     assert poule.entries == entries
     assert poule.size == len(entries)
@@ -100,7 +100,7 @@ def test_poule_creation_invalid_duplicate_entry(entry1, entry2):
 
 @pytest.mark.parametrize('unsupported_size', [13, 14, 15, 16])
 def test_poule_creation_invalid_unsupported_size(unsupported_size):
-    entries = factories.make_entries(n=unsupported_size, tournament_id=TOURNY_ID1, initial_seed=True)
+    entries = factories.make_entries(n=unsupported_size, tournament_id=TOURNY_ID1)
 
     with pytest.raises(ValueError, match='no official bout order exists for that size'):
         Poule(1, 1, entries)
@@ -122,7 +122,7 @@ def test_poule_creation_invalid_unsupported_size(unsupported_size):
         ]
 )
 def test_poule_size_and_number_matches_properties(size, expected_number_matches):
-    entries = factories.make_entries(n=size, tournament_id=TOURNY_ID1, initial_seed=True)
+    entries = factories.make_entries(n=size, tournament_id=TOURNY_ID1)
     
     poule = Poule(1, 1, entries)
 
@@ -158,6 +158,6 @@ def test_poule_inequality_different_poules_same_tournament(entries):
 def test_poule_inequality_different_tournaments(entries):
     poule1 = Poule(1, 1, entries)
     
-    poule2 = Poule(1, 2, factories.make_entries(n=7, tournament_id=TOURNY_ID2, initial_seed=True))
+    poule2 = Poule(1, 2, factories.make_entries(n=7, tournament_id=TOURNY_ID2))
     
     assert poule1 != poule2
