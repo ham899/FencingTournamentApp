@@ -16,10 +16,8 @@ class DEEntryStatus(Enum):
         The entry has won the entire DE stage.
     ACTIVE
         The entry remains in contention to win the DE stage.
-        Includes entries that have not yet fenced.
     ELIMINATED
         The entry has been eliminated from the DE stage.
-        Its exact finishing place may still be undetermined.
     """
     WINNER = auto()
     ACTIVE = auto()
@@ -39,7 +37,7 @@ class DEEntryResult:
         The tournament entry whose DE results are represented.
     stage_number : int
         The DE stage's one-based position within the tournament.
-    de_seed : int
+    bracket_seed : int
         The entry's one-based starting seed within this DE stage.
     round_reached : int
         The one-based number of the furthest DE round reached within this bracket.
@@ -50,7 +48,7 @@ class DEEntryResult:
     """  
     entry: TournamentEntry
     stage_number: int
-    de_seed: int
+    bracket_seed: int
     round_reached: int
     place: int | None
     status: DEEntryStatus
@@ -64,17 +62,17 @@ class DEEntryResult:
         Raises
         ------
         TypeError
-            If entry is not a TournamentEntry, stage_number, de_seed, or round_reached is not an integer, 
+            If entry is not a TournamentEntry, stage_number, bracket_seed, or round_reached is not an integer, 
             place is neither an integer nor None, or status is not a DEEntryStatus.
         ValueError
-            If stage_number, de_seed, or round_reached is not positive, place is not positive when provided, 
+            If stage_number, bracket_seed, or round_reached is not positive, place is not positive when provided, 
             or status and place are inconsistent with each other.
         """
         if not isinstance(self.entry, TournamentEntry):
             raise TypeError(f'Entry must be a TournamentEntry in DEEntryResult - got {type(self.entry).__name__}')
         
         validation.validate_positive_int(self.stage_number, 'Stage number', 'DEEntryResult')
-        validation.validate_positive_int(self.de_seed, 'DE seed', 'DEEntryResult')
+        validation.validate_positive_int(self.bracket_seed, 'DE seed', 'DEEntryResult')
         validation.validate_positive_int(self.round_reached, 'Round reached', 'DEEntryResult')
         validation.validate_optional_positive_int(self.place, 'Place', 'DEEntryResult')
 
@@ -89,28 +87,17 @@ class DEEntryResult:
         """
         Validate that the participation status and finishing place agree.
 
-        A winner must have place 1. An active entry cannot have a confirmed
-        finishing place. An eliminated entry may have an undetermined
-        place or a confirmed place greater than 1.
-
         Parameters
         ----------
         status : DEEntryStatus
             The entry's participation status within the DE stage.
         place : int | None
-            The entry's confirmed finishing position, or None if its
-            exact position is not yet determined.
+            The entry's confirmed finishing position, or None if its exact position is not yet determined.
 
         Raises
         ------
         ValueError
-            If a winner does not have place 1, an active entry has a
-            confirmed place, or an eliminated entry has place 1.
-
-        Notes
-        -----
-        Assumes status has already been validated as a DEEntryStatus
-        and place as a positive integer or None.
+            If a winner does not have place 1, an active entry has a confirmed place, or an eliminated entry has place 1.
         """
         # Validate status guarantees
         if status == DEEntryStatus.WINNER and place != 1:
