@@ -142,6 +142,11 @@ class DEBracket:
     def first_round(self) -> DERound:
         """Return the opening round containing the bracket's original entrants."""
         return self.rounds[0]
+
+    @property
+    def round_one_seed_order(self) -> tuple[int, ...]:
+        """Return the seed numbers in first-round tableau position order."""
+        return DERound.generate_tree_bracket_level(depth=self.num_rounds)
     
     @property
     def entries(self) -> tuple[TournamentEntry, ...]:
@@ -505,7 +510,7 @@ class DEBracket:
         expected_num_rounds = DEBracket._calculate_number_de_rounds(num_entries)
         
         # Get tree level position order
-        tree_level_position_order = DERound._generate_tree_bracket_level(expected_num_rounds)
+        tree_level_position_order = DERound.generate_tree_bracket_level(expected_num_rounds)
 
         # Matchup position pairings
         matchup_position_pairings = []
