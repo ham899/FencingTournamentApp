@@ -286,7 +286,7 @@ class DERound:
         depth: int = log2_int(self.size)
 
         # Generate the tree level of positions
-        level = DERound._generate_tree_bracket_level(depth)
+        level = DERound.generate_tree_bracket_level(depth)
 
         # Return the position for this match and fencer (1 or 2)
         return level[2 * matchup_index + entry_index]
@@ -418,7 +418,7 @@ class DERound:
 
     # --- Bracket Position Generation Helper Methods ---
     @staticmethod
-    def _generate_tree_bracket_level(depth: int) -> tuple[int, ...]:
+    def generate_tree_bracket_level(depth: int) -> tuple[int, ...]:
         """
         Generate the branch-position ordering at a specified tableau depth.
 
@@ -440,7 +440,7 @@ class DERound:
         ValueError
             If ``depth`` is negative.
         """
-        validation.validate_int_at_least(depth, 0, 'Depth', 'DERound', '_generate_tree_bracket_level')
+        validation.validate_int_at_least(depth, 0, 'Depth', 'DERound', 'generate_tree_bracket_level')
 
         # Start the position tree at depth 0
         current_depth = 0
