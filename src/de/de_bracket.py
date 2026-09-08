@@ -19,6 +19,8 @@ class DEBracket:
         The DE stage's one-based position within its tournament.
     seed_ordered_entries : tuple[TournamentEntry, ...]
         The entries provided for bracket initialization in ascending seed order.
+    score_to_win : int, default=15
+        The target score and maximum permitted recorded score for either entry.
 
     Attributes
     ----------
@@ -26,9 +28,12 @@ class DEBracket:
         The DE stage's one-based position within its tournament.
     rounds : tuple[DERound, ...]
         All rounds in progression order, made on initialization.
+    score_to_win : int, default=15
+        The target score and maximum permitted recorded score for either entry.
     """
     stage_number: int
     seed_ordered_entries: InitVar[tuple[TournamentEntry, ...]]
+    score_to_win: int = field(default=15, kw_only=True)
     rounds: tuple[DERound, ...] = field(init=False)
 
 
@@ -47,14 +52,17 @@ class DEBracket:
         Raises
         ------
         TypeError
-            If the stage number is not an integer, the entries are not a tuple, 
-            an item is not a ``TournamentEntry``, 
+            If the stage number or `score_to_win` is not an integer, 
+            the entries are not a tuple, an item is not a ``TournamentEntry``, 
             or a generated matchup or match encounters an invalid attribute type.
         ValueError
-            If the stage number is not positive, fewer than two entries are supplied, entry IDs repeat, 
+            If the stage number or `score_to_win` is not positive, 
+            fewer than two entries are supplied, entry IDs repeat, 
             tournament IDs differ, or the generated matchups cannot form valid rounds or matches.
         """
         validation.validate_positive_int(self.stage_number, 'Stage number', 'DEBracket')
+        validation.validate_positive_int(self.score_to_win, 'Score to win', 'DEBracket')
+
         self._validate_seed_ordered_entries(seed_ordered_entries)
     
         self.rounds = self._init_all_rounds(seed_ordered_entries)
@@ -539,12 +547,13 @@ class DEBracket:
             # Create the matchup and add to `matchups`
             matchups.append(
                 DEMatchup(
-                    matchup_number=matchup_index+1,
-                    round_number=1,
-                    stage_number=self.stage_number,
-                    tournament_id=ordered_entries[0].tournament_id,
-                    entry1=entry1,
-                    entry2=entry2
+                    matchup_number = matchup_index + 1,
+                    round_number = 1,
+                    stage_number = self.stage_number,
+                    tournament_id = ordered_entries[0].tournament_id,
+                    entry1 = entry1,
+                    entry2 = entry2, 
+                    score_to_win = self.score_to_win
                 )
             )
 
@@ -553,9 +562,9 @@ class DEBracket:
 
         # Return the first round in this bracket
         return DERound(
-            matchups=matchups,
-            round_number=1,
-            stage_number=self.stage_number
+            matchups = matchups,
+            round_number = 1,
+            stage_number = self.stage_number
         )
 
     def _init_all_rounds(self, ordered_entries: tuple[TournamentEntry, ...]) -> tuple[DERound, ...]:
@@ -599,10 +608,11 @@ class DEBracket:
             for matchup_index in range(round_num_matchups):
                 matchups.append(
                     DEMatchup(
-                        matchup_number=matchup_index+1,
-                        round_number=round_index + 1,
-                        stage_number=self.stage_number,
-                        tournament_id=ordered_entries[0].tournament_id
+                        matchup_number = matchup_index+1,
+                        round_number = round_index + 1,
+                        stage_number = self.stage_number,
+                        tournament_id = ordered_entries[0].tournament_id, 
+                        score_to_win = self.score_to_win
                     )
                 )
 
@@ -611,9 +621,9 @@ class DEBracket:
             
             subsequent_rounds.append(
                 DERound(
-                    matchups=matchups, 
-                    round_number=round_index+1, 
-                    stage_number=self.stage_number
+                    matchups = matchups, 
+                    round_number = round_index + 1, 
+                    stage_number = self.stage_number
                 )
             )
 

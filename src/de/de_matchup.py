@@ -33,6 +33,8 @@ class DEMatchup:
         The entry occupying the top branch, or ``None`` if that position is empty.
     entry2 : TournamentEntry | None, default=None
         The entry occupying the bottom branch, or ``None`` if that position is empty.
+    score_to_win : int, default=15
+        The target score and maximum permitted recorded score for either entry.
     match : DEMatch | None, default=None, init=False
         The match generated when both entries are present, or ``None`` otherwise.
     """
@@ -43,6 +45,7 @@ class DEMatchup:
 
     entry1: TournamentEntry | None = None
     entry2: TournamentEntry | None = None
+    score_to_win: int = field(default=15, kw_only=True)
 
     match: DEMatch | None = field(default=None, init=False)
 
@@ -57,11 +60,11 @@ class DEMatchup:
         Raises
         ------
         TypeError
-            If an identifying number is not an integer, 
+            If an identifying number or `score_to_win` is not an integer, 
             an entry is not a ``TournamentEntry``, 
             or the entries cannot form a valid DE match because of an invalid attribute type.
         ValueError
-            If an identifying number is not positive, 
+            If an identifying number or `score_to_win` is not positive, 
             an entry belongs to another tournament, 
             or the entries cannot form a valid DE match.
         """
@@ -69,6 +72,7 @@ class DEMatchup:
         validation.validate_positive_int(self.round_number, 'Round number', 'DEMatchup')
         validation.validate_positive_int(self.stage_number, 'Stage number', 'DEMatchup')
         validation.validate_positive_int(self.tournament_id, 'Tournament ID', 'DEMatchup')
+        validation.validate_positive_int(self.score_to_win, 'Score to win', 'DEMatchup')
 
         self._validate_optional_entry(self.entry1, 'Entry 1')
         self._validate_optional_entry(self.entry2, 'Entry 2')
@@ -499,11 +503,12 @@ class DEMatchup:
             A newly created DE match for this matchup.
         """
         return DEMatch(
-            entry1=entry1, 
-            entry2=entry2, 
-            match_number=self.matchup_number, 
-            round_number=self.round_number, 
-            stage_number=self.stage_number
+            entry1 = entry1, 
+            entry2 = entry2, 
+            match_number = self.matchup_number, 
+            round_number = self.round_number, 
+            stage_number = self.stage_number,
+            score_to_win = self.score_to_win
         )
 
 
