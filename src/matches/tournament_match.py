@@ -261,8 +261,8 @@ class TournamentMatch(Match, ABC):
         """
         Record a scored result and mark the match complete.
 
-        Any previous scored result is overwritten. A forfeit result must 
-        be reset before it can be replaced by a scored result.
+        A result cannot be recorded if the match is already complete - 
+        use ``replace_with_score()`` to replace an existing scored or forfeit result.
 
         Parameters
         ----------
@@ -276,20 +276,41 @@ class TournamentMatch(Match, ABC):
         TypeError
             If either score is not an integer.
         ValueError
-            If the match already has a forfeit result, if either score is
-            outside the permitted range, or if the scores are equal.
+            If either score is outside the permitted range, if the scores are equal, 
+            or if the match is already complete.
         """
         if self.is_forfeit():
-            raise ValueError(f'{self.label} already has a forfeit result. Reset it before recording a score.')
+            raise ValueError(f'{self.label} already has a forfeit result - use replace_with_score instead')
 
         super().record_score(score1, score2)
 
-    def forfeit(self, forfeiting_index: int) -> None:
+    def replace_with_score(self, score1: int, score2: int) -> None:
+        """
+        Replace the existing scored or forfeit result with a scored result.
+        
+        Parameters
+        ----------
+        score1 : int
+            The new score for ``entry1``.
+        score2 : int
+            The new score for ``entry2``.
+        Raises
+        ------
+        TypeError
+            If either score is not an integer.
+        ValueError
+            If either score is outside the permitted range, if the scores are equal, 
+            or if no match result has been recorded.
+        """
+        super().replace_with_score(score1, score2)
+        self.forfeited_index = None
+
+    def record_forfeit(self, forfeiting_index: int) -> None:
         """
         Record a forfeit and mark the match complete.
 
-        The entry at ``forfeiting_index`` is recorded as the loser. The concrete subclass 
-        assigns the appropriate score representation before the match is marked complete.
+        The entry at ``forfeiting_index`` is recorded as the loser. 
+        The concrete subclass assigns the appropriate score representation before the match is marked complete.
 
         Parameters
         ----------
@@ -303,20 +324,47 @@ class TournamentMatch(Match, ABC):
         ValueError
             If the match is already complete or ``forfeiting_index`` is not ``0`` or ``1``.
         """
-        # Validate match state
         if self.is_complete():
-            raise ValueError(f'{self.label} is already complete.')
+            raise ValueError(
+                f'Cannot record a forfeit for {self.label} because the match is already complete'
+                ' - use replace_with_forfeit instead'
+            )
 
-        # Validate input entry
-        validation.validate_int_in_range(forfeiting_index, 0, 1, 'Forfeiting index', 'TournamentMatch', 'forfeit')  
+        validation.validate_int_in_range(forfeiting_index, 0, 1, 'Forfeiting index', 'TournamentMatch', 'record_forfeit')  
 
-        # Set the forfeited index
         self.forfeited_index = forfeiting_index
+        
+        self._assign_forfeit_scores() # Let subclass handle the score assignment
 
-        # Let subclass handle the score assignment
+        self._mark_complete()
+
+    def replace_with_forfeit(self, forfeiting_index: int) -> None:
+        """
+        Replace the existing scored or forfeit result with a forfeit.
+
+        Parameters
+        ----------
+        forfeiting_index : int
+            The forfeiting entry's index: ``0`` for ``entry1`` or ``1`` for ``entry2``.
+
+        Raises
+        ------
+        TypeError
+            If ``forfeiting_index`` is not an integer.
+        ValueError
+            If ``forfeiting_index`` is not ``0`` or ``1``, 
+            or if no match result has been recorded.
+        """
+        if self.is_incomplete():
+            raise ValueError(
+                f'Cannot replace the result with a forfeit for {self.label} because no result has been recorded'
+                ' - use record_forfeit() instead'
+            )
+        
+        validation.validate_int_in_range(forfeiting_index, 0, 1, 'Forfeiting index', 'TournamentMatch', 'replace_with_forfeit')
+
+        self.forfeited_index = forfeiting_index
         self._assign_forfeit_scores()
-
-        # Mark the match as complete
         self._mark_complete()
 
 
@@ -326,8 +374,8 @@ class TournamentMatch(Match, ABC):
         """
         Assign the subclass-specific scores for a forfeit.
 
-        Implementations must leave either two valid, non-tied scores or two
-        absent scores for ``Match._mark_complete`` to validate.
+        Implementations must leave either two valid, non-tied scores 
+        or two absent scores for ``Match._mark_complete`` to validate.
         """
         pass
 
