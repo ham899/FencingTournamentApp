@@ -27,11 +27,14 @@ class Poule:
         The tournament entries in fencer-number order.
     matches : tuple[PouleMatch, ...]
         The poule matches in official bout order.
+    score_to_win : int
+        The target score and maximum permitted recorded score for either entry.
     """
     poule_number: int
     stage_number: int
     entries: tuple[TournamentEntry, ...]
     matches: tuple[PouleMatch, ...] = field(init=False)
+    score_to_win: int = 5
 
 
     # --- Initialization and Validation Methods ---
@@ -285,7 +288,8 @@ class Poule:
         Raises
         ------
         TypeError
-            If `match_number` is not an integer, if either fencer number is not an integer, 
+            If `match_number` is not an integer, 
+            if either fencer number is not an integer, 
             or if `match_pair` is not a tuple.
         ValueError
             If `match_number` or a fencer number is outside the valid range, 
@@ -317,7 +321,8 @@ class Poule:
             poule_number = self.poule_number,
             stage_number = self.stage_number,
             entry1 = entry1,
-            entry2 = entry2
+            entry2 = entry2,
+            score_to_win = self.score_to_win
         )
 
     def _generate_matches(self, entries: tuple[TournamentEntry, ...]) -> tuple[PouleMatch, ...]:

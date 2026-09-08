@@ -30,10 +30,13 @@ class PouleStage:
         The poule stage's one-based position within the tournament.
     poules : tuple[Poule, ...]
         The generated poules in poule-number order.
+    score_to_win : int
+        The target score and maximum permitted recorded score for either entry.
     """
     stage_number: int
     seeded_entries: tuple[SeededEntry, ...]
     poules: tuple[Poule, ...] = field(init=False)
+    score_to_win: int = 5
 
 
     # --- Initialization and Validation Methods ---
@@ -81,7 +84,7 @@ class PouleStage:
     def num_entries(self) -> int:
         """Return the number of entries in this stage."""
         return len(self.seeded_entries)
-    
+
     @property
     def entries(self) -> tuple[TournamentEntry, ...]:
         """Return the tournament entries in ascending stage-seed order."""
@@ -504,9 +507,10 @@ class PouleStage:
         for poule_number, poule_entries in enumerate(entries_by_poule, start=1):
             poules.append(
                 Poule(
-                    poule_number=poule_number, 
-                    stage_number=self.stage_number, 
-                    entries=poule_entries
+                    poule_number = poule_number, 
+                    stage_number = self.stage_number, 
+                    entries = poule_entries,
+                    score_to_win = self.score_to_win
                 )
             )
 
