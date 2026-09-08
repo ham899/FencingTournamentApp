@@ -28,15 +28,15 @@ class PouleStage:
         Seeded entries are stored in ascending seed order.
     stage_number : int
         The poule stage's one-based position within the tournament.
+    score_to_win : int, default=5
+        The target score and maximum permitted recorded score for either entry.
     poules : tuple[Poule, ...]
         The generated poules in poule-number order.
-    score_to_win : int
-        The target score and maximum permitted recorded score for either entry.
     """
     stage_number: int
     seeded_entries: tuple[SeededEntry, ...]
+    score_to_win: int = field(default=5, kw_only=True)
     poules: tuple[Poule, ...] = field(init=False)
-    score_to_win: int = 5
 
 
     # --- Initialization and Validation Methods ---
@@ -47,15 +47,17 @@ class PouleStage:
         Raises
         ------
         TypeError
-            If `stage_number` is not an integer, if `entries` is not a tuple, 
+            If `stage_number` or `score_to_win` is not an integer, if `entries` is not a tuple, 
             if an item is not a `SeededEntry`, or if a seed is not an integer.
         ValueError
-            If `stage_number` is not positive, if fewer than two entries are provided, 
+            If `stage_number` or `score_to_win` is not positive, 
+            if fewer than two entries are provided, 
             if an entry belongs to another tournament or appears more than once, 
             if a seed is missing, non-positive, or repeated, 
             or if the seeds are not exactly the integers from 1 through the number of entries.
         """
         validation.validate_positive_int(self.stage_number, 'Stage number', 'PouleStage')
+        validation.validate_positive_int(self.score_to_win, 'Score to win', 'PouleStage')
         
         self._validate_seeded_entries(self.seeded_entries)
 

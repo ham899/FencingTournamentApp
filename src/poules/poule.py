@@ -25,16 +25,16 @@ class Poule:
         The stage's one-based overall position within the tournament.
     entries : tuple[TournamentEntry, ...]
         The tournament entries in fencer-number order.
+    score_to_win : int, default=5
+        The target score and maximum permitted recorded score for either entry.
     matches : tuple[PouleMatch, ...]
         The poule matches in official bout order.
-    score_to_win : int
-        The target score and maximum permitted recorded score for either entry.
     """
     poule_number: int
     stage_number: int
     entries: tuple[TournamentEntry, ...]
+    score_to_win: int = field(default=5, kw_only=True)
     matches: tuple[PouleMatch, ...] = field(init=False)
-    score_to_win: int = 5
 
 
     # --- Initialization and Validation Methods ---
@@ -45,20 +45,21 @@ class Poule:
         Raises
         ------
         TypeError
-            If the poule number or stage number is not an integer, 
+            If the poule number, stage number, or score to win is not an integer, 
             if `entries` is not a tuple, 
             or if an item is not a `TournamentEntry` object.
         ValueError
-            If the poule number or stage number is not positive, 
+            If the poule number, stage number, or score to win is not positive, 
             if fewer than two entries are provided, 
             if an entry is repeated or belongs to another tournament,
             or no bout order exists for the poule size.
         RuntimeError
             If the generated schedule has the wrong number of matches.
         """
-        # Validate the poule and stage numbers
+        # Validate the poule and stage numbers, and the score to win
         validation.validate_positive_int(self.poule_number, 'Poule number', 'Poule')
         validation.validate_positive_int(self.stage_number, 'Stage number', 'Poule')
+        validation.validate_positive_int(self.score_to_win, 'Score to win', 'Poule')
                 
         # Validate the entries provided and generate the poule matches given the validated entries
         self.matches = self._generate_matches(self.entries)
