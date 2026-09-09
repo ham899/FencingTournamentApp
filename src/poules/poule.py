@@ -186,13 +186,13 @@ class Poule:
 
 
     # --- Match Result Recording Methods ---
-    def record_match_result(self, index: int, score1: int, score2: int) -> None:
+    def record_match_result(self, match_index: int, score1: int, score2: int) -> None:
         """
-        Records the result of a specified match.
+        Record the result of the specified match with the given scores.
 
         Parameters
         ----------
-        index : int
+        match_index : int
             The match's zero-based position in the official bout order.
         score1 : int
             The score to record for the first entry in the match.
@@ -204,10 +204,10 @@ class Poule:
         TypeError
             If the index or either score is not an integer.
         ValueError
-            If the index is outside the valid range, the match already has a
-            forfeit result, or the scores do not form a valid completed result.
+            If the index is outside the valid range, the match is already complete,
+            or the scores do not form a valid completed result.
         """
-        match = self.get_match_at(index)
+        match = self.get_match_at(match_index)
         match.record_score(score1, score2)
 
     def record_on_piste_match_result(self, score1: int, score2: int) -> None:
@@ -226,8 +226,7 @@ class Poule:
         TypeError
             If either score is not an integer.
         ValueError
-            If the match already has a forfeit result or the scores do not form
-            a valid completed result.
+            If either score is outside the permitted range or the scores are equal.
         RuntimeError
             If the poule is complete and there is no on-piste match.
         """
@@ -238,6 +237,75 @@ class Poule:
 
         match.record_score(score1, score2)
 
+    def record_forfeit(self, match_index: int, forfeiting_index: int) -> None:
+        """
+        Record a forfeit for the match at the specified index.
+
+        Parameters
+        ----------
+        match_index : int
+            The zero-based position of the match for which to record the forfeit.
+        forfeiting_index : int
+            The index of the forfeiting entry - ``0`` for entry 1 and ``1`` for entry 2.
+
+        Raises
+        ------
+        TypeError
+            If either index is not an integer.
+        ValueError
+            If ``match_index`` is outside the valid range, 
+            ``forfeiting_index`` is not ``0`` or ``1``, 
+            or the match is already complete.
+        """
+        match = self.get_match_at(match_index)
+        match.record_forfeit(forfeiting_index)
+
+    def replace_with_score(self, match_index: int, score1: int, score2: int) -> None:
+        """
+        Replace the specified match's scored or forfeit result with new scores.
+
+        Parameters
+        ----------
+        match_index : int
+            The zero-based index of the match for which to replace the result.
+        score1 : int
+            The new score for entry 1.
+        score2 : int
+            The new score for entry 2.
+
+        Raises
+        ------
+        TypeError
+            If ``match_index`` or either score is not an integer.
+        ValueError
+            If ``match_index`` is outside the valid range, either score is outside the permitted range, 
+            the scores are equal, or the match is incomplete.
+        """
+        match = self.get_match_at(match_index)
+        match.replace_with_score(score1, score2)
+
+    def replace_with_forfeit(self, match_index: int, forfeiting_index: int) -> None:
+        """
+        Replace the specified match's scored or forfeit result with a forfeit.
+
+        Parameters
+        ----------
+        match_index : int
+            The zero-based index of the match for which to replace the result.
+        forfeiting_index : int
+            The index of the forfeiting entry: ``0`` for entry 1 and ``1`` for entry 2.
+
+        Raises
+        ------
+        TypeError
+            If either index is not an integer.
+        ValueError
+            If ``match_index`` is outside the valid range, 
+            ``forfeiting_index`` is not ``0`` or ``1``, 
+            or the match is incomplete.
+        """
+        match = self.get_match_at(match_index)
+        match.replace_with_forfeit(forfeiting_index)
 
     # --- Result Calculation Methods ---
     def calculate_results(self) -> PouleResult:
