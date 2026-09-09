@@ -274,30 +274,6 @@ class PouleStage:
         poule = self.get_poule_at(poule_index)
         poule.record_on_piste_match_result(score1, score2)
 
-    def record_forfeit(self, poule_index: int, match_index: int, forfeiting_index: int) -> None:
-        """
-        Record a forfeit for the match at the specified index.
-
-        Parameters
-        ----------
-        poule_index : int
-            The zero-based index of the poule.
-        match_index : int
-            The zero-based position of the match for which to record the forfeit.
-        forfeiting_index : int
-            The index of the forfeiting entry - ``0`` for entry 1 and ``1`` for entry 2.
-
-        Raises
-        ------
-        TypeError
-            If any index is not an integer.
-        ValueError
-            If ``poule_index`` or ``match_index`` is outside its valid range,
-            ``forfeiting_index`` is not ``0`` or ``1``, or the match is already complete.
-        """
-        poule = self.get_poule_at(poule_index)
-        poule.record_forfeit(match_index, forfeiting_index)
-
     def replace_with_score(self, poule_index: int, match_index: int, score1: int, score2: int) -> None:
         """
         Replace the specified match's scored or forfeit result with new scores.
@@ -323,6 +299,30 @@ class PouleStage:
         """
         poule = self.get_poule_at(poule_index)
         poule.replace_with_score(match_index, score1, score2)
+
+    def record_forfeit(self, poule_index: int, match_index: int, forfeiting_index: int) -> None:
+        """
+        Record a forfeit for the match at the specified index.
+
+        Parameters
+        ----------
+        poule_index : int
+            The zero-based index of the poule.
+        match_index : int
+            The zero-based position of the match for which to record the forfeit.
+        forfeiting_index : int
+            The index of the forfeiting entry - ``0`` for entry 1 and ``1`` for entry 2.
+
+        Raises
+        ------
+        TypeError
+            If any index is not an integer.
+        ValueError
+            If ``poule_index`` or ``match_index`` is outside its valid range,
+            ``forfeiting_index`` is not ``0`` or ``1``, or the match is already complete.
+        """
+        poule = self.get_poule_at(poule_index)
+        poule.record_forfeit(match_index, forfeiting_index)
 
     def replace_with_forfeit(self, poule_index: int, match_index: int, forfeiting_index: int) -> None:
         """

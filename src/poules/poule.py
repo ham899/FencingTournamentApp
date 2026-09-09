@@ -237,29 +237,6 @@ class Poule:
 
         match.record_score(score1, score2)
 
-    def record_forfeit(self, match_index: int, forfeiting_index: int) -> None:
-        """
-        Record a forfeit for the match at the specified index.
-
-        Parameters
-        ----------
-        match_index : int
-            The zero-based position of the match for which to record the forfeit.
-        forfeiting_index : int
-            The index of the forfeiting entry - ``0`` for entry 1 and ``1`` for entry 2.
-
-        Raises
-        ------
-        TypeError
-            If either index is not an integer.
-        ValueError
-            If ``match_index`` is outside the valid range, 
-            ``forfeiting_index`` is not ``0`` or ``1``, 
-            or the match is already complete.
-        """
-        match = self.get_match_at(match_index)
-        match.record_forfeit(forfeiting_index)
-
     def replace_with_score(self, match_index: int, score1: int, score2: int) -> None:
         """
         Replace the specified match's scored or forfeit result with new scores.
@@ -284,6 +261,29 @@ class Poule:
         match = self.get_match_at(match_index)
         match.replace_with_score(score1, score2)
 
+    def record_forfeit(self, match_index: int, forfeiting_index: int) -> None:
+        """
+        Record a forfeit for the match at the specified index.
+
+        Parameters
+        ----------
+        match_index : int
+            The zero-based position of the match for which to record the forfeit.
+        forfeiting_index : int
+            The index of the forfeiting entry - ``0`` for entry 1 and ``1`` for entry 2.
+
+        Raises
+        ------
+        TypeError
+            If either index is not an integer.
+        ValueError
+            If ``match_index`` is outside the valid range, 
+            ``forfeiting_index`` is not ``0`` or ``1``, 
+            or the match is already complete.
+        """
+        match = self.get_match_at(match_index)
+        match.record_forfeit(forfeiting_index)
+
     def replace_with_forfeit(self, match_index: int, forfeiting_index: int) -> None:
         """
         Replace the specified match's scored or forfeit result with a forfeit.
@@ -306,6 +306,7 @@ class Poule:
         """
         match = self.get_match_at(match_index)
         match.replace_with_forfeit(forfeiting_index)
+
 
     # --- Result Calculation Methods ---
     def calculate_results(self) -> PouleResult:
