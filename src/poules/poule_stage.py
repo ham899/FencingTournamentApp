@@ -222,7 +222,7 @@ class PouleStage:
     
 
     # --- Match Result Recording Methods ---
-    def record_match_result(self, poule_index: int, match_index: int, score1: int, score2: int) -> None:
+    def record_match_score(self, poule_index: int, match_index: int, score1: int, score2: int) -> None:
         """
         Record the result of a specified match in a specified poule.
 
@@ -245,10 +245,9 @@ class PouleStage:
             If either index is outside its valid range, the match is already complete, 
             or the scores do not form a valid completed result.
         """
-        poule = self.get_poule_at(poule_index)
-        poule.record_match_result(match_index, score1, score2)
+        self.get_poule_at(poule_index).record_match_score(match_index, score1, score2)
 
-    def record_on_piste_match_result(self, poule_index: int, score1: int, score2: int) -> None:
+    def record_on_piste_match_score(self, poule_index: int, score1: int, score2: int) -> None:
         """
         Record the result of the on-piste match in a specified poule.
 
@@ -271,8 +270,7 @@ class PouleStage:
         RuntimeError
             If the poule is complete and therefore has no on-piste match.
         """
-        poule = self.get_poule_at(poule_index)
-        poule.record_on_piste_match_result(score1, score2)
+        self.get_poule_at(poule_index).record_on_piste_match_score(score1, score2)
 
     def replace_with_score(self, poule_index: int, match_index: int, score1: int, score2: int) -> None:
         """
@@ -297,8 +295,7 @@ class PouleStage:
             If either index is outside its valid range, either score is outside the permitted range, 
             the scores are equal, or the match is incomplete.
         """
-        poule = self.get_poule_at(poule_index)
-        poule.replace_with_score(match_index, score1, score2)
+        self.get_poule_at(poule_index).replace_with_score(match_index, score1, score2)
 
     def record_forfeit(self, poule_index: int, match_index: int, forfeiting_index: int) -> None:
         """
@@ -321,8 +318,7 @@ class PouleStage:
             If ``poule_index`` or ``match_index`` is outside its valid range,
             ``forfeiting_index`` is not ``0`` or ``1``, or the match is already complete.
         """
-        poule = self.get_poule_at(poule_index)
-        poule.record_forfeit(match_index, forfeiting_index)
+        self.get_poule_at(poule_index).record_forfeit(match_index, forfeiting_index)
 
     def replace_with_forfeit(self, poule_index: int, match_index: int, forfeiting_index: int) -> None:
         """
@@ -345,8 +341,7 @@ class PouleStage:
             If ``poule_index`` or ``match_index`` is outside its valid range,
             ``forfeiting_index`` is not ``0`` or ``1``, or the match is incomplete.
         """
-        poule = self.get_poule_at(poule_index)
-        poule.replace_with_forfeit(match_index, forfeiting_index)
+        self.get_poule_at(poule_index).replace_with_forfeit(match_index, forfeiting_index)
 
 
     # --- Result Calculation Methods ---
