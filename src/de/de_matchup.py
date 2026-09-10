@@ -416,12 +416,12 @@ class DEMatchup:
 
 
     # --- Result Recording Methods ---
-    def record_score(self, score1: int, score2: int) -> None:
+    def record_match_score(self, score1: int, score2: int) -> None:
         """
         Record a scored result for the matchup's DE match.
 
-        Any existing scored result is overwritten. 
-        A forfeit result must be reset before it can be replaced by a scored result.
+        A result cannot be recorded if the match is already complete.
+        Use ``replace_with_score()`` to replace an existing scored or forfeit result.
         
         Parameters
         ----------
@@ -435,12 +435,16 @@ class DEMatchup:
         TypeError
             If either score is not an integer.
         ValueError
-            If the matchup does not contain both entries, 
-            either score is outside the permitted range, 
-            the scores are tied, or the match already has a forfeit result.
+            If the matchup is a BYE, if the matchup does not contain both entries, 
+            either score is outside the permitted range, the scores are tied, or the match is already complete.
         RuntimeError
             If both entries are present but the matchup's match is unexpectedly missing.
         """
+        if self.is_bye():
+            raise ValueError(
+                f'Cannot record a score for {self.label} because the matchup is a BYE'
+            )
+
         if self.is_missing_an_entry():
             raise ValueError(
                 f'Cannot record a score for {self.label} because the matchup does not contain both entries'
@@ -452,8 +456,47 @@ class DEMatchup:
             )
 
         self.match.record_score(score1, score2)
+
+    def replace_with_score(self, score1: int, score2: int) -> None:
+        """
+        Replace the existing scored or forfeit result with new scores.
+
+        Parameters
+        ----------
+        score1 : int
+            The new score for ``entry1``.
+        score2 : int
+            The new score for ``entry2``.
+
+        Raises
+        ------
+        TypeError
+            If either score is not an integer.
+        ValueError
+            If the matchup is a BYE, if the matchup does not contain both entries, 
+            the match is incomplete, either score is outside the permitted range, or the scores are equal.
+        RuntimeError
+            If both entries are present but the matchup's match is missing.
+        """
+        if self.is_bye():
+            raise ValueError(
+                f'Cannot replace a result with a score for {self.label} because the matchup is a BYE'
+            )
+
+        if self.is_missing_an_entry():
+            raise ValueError(
+                f'Cannot replace the result for {self.label} '
+                'because the matchup does not contain both entries'
+            )
+
+        if self.match is None:
+            raise RuntimeError(
+                f'Cannot replace the result for {self.label}: both entries are present, but its DE match is missing'
+            )
+
+        self.match.replace_with_score(score1, score2)
     
-    def forfeit(self, forfeiting_index: int) -> None:
+    def record_forfeit(self, forfeiting_index: int) -> None:
         """
         Record a forfeit by the entry at the specified index.
         
@@ -467,11 +510,16 @@ class DEMatchup:
         TypeError
             If ``forfeiting_index`` is not an integer.
         ValueError
-            If the matchup does not contain both entries, the index is not ``0`` or ``1``,
-            or the match is already complete.
+            If the matchup is a BYE, if the matchup does not contain both entries, 
+            if the match is already complete, or if ``forfeiting_index`` is not ``0`` or ``1``.
         RuntimeError
             If both entries are present but the matchup's match is unexpectedly missing.
         """
+        if self.is_bye():
+            raise ValueError(
+                f'Cannot record a forfeit for {self.label} because the matchup is a BYE'
+            )
+
         if self.is_missing_an_entry():
             raise ValueError(
                 f'Cannot record a forfeit for {self.label} because the matchup does not contain both entries'
@@ -482,9 +530,46 @@ class DEMatchup:
                 f'Cannot record a forfeit for {self.label}: both entries are present, but its DE match is missing'
             )
 
-        self.match.forfeit(forfeiting_index)
+        self.match.record_forfeit(forfeiting_index)
 
-    
+    def replace_with_forfeit(self, forfeiting_index: int) -> None:
+        """
+        Replace the existing scored or forfeit result with a forfeit.
+
+        Parameters
+        ----------
+        forfeiting_index : int
+            The forfeiting entry's index: ``0`` for ``entry1`` or ``1`` for ``entry2``.
+
+        Raises
+        ------
+        TypeError
+            If ``forfeiting_index`` is not an integer.
+        ValueError
+            If the matchup is a BYE, if the matchup does not contain both entries, 
+            the match is incomplete, or ``forfeiting_index`` is not ``0`` or ``1``.
+        RuntimeError
+            If both entries are present but the matchup's match is missing.
+        """
+        if self.is_bye():
+            raise ValueError(
+                f'Cannot replace a result with a forfeit for {self.label} because the matchup is a BYE'
+            )
+
+        if self.is_missing_an_entry():
+            raise ValueError(
+                f'Cannot replace the result for {self.label} '
+                'because the matchup does not contain both entries'
+            )
+
+        if self.match is None:
+            raise RuntimeError(
+                f'Cannot replace the result for {self.label}: both entries are present, but its DE match is missing'
+            )
+        
+        self.match.replace_with_forfeit(forfeiting_index)
+
+
     # --- Creation Helper Methods ---
     def _create_match(self, entry1: TournamentEntry, entry2: TournamentEntry) -> DEMatch:
         """
