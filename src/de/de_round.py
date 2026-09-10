@@ -342,35 +342,9 @@ class DERound:
             )
 
         matchup.add_entry(entry, entry_index)
-    
 
-    # --- Result Management Methods ---
-    def record_match_result(self, matchup_index: int, score1: int, score2: int) -> None:
-        """
-        Record a scored result for a specified matchup.
 
-        Parameters
-        ----------
-        matchup_index : int
-            The matchup's zero-based position in the round.
-        score1 : int
-            The final score of the matchup's top entry.
-        score2 : int
-            The final score of the matchup's bottom entry.
-
-        Raises
-        ------
-        TypeError
-            If the matchup index or either score is not an integer.
-        ValueError
-            If the matchup index is invalid, the matchup does not contain both entries, 
-            either score is outside the permitted range, the scores are tied, 
-            or the match currently has a forfeit result.
-        RuntimeError
-            If both entries are present but the matchup's DE match is missing.
-        """
-        self.get_matchup_at(matchup_index).record_score(score1, score2)
-
+    # --- State Change Methods ---
     def reset_match_result(self, matchup_index: int) -> None:
         """
         Reset the DE match in a specified matchup while preserving its entries.
@@ -390,7 +364,60 @@ class DERound:
         """
         self.get_matchup_at(matchup_index).reset_match()
     
-    def forfeit(self, matchup_index: int, forfeiting_index: int) -> None:
+
+    # --- Result Management Methods ---
+    def record_match_score(self, matchup_index: int, score1: int, score2: int) -> None:
+        """
+        Record a scored result for a specified matchup.
+
+        Parameters
+        ----------
+        matchup_index : int
+            The matchup's zero-based position in the round.
+        score1 : int
+            The final score of the matchup's top entry.
+        score2 : int
+            The final score of the matchup's bottom entry.
+
+        Raises
+        ------
+        TypeError
+            If the matchup index or either score is not an integer.
+        ValueError
+            If the matchup index is invalid, either score is outside the permitted range, the matchup is a BYE, 
+            the matchup does not contain both entries, the scores are tied, or the match is already complete.
+        RuntimeError
+            If both entries are present but the matchup's DE match is missing.
+        """
+        self.get_matchup_at(matchup_index).record_match_score(score1, score2)
+
+    def replace_with_score(self, matchup_index: int, score1: int, score2: int) -> None:
+        """
+        Replace the existing scored or forfeit result of the matchup at the matchup index with new scores.
+
+        Parameters
+        ----------
+        matchup_index : int
+            The zero-based position of the matchup within this round.
+        score1 : int
+            The new score for entry 1.
+        score2 : int
+            The new score for entry 2.
+
+        Raises
+        ------
+        TypeError
+            If ``matchup_index`` or either of the scores is not an integer.
+        ValueError
+            If ``matchup_index`` is outside the permitted range, if either score is outside the permitted range, 
+            if the matchup is a BYE, if the matchup does not contain both entries, 
+            if the match is incomplete, or the scores are equal.
+        RuntimeError
+            If both entries are present but the matchup's match is missing.
+        """
+        self.get_matchup_at(matchup_index).replace_with_score(score1, score2)
+    
+    def record_forfeit(self, matchup_index: int, forfeiting_index: int) -> None:
         """
         Record a forfeit in a specified matchup.
 
@@ -408,12 +435,35 @@ class DERound:
         TypeError
             If either index is not an integer.
         ValueError
-            If either index is invalid, the matchup does not contain both
-            entries, or its match is already complete.
+            If ``matchup_index`` is outside its valid range, if ``forfeiting_index`` is not ``0`` or ``1``, 
+            if the matchup is a BYE, if the matchup does not contain both entries, or if its match is already complete. 
         RuntimeError
             If both entries are present but the matchup's DE match is missing.
         """
-        self.get_matchup_at(matchup_index).forfeit(forfeiting_index)
+        self.get_matchup_at(matchup_index).record_forfeit(forfeiting_index)
+
+    def replace_with_forfeit(self, matchup_index: int, forfeiting_index: int) -> None:
+        """
+        Replace the existing scored or forfeit result of the matchup at the index with a new forfeit result.
+
+        Parameters
+        ----------
+        matchup_index : int
+            The zero-based position of the matchup within this round.
+        forfeiting_index : int
+            The forfeiting entry's index: ``0`` for ``entry1`` or ``1`` for ``entry2``.
+
+        Raises
+        ------
+        TypeError
+            If ``matchup_index`` or ``forfeiting_index`` is not an integer.
+        ValueError
+            If ``matchup_index`` is outside the permitted range, if ``forfeiting_index`` is not ``0`` or ``1``, 
+            if the matchup is a BYE, if the matchup is missing an entry, or if the match is incomplete.
+        RuntimeError
+            If both entries are present but the matchup's match is missing.
+        """
+        self.get_matchup_at(matchup_index).replace_with_forfeit(forfeiting_index)
     
 
     # --- Bracket Position Generation Helper Methods ---
