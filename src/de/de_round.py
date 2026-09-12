@@ -109,44 +109,6 @@ class DERound:
         """
         return tuple(entry for matchup in self.matchups for entry in matchup.entries if entry is not None)
 
-    @property
-    def winners(self) -> tuple[TournamentEntry, ...]:
-        """
-        Return the currently known winners in matchup order.
-
-        Winners of completed matches and winners advancing by bye are included. 
-        Matchups that have not yet produced a winner are omitted.
-        """
-        winners = []
-        
-        for matchup in self.matchups:
-            if matchup.is_complete():
-                winner = matchup.winner
-
-                if winner is not None:
-                    winners.append(winner)
-        
-        return tuple(winners)
-    
-    @property
-    def losers(self) -> tuple[TournamentEntry, ...]:
-        """
-        Return the currently known losers in matchup order.
-
-        Losers of completed matches are included. 
-        Incomplete matchups and byes, which do not have losers, are omitted.
-        """
-        losers = []
-        
-        for matchup in self.matchups:
-            if matchup.is_complete():
-                loser = matchup.loser
-
-                if loser is not None:
-                    losers.append(loser)
-
-        return tuple(losers)
-    
 
     # --- Equality ---
     def __eq__(self, other: object) -> bool:
@@ -226,70 +188,6 @@ class DERound:
         """
         self._validate_matchup_index(index, 'get_matchup_at')
         return self.matchups[index]
-    
-    def get_match_at(self, matchup_index: int) -> DEMatch | None:
-        """
-        Return the match contained in the matchup at the specified index.
-
-        Parameters
-        ----------
-        matchup_index : int
-            The matchup's zero-based position in the round.
-
-        Returns
-        -------
-        DEMatch | None
-            The matchup's DE match, or ``None`` if it does not currently contain a match.
-
-        Raises
-        ------
-        TypeError
-            If ``matchup_index`` is not an integer.
-        ValueError
-            If ``matchup_index`` is outside the valid range.
-        """
-        self._validate_matchup_index(matchup_index, 'get_match_at')
-        return self.matchups[matchup_index].match
-
-    def get_branch_position(self, matchup_index: int, entry_index: int) -> int:
-        """
-        Return the positional rank of a specified tableau branch.
-
-        The returned value identifies the branch's conventional position within this round 
-        and is not necessarily the occupying entry's DE seed.
-
-        Parameters
-        ----------
-        matchup_index : int
-            The matchup's zero-based position in the round.
-        entry_index : int
-            The branch index within the matchup: 
-            ``0`` for the top branch or
-            ``1`` for the bottom branch.
-
-        Returns
-        -------
-        int
-            The branch's one-based positional rank within the round.
-
-        Raises
-        ------
-        TypeError
-            If either index is not an integer.
-        ValueError
-            If either index is outside its valid range.
-        """
-        self._validate_matchup_index(matchup_index, 'get_branch_position')
-        validation.validate_int_in_range(entry_index, 0, 1, 'Entry index', 'DERound', 'get_branch_position')
-
-        # Calculate the depth of the round's tree
-        depth: int = log2_int(self.size)
-
-        # Generate the tree level of positions
-        level = DERound.generate_tree_bracket_level(depth)
-
-        # Return the position for this match and fencer (1 or 2)
-        return level[2 * matchup_index + entry_index]
 
 
     # --- Entry Management Methods ---
@@ -322,8 +220,8 @@ class DERound:
             or the resulting entry pair cannot form a valid DE match.
         """
         self._validate_entry(entry, 'add_entry_to_matchup')
-        
         self._validate_matchup_index(matchup_index, 'add_entry_to_matchup')
+
         validation.validate_int_in_range(entry_index, 0, 1, 'Entry index', 'DERound', 'add_entry_to_matchup')
 
         if entry in self.entries:
@@ -333,138 +231,8 @@ class DERound:
 
         matchup = self.get_matchup_at(matchup_index)
     
-        if matchup.has_entry_at(entry_index):
-            position_name = 'top' if entry_index == 0 else 'bottom'
-
-            raise ValueError(
-                f'Cannot add entry {entry.id} to the {position_name} position of '
-                f'{matchup.label} because that position is already occupied'
-            )
-
         matchup.add_entry(entry, entry_index)
 
-
-    # --- State Change Methods ---
-    def reset_match_result(self, matchup_index: int) -> None:
-        """
-        Reset the DE match in a specified matchup while preserving its entries.
-
-        Parameters
-        ----------
-        matchup_index : int
-            The matchup's zero-based position in the round.
-
-        Raises
-        ------
-        TypeError
-            If ``matchup_index`` is not an integer.
-        ValueError
-            If the matchup index is invalid or 
-            the matchup does not contain a DE match.
-        """
-        self.get_matchup_at(matchup_index).reset_match()
-    
-
-    # --- Result Management Methods ---
-    def record_match_score(self, matchup_index: int, score1: int, score2: int) -> None:
-        """
-        Record a scored result for a specified matchup.
-
-        Parameters
-        ----------
-        matchup_index : int
-            The matchup's zero-based position in the round.
-        score1 : int
-            The final score of the matchup's top entry.
-        score2 : int
-            The final score of the matchup's bottom entry.
-
-        Raises
-        ------
-        TypeError
-            If the matchup index or either score is not an integer.
-        ValueError
-            If the matchup index is invalid, either score is outside the permitted range, the matchup is a BYE, 
-            the matchup does not contain both entries, the scores are tied, or the match is already complete.
-        RuntimeError
-            If both entries are present but the matchup's DE match is missing.
-        """
-        self.get_matchup_at(matchup_index).record_match_score(score1, score2)
-
-    def replace_with_score(self, matchup_index: int, score1: int, score2: int) -> None:
-        """
-        Replace the existing scored or forfeit result of the matchup at the matchup index with new scores.
-
-        Parameters
-        ----------
-        matchup_index : int
-            The zero-based position of the matchup within this round.
-        score1 : int
-            The new score for entry 1.
-        score2 : int
-            The new score for entry 2.
-
-        Raises
-        ------
-        TypeError
-            If ``matchup_index`` or either of the scores is not an integer.
-        ValueError
-            If ``matchup_index`` is outside the permitted range, if either score is outside the permitted range, 
-            if the matchup is a BYE, if the matchup does not contain both entries, 
-            if the match is incomplete, or the scores are equal.
-        RuntimeError
-            If both entries are present but the matchup's match is missing.
-        """
-        self.get_matchup_at(matchup_index).replace_with_score(score1, score2)
-    
-    def record_forfeit(self, matchup_index: int, forfeiting_index: int) -> None:
-        """
-        Record a forfeit in a specified matchup.
-
-        Parameters
-        ----------
-        matchup_index : int
-            The matchup's zero-based position in the round.
-        forfeiting_index : int
-            The forfeiting entry's index: 
-            ``0`` for the top entry or 
-            ``1`` for the bottom entry.
-
-        Raises
-        ------
-        TypeError
-            If either index is not an integer.
-        ValueError
-            If ``matchup_index`` is outside its valid range, if ``forfeiting_index`` is not ``0`` or ``1``, 
-            if the matchup is a BYE, if the matchup does not contain both entries, or if its match is already complete. 
-        RuntimeError
-            If both entries are present but the matchup's DE match is missing.
-        """
-        self.get_matchup_at(matchup_index).record_forfeit(forfeiting_index)
-
-    def replace_with_forfeit(self, matchup_index: int, forfeiting_index: int) -> None:
-        """
-        Replace the existing scored or forfeit result of the matchup at the index with a new forfeit result.
-
-        Parameters
-        ----------
-        matchup_index : int
-            The zero-based position of the matchup within this round.
-        forfeiting_index : int
-            The forfeiting entry's index: ``0`` for ``entry1`` or ``1`` for ``entry2``.
-
-        Raises
-        ------
-        TypeError
-            If ``matchup_index`` or ``forfeiting_index`` is not an integer.
-        ValueError
-            If ``matchup_index`` is outside the permitted range, if ``forfeiting_index`` is not ``0`` or ``1``, 
-            if the matchup is a BYE, if the matchup is missing an entry, or if the match is incomplete.
-        RuntimeError
-            If both entries are present but the matchup's match is missing.
-        """
-        self.get_matchup_at(matchup_index).replace_with_forfeit(forfeiting_index)
-    
 
     # --- Bracket Position Generation Helper Methods ---
     @staticmethod
@@ -660,11 +428,13 @@ class DERound:
                 )
             
             for entry in matchup.entries:
-                if isinstance(entry, TournamentEntry):
-                    if entry.id in seen_entry_ids:
-                        raise ValueError(
-                            f'Entry {entry.id} appears more than once in DERound for '
-                            f'tournament {tournament_id}, stage {self.stage_number}, round {self.round_number}'
-                        )
-                    
-                    seen_entry_ids.add(entry.id)
+                if entry is None:
+                    continue
+                
+                if entry.id in seen_entry_ids:
+                    raise ValueError(
+                        f'Entry {entry.id} appears more than once in DERound for '
+                        f'tournament {tournament_id}, stage {self.stage_number}, round {self.round_number}'
+                    )
+                
+                seen_entry_ids.add(entry.id)
