@@ -5,7 +5,7 @@ import validation
 from de.de_matchup import DEMatchup
 from entities.tournament_entry import TournamentEntry
 from matches.de_match import DEMatch
-from utils import is_power_of_two, log2_int
+from utils import is_power_of_two
 
 
 @dataclass(eq=False)
@@ -44,11 +44,11 @@ class DERound:
         Raises
         ------
         TypeError
-            If a round identifier is not an integer, 
+            If the round or stage number is not an integer, 
             ``matchups`` is not a tuple, an item is not a ``DEMatchup``, 
             or a stored match is neither a ``DEMatch`` nor ``None``.
         ValueError
-            If a round identifier is not positive, ``matchups`` is empty,
+            If the round or stage number is not positive, ``matchups`` is empty,
             the number of matchups is not a power of two, 
             a matchup's identifiers do not agree with its position or this round, 
             the matchups do not share a tournament ID, or an entry appears more than once.
@@ -131,7 +131,7 @@ class DERound:
 
     # --- Predicate Methods ---
     def is_complete(self) -> bool:
-        """Return whether every matchup in the round has produced a winner."""
+        """Return whether every matchup is complete, including first-round byes."""
         return all(matchup.is_complete() for matchup in self.matchups)
 
     def is_incomplete(self) -> bool:
@@ -198,6 +198,8 @@ class DERound:
         If adding the entry fills both matchup positions, 
         the matchup automatically creates its DE match.
 
+        If validation or match creation fails, the round remains unchanged.
+
         Parameters
         ----------
         entry : TournamentEntry
@@ -212,7 +214,8 @@ class DERound:
         Raises
         ------
         TypeError
-            If ``entry`` is not a ``TournamentEntry`` or either index is not an integer.
+            If ``entry`` is not a ``TournamentEntry``, either index is not an integer, 
+            or match creation detects an invalid attribute type.
         ValueError
             If the entry belongs to another tournament, 
             already appears in this round, 
@@ -238,7 +241,10 @@ class DERound:
     @staticmethod
     def generate_tree_bracket_level(depth: int) -> tuple[int, ...]:
         """
-        Generate the branch-position ordering at a specified tableau depth.
+        Generate the seed ordering at a specified tableau depth.
+
+        The returned values identify the seeds occupying successive
+        positions from the top of the tableau to the bottom.
 
         Parameters
         ----------
@@ -250,6 +256,15 @@ class DERound:
         -------
         tuple[int, ...]
             The one-based branch positions at the requested depth in top-to-bottom tableau order.
+
+        Examples
+        --------
+        >>> DERound.generate_tree_bracket_level(0)
+        (1,)
+        >>> DERound.generate_tree_bracket_level(2)
+        (1, 4, 3, 2)
+        >>> DERound.generate_tree_bracket_level(3)
+        (1, 8, 5, 4, 3, 6, 7, 2)
 
         Raises
         ------
@@ -377,7 +392,8 @@ class DERound:
             If ``matchups`` is empty, its length is not a power of two, 
             a matchup number does not agree with its tuple position, 
             a matchup's round or stage number does not agree with this round,
-            the matchups do not share a tournament ID, or a tournament entry appears more than once.
+            the matchups do not share a tournament ID, 
+            or the same tournament entry ID appears in more than one position.
         """
         if not isinstance(matchups, tuple):
             raise TypeError(f'Matchups must be a tuple in DERound - got {type(matchups).__name__}')

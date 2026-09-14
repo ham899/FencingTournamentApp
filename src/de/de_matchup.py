@@ -282,7 +282,8 @@ class DEMatchup:
         Parameters
         ----------
         index : int
-            The entry index to retrieve the entry from.
+            The entry index: ``0`` for the top position
+            or ``1`` for the bottom position.
 
         Returns
         -------
@@ -305,7 +306,8 @@ class DEMatchup:
         """
         Add an entry at the specified matchup position.
 
-        A DE match is created automatically if this causes both positions to become occupied.
+        A DE match is created automatically if both positions become occupied.
+        If validation or match creation fails, the matchup remains unchanged.
 
         Parameters
         ----------
@@ -393,7 +395,7 @@ class DEMatchup:
 
     # --- State Change Methods ---
     def reset(self) -> None:
-        """Clear both entries and discard any recorded match result."""
+        """Clear both entries and discard the contained DE match, including its result."""
         self.entry1, self.entry2, self.match = None, None, None
 
     def reset_match(self) -> None:
@@ -619,7 +621,7 @@ class DEMatchup:
     
     def _validate_entry(self, entry: TournamentEntry, entry_name: str = 'Entry', method_name: str | None = None) -> None:
         """
-        Validate an entry for inclusion in this matchup.
+        Validate that the entry is a TournamentEntry belonging to this tournament.
         
         Parameters
         ----------
@@ -645,7 +647,7 @@ class DEMatchup:
 
     def _validate_optional_entry(self, entry: TournamentEntry | None, entry_name: str = 'Entry') -> None:
         """
-        Validate an optional matchup entry.
+        Accept None or validate the entry's type and tournament membership.
         
         Parameters
         ----------
