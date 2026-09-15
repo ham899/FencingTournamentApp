@@ -392,6 +392,45 @@ class DEMatchup:
         if self.match is not None:
             self.match = None
 
+    def replace_entry(self, entry: TournamentEntry, index: int) -> None:
+        """
+        Replace the entry at the specified occupied matchup position.
+
+        Any existing incomplete DE match is discarded. 
+        A new match is created if both positions are occupied after replacement. 
+        A completed match must be reset before an entry can be replaced.
+
+        If replacement fails, the original entries and match are preserved.
+
+        Parameters
+        ----------
+        entry : TournamentEntry
+            The replacement entry.
+        index : int
+            The entry index: ``0`` for the top position or ``1`` for the bottom position.
+
+        Raises
+        ------
+        TypeError
+            If ``entry`` is not a ``TournamentEntry``, ``index`` is not an integer, 
+            or an attribute has an invalid type during match creation.
+        ValueError
+            If the entry belongs to another tournament, the index is not ``0`` or ``1``, the position is empty, 
+            the existing match is complete, or the resulting entry pair cannot form a valid DE match.
+        """
+        self._validate_entry(entry, method_name='replace_entry')
+        self._validate_entry_index(index, method_name='replace_entry')
+
+        original_state = self.entry1, self.entry2, self.match
+
+        self.remove_entry(index)
+
+        try:
+            self.add_entry(entry, index)
+
+        except Exception:
+            self.entry1, self.entry2, self.match = original_state
+            raise
 
     # --- State Change Methods ---
     def reset(self) -> None:
