@@ -188,6 +188,27 @@ class DERound:
         """
         self._validate_matchup_index(index, 'get_matchup_at')
         return self.matchups[index]
+    
+    def get_round_losers(self) -> tuple[TournamentEntry, ...]:
+        """
+        Return known losers in matchup order.
+
+        Incomplete matchups and byes are excluded.
+
+        Returns
+        -------
+        tuple[TournamentEntry, ...]
+            The losing entries from completed matches, in matchup order.
+        """
+        round_losers: list[TournamentEntry] = []
+
+        for matchup in self.matchups:
+            loser = matchup.loser
+
+            if loser is not None:
+                round_losers.append(loser)
+
+        return tuple(round_losers)
 
 
     # --- Entry Management Methods ---
