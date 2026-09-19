@@ -8,16 +8,17 @@ from entities.tournament_entry import TournamentEntry
 
 class DEEntryStatus(Enum):
     """
-    Represent an entry's participation status within a DE stage.
+    Represent an entry's participation status within a DE bracket.
 
     Attributes
     ----------
     WINNER
-        The entry has won the entire DE stage.
+        The entry has won the DE bracket.
     ACTIVE
-        The entry remains in contention to win the DE stage.
+        The entry remains in contention to win the DE bracket.
     ELIMINATED
-        The entry has been eliminated from the DE stage.
+        The entry can no longer win the DE bracket.
+        It may still participate in the separate third-place matchup.
     """
     WINNER = auto()
     ACTIVE = auto()
@@ -27,25 +28,27 @@ class DEEntryStatus(Enum):
 @dataclass(frozen=True, slots=True)
 class DEEntryResult:
     """
-    Represent a single entry's calculated result snapshot for a DE stage.
+    Represent a single entry's calculated result snapshot for a DE bracket.
 
     This object's fields cannot be reassigned after initialization.
 
     Attributes
     ----------
     entry : TournamentEntry
-        The tournament entry whose DE results are represented.
+        The tournament entry whose bracket results are represented.
     stage_number : int
-        The DE stage's one-based position within the tournament.
+        The containing DE stage's one-based position within the tournament.
     bracket_seed : int
-        The entry's one-based starting seed within this DE stage.
+        The entry's one-based starting seed within this DE bracket.
     round_reached : int
-        The one-based number of the furthest DE round reached within this bracket.
+        The one-based number of the furthest main-bracket round reached.
+        Participation in the separate third-place matchup does not change this value.
     place : int | None
-        The entry's confirmed finishing position within this DE stage, or None if its exact position is not yet determined.
+        The entry's confirmed finishing position within this DE bracket,
+        or None if its exact position has not yet been determined.
     status : DEEntryStatus
-        The entry's participation status within this DE stage.
-    """  
+        The entry's participation status within this DE bracket.
+    """
     entry: TournamentEntry
     stage_number: int
     bracket_seed: int
@@ -72,7 +75,7 @@ class DEEntryResult:
             raise TypeError(f'Entry must be a TournamentEntry in DEEntryResult - got {type(self.entry).__name__}')
         
         validation.validate_positive_int(self.stage_number, 'Stage number', 'DEEntryResult')
-        validation.validate_positive_int(self.bracket_seed, 'DE seed', 'DEEntryResult')
+        validation.validate_positive_int(self.bracket_seed, 'Bracket seed', 'DEEntryResult')
         validation.validate_positive_int(self.round_reached, 'Round reached', 'DEEntryResult')
         validation.validate_optional_positive_int(self.place, 'Place', 'DEEntryResult')
 
@@ -90,9 +93,10 @@ class DEEntryResult:
         Parameters
         ----------
         status : DEEntryStatus
-            The entry's participation status within the DE stage.
+            The entry's participation status within the DE bracket.
         place : int | None
-            The entry's confirmed finishing position, or None if its exact position is not yet determined.
+            The entry's confirmed finishing position within the DE bracket,
+            or None if its exact position has not yet been determined.
 
         Raises
         ------

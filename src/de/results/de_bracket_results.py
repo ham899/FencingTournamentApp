@@ -32,9 +32,9 @@ class _DEEntryResultState:
 
 
 @dataclass(frozen=True, slots=True)
-class DEStageResults:
+class DEBracketResults:
     """
-    Represent a fixed snapshot of every entry's results in a DE stage.
+    Represent a fixed snapshot of every entry's results in a DE bracket.
 
     The snapshot is calculated from the supplied bracket's current state,
     including its optional third-place matchup.
@@ -61,7 +61,7 @@ class DEStageResults:
     # --- Initialization and Validation ---
     def __post_init__(self, bracket: DEBracket) -> None:
         """
-        Validate the bracket and calculate the DE stage result snapshot.
+        Validate the bracket and calculate the DE bracket result snapshot.
 
         Parameters
         ----------
@@ -76,7 +76,7 @@ class DEStageResults:
         if not isinstance(bracket, DEBracket):
             raise TypeError(f'Bracket must be a DEBracket - got {type(bracket).__name__}')
 
-        object.__setattr__(self, 'entry_results', self._calculate_stage_results(bracket))
+        object.__setattr__(self, 'entry_results', self._calculate_bracket_results(bracket))
 
 
     # --- Helper Methods ---
@@ -121,7 +121,7 @@ class DEStageResults:
 
         Entries appearing in later rounds have their furthest round reached updated,
         losers of completed matchups are marked as eliminated,
-        and the winner of a completed final is marked as the stage winner.
+        and the winner of a completed final is marked as the bracket winner.
 
         The separate third-place matchup is handled by _apply_third_place_result().
 
@@ -265,7 +265,7 @@ class DEStageResults:
             entry_states_by_id[third_place_matchup.winner.id].place = 3
             entry_states_by_id[third_place_matchup.loser.id].place = 4
 
-    def _calculate_stage_results(self, bracket: DEBracket) -> tuple[DEEntryResult, ...]:
+    def _calculate_bracket_results(self, bracket: DEBracket) -> tuple[DEEntryResult, ...]:
         """
         Calculate the DE entry result snapshots in result order.
 
