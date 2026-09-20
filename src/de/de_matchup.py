@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 
 import validation
 
+from de.de_bracket_role import DEBracketRole
 from entities.tournament_entry import TournamentEntry
 from matches.de_match import DEMatch
 
@@ -35,6 +36,8 @@ class DEMatchup:
         The entry occupying the bottom branch, or ``None`` if that position is empty.
     score_to_win : int, default=15
         The target score and maximum permitted recorded score for either entry.
+    bracket_role : DEBracketRole, default=DEBracketRole.MAIN
+        The role of the bracket within its DE stage that this matchup belongs to.
     match : DEMatch | None, default=None, init=False
         The match generated when both entries are present, or ``None`` otherwise.
     """
@@ -46,6 +49,7 @@ class DEMatchup:
     entry1: TournamentEntry | None = None
     entry2: TournamentEntry | None = None
     score_to_win: int = field(default=15, kw_only=True)
+    bracket_role: DEBracketRole = field(default=DEBracketRole.MAIN, kw_only=True)
 
     match: DEMatch | None = field(default=None, init=False)
 
@@ -60,19 +64,24 @@ class DEMatchup:
         Raises
         ------
         TypeError
-            If an identifying number or `score_to_win` is not an integer, 
-            an entry is not a ``TournamentEntry``, 
-            or the entries cannot form a valid DE match because of an invalid attribute type.
+            If an identifying number or `score_to_win` is not an integer, an entry is not a ``TournamentEntry``, 
+            the entries cannot form a valid DE match because of an invalid attribute type, 
+            or the bracket role is not a ``DEBracketRole``.
         ValueError
             If an identifying number or `score_to_win` is not positive, 
             an entry belongs to another tournament, 
             or the entries cannot form a valid DE match.
         """
-        validation.validate_positive_int(self.matchup_number, 'Matchup number', 'DEMatchup')
-        validation.validate_positive_int(self.round_number, 'Round number', 'DEMatchup')
-        validation.validate_positive_int(self.stage_number, 'Stage number', 'DEMatchup')
-        validation.validate_positive_int(self.tournament_id, 'Tournament ID', 'DEMatchup')
-        validation.validate_positive_int(self.score_to_win, 'Score to win', 'DEMatchup')
+        location = 'DEMatchup'
+        
+        validation.validate_positive_int(self.matchup_number, 'Matchup number', location)
+        validation.validate_positive_int(self.round_number, 'Round number', location)
+        validation.validate_positive_int(self.stage_number, 'Stage number', location)
+        validation.validate_positive_int(self.tournament_id, 'Tournament ID', location)
+        validation.validate_positive_int(self.score_to_win, 'Score to win', location)
+
+        if not isinstance(self.bracket_role, DEBracketRole):
+            raise TypeError(f'Bracket role must be a DEBracketRole in {location} - got {type(self.bracket_role).__name__}')
 
         self._validate_optional_entry(self.entry1, 'Entry 1')
         self._validate_optional_entry(self.entry2, 'Entry 2')
@@ -88,10 +97,11 @@ class DEMatchup:
         return (
             f'Matchup {self.matchup_number} '
             f'in round {self.round_number} '
+            f'in the {self.bracket_role.name.lower()} bracket '
             f'in stage {self.stage_number} '
             f'in tournament {self.tournament_id}'
         )
-    
+
     @property
     def matchup_index(self) -> int:
         """Return the matchup's zero-based position within its DE round."""
@@ -165,7 +175,7 @@ class DEMatchup:
         """
         Return whether ``other`` represents the same tableau position.
 
-        Equality is based on tournament ID, stage number, round number, and matchup number. 
+        Equality is based on tournament ID, stage number, round number, matchup number, and bracket role.
         Entries and match results are not considered.
         """
         if not isinstance(other, DEMatchup):
@@ -175,7 +185,8 @@ class DEMatchup:
             self.tournament_id == other.tournament_id and
             self.stage_number == other.stage_number and
             self.round_number == other.round_number and
-            self.matchup_number == other.matchup_number
+            self.matchup_number == other.matchup_number and 
+            self.bracket_role == other.bracket_role
         )
 
 
@@ -628,12 +639,13 @@ class DEMatchup:
             A newly created DE match for this matchup.
         """
         return DEMatch(
-            entry1 = entry1, 
-            entry2 = entry2, 
-            match_number = self.matchup_number, 
-            round_number = self.round_number, 
+            entry1 = entry1,
+            entry2 = entry2,
+            match_number = self.matchup_number,
+            round_number = self.round_number,
             stage_number = self.stage_number,
-            score_to_win = self.score_to_win
+            score_to_win = self.score_to_win,
+            bracket_role = self.bracket_role
         )
 
 

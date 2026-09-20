@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 
 import validation
 
+from de.de_bracket_role import DEBracketRole
 from matches.tournament_match import TournamentMatch
 
 
@@ -25,12 +26,15 @@ class DEMatch(TournamentMatch):
     score_to_win : int, default=15
         The score required to win the match. 
         It defaults to 15 for DE matches but can be customized when setting up the tournament.
+    bracket_role : DEBracketRole, default=DEBracketRole.MAIN
+        The role of the bracket in its DE stage this match belongs to.
     """
     match_number: int
     round_number: int
     stage_number: int
 
     score_to_win: int = field(default=15, kw_only=True)
+    bracket_role: DEBracketRole = field(default=DEBracketRole.MAIN, kw_only=True)
 
     
     # --- Initialization and Validation ---
@@ -41,14 +45,19 @@ class DEMatch(TournamentMatch):
         Raises
         ------
         TypeError
-            If match, round, or stage number is not an integer.
+            If match, round, or stage number is not an integer or if bracket role is not a DEBracketRole.
         ValueError
             If match, round, or stage number is not positive.
         """
-        # Validate DE match's defining numbers
-        validation.validate_positive_int(self.match_number, 'DE match match number', 'DEMatch')
-        validation.validate_positive_int(self.round_number, 'DE match round number', 'DEMatch')
-        validation.validate_positive_int(self.stage_number, 'DE match stage number', 'DEMatch')
+        location = 'DEMatch'
+
+        # Validate DE match's defining attributes
+        validation.validate_positive_int(self.match_number, 'DE match match number', location)
+        validation.validate_positive_int(self.round_number, 'DE match round number', location)
+        validation.validate_positive_int(self.stage_number, 'DE match stage number', location)
+
+        if not isinstance(self.bracket_role, DEBracketRole):
+            raise TypeError(f'Bracket role in {location} must be a DEBracketRole - got {type(self.bracket_role).__name__}')
 
         # Get parent to validate common attributes
         super().__post_init__()
@@ -59,7 +68,9 @@ class DEMatch(TournamentMatch):
     def label(self) -> str:
         """Return a descriptive label identifying the match."""
         return (
-            f'Match {self.match_number} in DE round {self.round_number} '
+            f'Match {self.match_number} '
+            f'in DE round {self.round_number} '
+            f'of the {self.bracket_role.name.lower()} bracket '
             f'in tournament stage {self.stage_number} '
             f'in tournament {self.tournament_id}'
         )
@@ -95,7 +106,8 @@ class DEMatch(TournamentMatch):
             self.tournament_id == other.tournament_id and
             self.stage_number == other.stage_number and
             self.round_number == other.round_number and
-            self.match_number == other.match_number
+            self.match_number == other.match_number and 
+            self.bracket_role == other.bracket_role
         )
 
 

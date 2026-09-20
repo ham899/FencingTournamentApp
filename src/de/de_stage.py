@@ -3,6 +3,7 @@ from dataclasses import dataclass, field, InitVar
 import validation
 
 from de.de_bracket import DEBracket
+from de.de_bracket_role import DEBracketRole
 from de.de_matchup import DEMatchup
 from de.results.de_stage_results import DEStageResults
 from entities.seeded_entry import SeededEntry
@@ -96,9 +97,10 @@ class DEStage:
         ordered_entries = tuple(seeded_entry.entry for seeded_entry in self.seeded_entries)
 
         self.main_bracket = DEBracket(
-            stage_number = self.stage_number, 
-            seed_ordered_entries = ordered_entries, 
-            score_to_win = self.score_to_win, 
+            stage_number = self.stage_number,
+            seed_ordered_entries = ordered_entries,
+            bracket_role = DEBracketRole.MAIN,
+            score_to_win = self.score_to_win,
             has_third_place_match = has_third_place_match
         )
 
@@ -1009,9 +1011,10 @@ class DEStage:
                 consolation_entries = self._get_consolation_entries()
 
                 self.consolation_bracket = DEBracket(
-                    stage_number = self.stage_number, 
-                    seed_ordered_entries = consolation_entries, 
-                    score_to_win = self.score_to_win, 
+                    stage_number = self.stage_number,
+                    seed_ordered_entries = consolation_entries,
+                    bracket_role =  DEBracketRole.CONSOLATION,
+                    score_to_win = self.score_to_win,
                     has_third_place_match = len(consolation_entries) == 4
                 )
 

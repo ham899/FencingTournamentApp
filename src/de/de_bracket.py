@@ -2,6 +2,7 @@ from dataclasses import dataclass, field, InitVar
 
 import validation
 
+from de.de_bracket_role import DEBracketRole
 from de.de_matchup import DEMatchup
 from de.de_round import DERound
 from entities.tournament_entry import TournamentEntry
@@ -32,6 +33,8 @@ class DEBracket:
         Entries must have distinct entry IDs and fencer IDs and belong
         to the same tournament. 
         This initialization-only argument is not stored as an attribute.
+    bracket_role : DEBracketRole, default=DEBracketRole.MAIN
+        The role of this bracket within its DE stage.
     has_third_place_match : bool, default=False
         An initialization option enabling a match between the semi-final losers. Requires at least four entries.
     score_to_win : int, default=15
@@ -41,6 +44,8 @@ class DEBracket:
     ----------
     stage_number : int
         The DE stage's one-based position within its tournament.
+    bracket_role : DEBracketRole, default=DEBracketRole.MAIN
+        The role of this bracket within its DE stage.
     rounds : tuple[DERound, ...]
         All main-bracket rounds in opening-round-to-final order.
         Excludes the optional third-place matchup.
@@ -51,8 +56,11 @@ class DEBracket:
     """
     stage_number: int
     seed_ordered_entries: InitVar[tuple[TournamentEntry, ...]]
+
+    bracket_role: DEBracketRole = field(default=DEBracketRole.MAIN, kw_only=True)
     score_to_win: int = field(default=15, kw_only=True)
     has_third_place_match: InitVar[bool] = field(default=False, kw_only=True)
+    
     rounds: tuple[DERound, ...] = field(init=False)
     third_place_matchup: DEMatchup | None = field(default=None, init=False)
 
@@ -74,19 +82,23 @@ class DEBracket:
         Raises
         ------
         TypeError
-            If a stage number or target score is not an integer, 
-            the entries are not a tuple of TournamentEntry objects, 
-            the third-place option is not a boolean, or construction encounters an invalid attribute type.
+            If a stage number or target score is not an integer, the entries are not a tuple of TournamentEntry objects, 
+            the bracket role is not a DEBracketRole, the third-place option is not a boolean, 
+            or construction encounters an invalid attribute type.
         ValueError
             If the stage number or target score is not positive, fewer than two entries are supplied, 
             entry IDs or fencer IDs repeat, tournament IDs differ, fewer than four entries are supplied with third place enabled, 
             or construction encounters an invalid value.
         """
         location = 'DEBracket'
+
         validation.validate_positive_int(self.stage_number, 'Stage number', location)
         validation.validate_positive_int(self.score_to_win, 'Score to win', location)
 
         self._validate_seed_ordered_entries(seed_ordered_entries)
+
+        if not isinstance(self.bracket_role, DEBracketRole):
+            raise TypeError(f'``bracket_role`` must be a DEBracketRole in {location} - got {type(self.bracket_role).__name__}')
 
         if type(has_third_place_match) is not bool:
             raise TypeError(
@@ -103,14 +115,19 @@ class DEBracket:
         self.rounds = self._init_all_rounds(seed_ordered_entries)
 
         if has_third_place_match:
-            self.third_place_matchup = self._create_matchup(matchup_number=2, round_number=self.num_rounds) # Separate third-place matchup using the final round's number
+            # Separate third-place matchup using the final round's number
+            self.third_place_matchup = self._create_matchup(matchup_number=2, round_number=self.num_rounds)
 
 
     # --- Properties ---
     @property
     def label(self) -> str:
         """Return a descriptive label identifying the tournament and DE stage."""
-        return f'DE bracket for tournament {self.tournament_id} in stage {self.stage_number}'
+        return (
+            f'{self.bracket_role.name.lower()} DE bracket '
+            f'in stage {self.stage_number} '
+            f'of tournament {self.tournament_id}'
+        )
 
     @property
     def tournament_id(self) -> int:
@@ -224,7 +241,7 @@ class DEBracket:
         """
         Return whether ``other`` represents the same tournament bracket.
 
-        Equality is based on tournament ID and stage number. 
+        Equality is based on tournament ID, stage number, and bracket role.
         Entrants, round contents, and recorded results are not considered.
 
         Parameters
@@ -235,12 +252,17 @@ class DEBracket:
         Returns
         -------
         bool
-            ``True`` if ``other`` is a ``DEBracket`` with the same tournament ID and stage number; otherwise, ``False``.
+            ``True`` if ``other`` is a ``DEBracket`` with the same tournament ID, stage number, and bracket role; 
+            otherwise, ``False``.
         """
         if not isinstance(other, DEBracket):
             return False
 
-        return self.tournament_id == other.tournament_id and self.stage_number == other.stage_number
+        return (
+            self.tournament_id == other.tournament_id and 
+            self.stage_number == other.stage_number and 
+            self.bracket_role == other.bracket_role
+        )
     
 
     # --- Predicate Methods ---
@@ -873,13 +895,14 @@ class DEBracket:
             tournament_id = self.tournament_id
 
         return DEMatchup(
-            matchup_number = matchup_number, 
-            round_number = round_number, 
-            stage_number = self.stage_number, 
-            tournament_id = tournament_id, 
-            entry1 = entry1, 
-            entry2 = entry2, 
-            score_to_win = self.score_to_win
+            matchup_number = matchup_number,
+            round_number = round_number,
+            stage_number = self.stage_number,
+            tournament_id = tournament_id,
+            entry1 = entry1,
+            entry2 = entry2,
+            score_to_win = self.score_to_win,
+            bracket_role = self.bracket_role
         )
 
 
@@ -1134,7 +1157,8 @@ class DEBracket:
         return DERound(
             matchups = matchups,
             round_number = 1,
-            stage_number = self.stage_number
+            stage_number = self.stage_number,
+            bracket_role = self.bracket_role
         )
 
     def _init_all_rounds(self, ordered_entries: tuple[TournamentEntry, ...]) -> tuple[DERound, ...]:
@@ -1198,7 +1222,8 @@ class DEBracket:
                 DERound(
                     matchups = matchups, 
                     round_number = round_index + 1, 
-                    stage_number = self.stage_number
+                    stage_number = self.stage_number,
+                    bracket_role = self.bracket_role
                 )
             )
 

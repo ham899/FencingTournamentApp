@@ -1,7 +1,8 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import validation
 
+from de.de_bracket_role import DEBracketRole
 from de.de_matchup import DEMatchup
 from entities.tournament_entry import TournamentEntry
 from matches.de_match import DEMatch
@@ -30,10 +31,14 @@ class DERound:
         The round's one-based position within its DE tableau.
     stage_number : int
         The DE stage's one-based position within the tournament.
+    bracket_role : DEBracketRole, default=DEBracketRole.MAIN
+        The role of the bracket this round belongs to within its DE stage.
     """
     matchups: tuple[DEMatchup, ...]
     round_number: int
     stage_number: int
+
+    bracket_role: DEBracketRole = field(default=DEBracketRole.MAIN, kw_only=True)
 
 
     # --- Initialization and Validation ---
@@ -44,7 +49,7 @@ class DERound:
         Raises
         ------
         TypeError
-            If the round or stage number is not an integer, 
+            If the round or stage number is not an integer, ``bracket_role`` is not a ``DEBracketRole``,
             ``matchups`` is not a tuple, an item is not a ``DEMatchup``, 
             or a stored match is neither a ``DEMatch`` nor ``None``.
         ValueError
@@ -53,8 +58,13 @@ class DERound:
             a matchup's identifiers do not agree with its position or this round, 
             the matchups do not share a tournament ID, or an entry appears more than once.
         """
-        validation.validate_positive_int(self.round_number, 'Round number', 'DERound')
-        validation.validate_positive_int(self.stage_number, 'Stage number', 'DERound')
+        location = 'DERound'
+
+        validation.validate_positive_int(self.round_number, 'Round number', location)
+        validation.validate_positive_int(self.stage_number, 'Stage number', location)
+
+        if not isinstance(self.bracket_role, DEBracketRole):
+            raise TypeError(f'Bracket role must be a DEBracketRole in {location} - got {type(self.bracket_role).__name__}')
         
         self._validate_matchups(self.matchups)
 
@@ -65,6 +75,7 @@ class DERound:
         """Return a descriptive label identifying this DE round."""
         return (
             f'The {self.round_name} '
+            f'in the {self.bracket_role.name.lower()} bracket '
             f'in stage {self.stage_number} '
             f'of tournament {self.tournament_id}'
         )
@@ -115,7 +126,7 @@ class DERound:
         """
         Return whether ``other`` represents the same DE round.
 
-        Equality is based on tournament ID, stage number, and round number.
+        Equality is based on tournament ID, stage number, round number, and bracket role.
         Matchups, entries, and recorded results are not considered.
         """
 
@@ -125,7 +136,8 @@ class DERound:
         return (
             self.tournament_id == other.tournament_id and
             self.stage_number == other.stage_number and
-            self.round_number == other.round_number
+            self.round_number == other.round_number and
+            self.bracket_role == other.bracket_role
         )
 
 
@@ -414,7 +426,8 @@ class DERound:
             a matchup number does not agree with its tuple position, 
             a matchup's round or stage number does not agree with this round,
             the matchups do not share a tournament ID, 
-            or the same tournament entry ID appears in more than one position.
+            a matchup's bracket role differs from the round's bracket role, 
+            or the same tournament entry ID appears more than once.
         """
         if not isinstance(matchups, tuple):
             raise TypeError(f'Matchups must be a tuple in DERound - got {type(matchups).__name__}')
@@ -456,6 +469,12 @@ class DERound:
                 raise ValueError(
                     f'All matchups must have the same tournament ID: matchup 1 has tournament ID '
                     f'{tournament_id} and matchup {i + 1} has tournament ID {matchup.tournament_id} in DERound'
+                )
+            
+            if matchup.bracket_role != self.bracket_role:
+                raise ValueError(
+                    f'Matchup at index {i} has bracket role {matchup.bracket_role.name}, '
+                    f'but the round has bracket role {self.bracket_role.name} in DERound'
                 )
 
             if matchup.match is not None and not isinstance(matchup.match, DEMatch):
