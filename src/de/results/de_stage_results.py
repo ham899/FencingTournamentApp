@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field, replace, InitVar
 
 from de.de_bracket import DEBracket
+from de.de_bracket_role import DEBracketRole
 from de.results.de_bracket_results import DEBracketResults
 from de.results.de_entry_result import DEEntryResult, DEEntryStatus
 
@@ -35,15 +36,41 @@ class DEStageResults:
         Raises
         ------
         TypeError
-            If main_bracket is not a DEBracket, or consolation_bracket is neither None nor a DEBracket.
+            If ``main_bracket`` is not a ``DEBracket``, 
+            or ``consolation_bracket`` is neither ``None`` nor a ``DEBracket``.
+        ValueError
+            If ``main_bracket`` does not have the ``DEBracketRole.MAIN`` role, 
+            the consolation bracket does not have the ``DEBracketRole.CONSOLATION`` role, 
+            the brackets do not belong to the same tournament or stage, 
+            or the consolation entries are not a subset of the main-bracket entries.
         """
         # Validate inputs
         location = 'DEStageResults'
+
         if not isinstance(main_bracket, DEBracket):
             raise TypeError(f'Main bracket must be a DEBracket in {location} - got {type(main_bracket).__name__}')
+        
+        if main_bracket.bracket_role != DEBracketRole.MAIN:
+            raise ValueError(f'Main bracket must have the MAIN bracket role in {location}')
 
-        if consolation_bracket is not None and not isinstance(consolation_bracket, DEBracket):
-            raise TypeError(f'Consolation bracket must be either None or a DEBracket in {location} - got {type(consolation_bracket).__name__}')
+        if consolation_bracket is not None:
+            if not isinstance(consolation_bracket, DEBracket):
+                raise TypeError(f'Consolation bracket must be either None or a DEBracket in {location} - got {type(consolation_bracket).__name__}')
+
+            if consolation_bracket.bracket_role != DEBracketRole.CONSOLATION:
+                raise ValueError(f'Consolation bracket must have the CONSOLATION bracket role in {location}')
+
+            if consolation_bracket.tournament_id != main_bracket.tournament_id:
+                raise ValueError(f'The consolation bracket and main bracket must have the same tournament ID in {location}')
+
+            if consolation_bracket.stage_number != main_bracket.stage_number:
+                raise ValueError(f'The consolation bracket and main bracket must have the same stage number in {location}')
+
+            main_entry_ids = {entry.id for entry in main_bracket.entries}
+            consolation_entry_ids = {entry.id for entry in consolation_bracket.entries}
+
+            if not consolation_entry_ids <= main_entry_ids:
+                raise ValueError(f'The entries in the consolation bracket must be a subset of the entries in the main bracket in {location}')
 
         # Calculate the main-bracket result snapshot
         main_bracket_results = DEBracketResults(main_bracket)
