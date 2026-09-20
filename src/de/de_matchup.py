@@ -218,10 +218,9 @@ class DEMatchup:
         ------
         TypeError
             If ``entry`` is not a ``TournamentEntry``.
-        ValueError
-            If ``entry`` belongs to another tournament.
         """
-        self._validate_entry(entry, method_name='has_entry')
+        if not isinstance(entry, TournamentEntry):
+            raise TypeError(f'Entry must be a TournamentEntry in DEMatchup.has_entry() - got {type(entry).__name__}')
 
         return entry in self.entries
     

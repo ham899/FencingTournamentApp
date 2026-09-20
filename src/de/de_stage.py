@@ -187,7 +187,7 @@ class DEStage:
             If ``entry`` is not a ``TournamentEntry``.
         """
         if not isinstance(entry, TournamentEntry):
-            raise TypeError(f'Entry must be a tournament entry object - got {type(entry).__name__}')
+            raise TypeError(f'Entry must be a tournament entry object in DEStage.has_entry() - got {type(entry).__name__}')
         
         return entry in self.entries
     
