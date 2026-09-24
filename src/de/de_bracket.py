@@ -19,9 +19,9 @@ class DEBracket:
     and first-round bye winners are automatically advanced.
 
     Recording a result advances its winner when a next round exists. 
-    With third place enabled, recording a semifinal also places its loser in the separate third-place matchup. 
+    With third place enabled, recording a semi-final also places its loser in the separate third-place matchup. 
     Resetting or replacing a result requires its next matchup, if any, to be incomplete. 
-    For a semifinal, the optional third-place matchup must also be incomplete.
+    For a semi-final, the optional third-place matchup must also be incomplete.
 
     Parameters
     ----------
@@ -37,6 +37,10 @@ class DEBracket:
         The role of this bracket within its DE stage.
     has_third_place_match : bool, default=False
         An initialization option enabling a match between the semi-final losers. Requires at least four entries.
+    stop_at_round : int | None, default=None
+        The one-based number of the round at which the bracket stops. Matches in this round are not fenced. 
+        Winners from the preceding round advance into this round and qualify for the next stage.
+        If ``None``, the bracket continues through to the final.
     score_to_win : int, default=15
         The target score and maximum permitted recorded score for either entry in matches created for this bracket.
 
@@ -46,6 +50,10 @@ class DEBracket:
         The DE stage's one-based position within its tournament.
     bracket_role : DEBracketRole, default=DEBracketRole.MAIN
         The role of this bracket within its DE stage.
+    stop_at_round : int | None, default=None
+        The one-based number of the round at which the bracket stops. Matches in this round are not fenced. 
+        Winners from the preceding round advance into this round and qualify for the next stage.
+        If ``None``, the bracket continues through to the final.
     rounds : tuple[DERound, ...]
         All main-bracket rounds in opening-round-to-final order.
         Excludes the optional third-place matchup.
@@ -60,7 +68,8 @@ class DEBracket:
     bracket_role: DEBracketRole = field(default=DEBracketRole.MAIN, kw_only=True)
     score_to_win: int = field(default=15, kw_only=True)
     has_third_place_match: InitVar[bool] = field(default=False, kw_only=True)
-    
+    stop_at_round: int | None = field(default=None, kw_only=True)
+
     rounds: tuple[DERound, ...] = field(init=False)
     third_place_matchup: DEMatchup | None = field(default=None, init=False)
 
@@ -83,12 +92,13 @@ class DEBracket:
         ------
         TypeError
             If a stage number or target score is not an integer, the entries are not a tuple of TournamentEntry objects, 
-            the bracket role is not a DEBracketRole, the third-place option is not a boolean, 
-            or construction encounters an invalid attribute type.
+            the third-place option is not a boolean, ``stop_at_round`` is neither an integer nor ``None``, 
+            the bracket role is not a DEBracketRole, or construction encounters an invalid attribute type.
         ValueError
             If the stage number or target score is not positive, fewer than two entries are supplied, 
-            entry IDs or fencer IDs repeat, tournament IDs differ, fewer than four entries are supplied with third place enabled, 
-            or construction encounters an invalid value.
+            entry IDs or fencer IDs repeat, tournament IDs differ, the stop round is outside its valid range, 
+            stopping and third place are both enabled, fewer than four entries are supplied with third place enabled, 
+            or if construction encounters an invalid value.
         """
         location = 'DEBracket'
 
@@ -96,21 +106,14 @@ class DEBracket:
         validation.validate_positive_int(self.score_to_win, 'Score to win', location)
 
         self._validate_seed_ordered_entries(seed_ordered_entries)
+        self._validate_has_third_place_match(has_third_place_match, len(seed_ordered_entries), location)
+        self._validate_stop_at_round(self.stop_at_round, len(seed_ordered_entries), location)
+
+        if self.stop_at_round is not None and has_third_place_match:
+            raise ValueError(f'Cannot enable a third-place match when a stopping round is set in {location}')
 
         if not isinstance(self.bracket_role, DEBracketRole):
             raise TypeError(f'``bracket_role`` must be a DEBracketRole in {location} - got {type(self.bracket_role).__name__}')
-
-        if type(has_third_place_match) is not bool:
-            raise TypeError(
-                f'``has_third_place_match`` parameter must be a boolean in {location}'
-                f' - got {type(has_third_place_match).__name__}'
-            )
-
-        if has_third_place_match and len(seed_ordered_entries) < 4:
-            raise ValueError(
-                f'At least four entries are required if the third-place matchup option is selected in {location}'
-                f' - got {len(seed_ordered_entries)} entries'
-            )
 
         self.rounds = self._init_all_rounds(seed_ordered_entries)
 
@@ -135,15 +138,130 @@ class DEBracket:
         return self.first_round.tournament_id
     
     @property
+    def stop_at_round_index(self) -> int:
+        """
+        Return the stopping round number as a round index.
+
+        Raises
+        ------
+        ValueError
+            If this bracket does not have a stopping round.
+        """
+        if self.stop_at_round is None:
+            raise ValueError(f'{self.label} does not have a stopping round')
+
+        return self.stop_at_round - 1
+
+    @property
     def num_entries(self) -> int:
         """Return the number of actual entrants, excluding empty bye positions."""
         return len(self.entries)
+
+    @property
+    def qualified_entries(self) -> tuple[TournamentEntry, ...]:
+        """
+        Return the entries that have reached the stop round so far.
+
+        Entries are returned in tableau order. 
+        The tuple may contain fewer than the expected number of advancing entries 
+        while playable rounds remain incomplete.
+
+        Returns
+        -------
+        tuple[TournamentEntry, ...]
+            The entries that have qualified for the next stage so far.
+
+        Raises
+        ------
+        ValueError
+            If this bracket does not have a stop round.
+        """
+        if not self.has_stop_round():
+            raise ValueError(f'{self.label} does not have a stopping round')
+
+        return self.rounds[self.stop_at_round_index].entries
+
+    @property
+    def num_qualified_entries(self) -> int:
+        """
+        Return the number of entries that have qualified so far.
+
+        Raises
+        ------
+        ValueError
+            If this bracket does not have a stopping round.
+        """
+        return len(self.qualified_entries)
     
+    @property
+    def advancing_entries(self) -> tuple[TournamentEntry, ...]:
+        """
+        Return all entries advancing from a completed stopped bracket.
+
+        Entries are returned in tableau order from the stop round.
+
+        Returns
+        -------
+        tuple[TournamentEntry, ...]
+            Every entry advancing to the next stage.
+
+        Raises
+        ------
+        ValueError
+            If this bracket has no stop round or remains incomplete.
+        RuntimeError
+            If the bracket is complete, 
+            but the stop round does not contain the expected number of advancing entries.
+        """
+        if not self.has_stop_round():
+            raise ValueError(f'{self.label} does not have a stopping round')
+        
+        if self.is_incomplete():
+            raise ValueError(f'{self.label} cannot return all advancing entries until the stopped bracket is complete')
+        
+        # Verify that there is the expected number of advancing entries present
+        entries = self.qualified_entries
+        
+        if len(entries) != self.expected_num_advancing_entries:
+            raise RuntimeError(
+                f'{self.label} is complete but has {len(entries)} advancing entries instead of {self.expected_num_advancing_entries}'
+            )
+
+        return entries
+
+    @property
+    def expected_num_advancing_entries(self) -> int:
+        """
+        Return the number of entries that will advance when the bracket is complete.
+
+        Returns
+        -------
+        int
+            The number of entry positions in the stop round.
+
+        Raises
+        ------
+        ValueError
+            If this bracket does not have a stop round.
+        """
+        if not self.has_stop_round():
+            raise ValueError(f'{self.label} does not have a stopping round')
+
+        return self.rounds[self.stop_at_round_index].size
+
     @property
     def num_rounds(self) -> int:
         """Return the number of main-bracket rounds, including the championship final."""
         return len(self.rounds)
-    
+
+    @property
+    def playable_rounds(self) -> tuple[DERound, ...]:
+        """Return the rounds in which matches may be fenced."""
+        if self.has_stop_round():
+            return self.rounds[:self.stop_at_round_index]
+
+        return self.rounds
+
     @property
     def bracket_size(self) -> int:
         """
@@ -157,42 +275,51 @@ class DEBracket:
     @property
     def current_round_index(self) -> int | None:
         """
-        Return the first incomplete main round's zero-based index, or ``None``.
+        Return the first incomplete playable main round's zero-based index, or ``None``.
 
         The third-place matchup is excluded. 
         Later rounds may already contain ready matchups while this round remains incomplete.
         """
-        return next((i for i, de_round in enumerate(self.rounds) if de_round.is_incomplete()), None)
+        return next((index for index, de_round in enumerate(self.playable_rounds) if de_round.is_incomplete()), None)
 
     @property
     def current_round_number(self) -> int | None:
         """
-        Return the first incomplete round's one-based number, or ``None``.
+        Return the first incomplete playable main round's one-based number.
 
-        Return ``None`` when the bracket itself is complete, not including the third-place matchup.
+        Return ``None`` when all playable main rounds are complete.
         """
         index = self.current_round_index
         return None if index is None else index + 1
     
     @property
     def current_round(self) -> DERound | None:
-        """Return the first incomplete round, or ``None`` if all bracket rounds are complete."""
+        """
+        Return the first incomplete playable main round.
+
+        Return ``None`` when all playable main rounds are complete.
+        """
         index = self.current_round_index
         return None if index is None else self.rounds[index]
 
     @property
     def current_round_size(self) -> int | None:
         """
-        Return the first incomplete round's size, or ``None`` if all bracket rounds are complete.
+        Return the first incomplete playable main round's size.
 
-        The size counts all entry positions in that round, including empty positions still awaiting an advancing winner.
+        Return ``None`` when all playable main rounds are complete.
+        Entry positions awaiting advancing winners are included in the size.
         """
         index = self.current_round_index
         return None if index is None else self.rounds[index].size
     
     @property
     def current_round_name(self) -> str | None:
-        """Return the first incomplete round's name, or ``None`` if all bracket rounds are complete."""
+        """
+        Return the first incomplete playable main round's name.
+
+        Return ``None`` when all playable main rounds are complete.
+        """
         index = self.current_round_index
         return None if index is None else self.rounds[index].round_name
     
@@ -226,14 +353,20 @@ class DEBracket:
     @property
     def winner(self) -> TournamentEntry | None:
         """
-        Return the bracket's final winner once that matchup is complete.
+        Return the bracket winner once the final is complete.
 
-        Return ``None`` while the final is incomplete. 
-        This property does not check the optional third-place matchup.
+        Return ``None`` while the final is incomplete or when this is a stopped bracket. 
+        The optional third-place matchup is not considered.
         """
+        if self.has_stop_round():
+            return None
+
         final_matchup = self.rounds[-1].matchups[0]
+
         if final_matchup.is_complete():
             return final_matchup.winner
+
+        return None
 
 
     # --- Equality ---
@@ -268,25 +401,28 @@ class DEBracket:
     # --- Predicate Methods ---
     def is_complete(self) -> bool:
         """
-        Return whether every round in the bracket and the third-place matchup (if exists) is complete.
+        Return whether every playable round in the bracket and the third-place matchup (if exists) is complete.
 
         Completed scored matches, forfeits, and first-round byes count toward completion. 
-        Later-round matchups awaiting an entry do not.
+        Later-round, playable matchups awaiting an entry do not.
         """
         return (
-            all(de_round.is_complete() for de_round in self.rounds) and (
-                not self.has_third_place_matchup() or self.third_place_matchup.is_complete()
-            )
+            all(de_round.is_complete() for de_round in self.playable_rounds) 
+            and (not self.has_third_place_matchup() or self.third_place_matchup.is_complete())
         )
-    
+
     def is_incomplete(self) -> bool:
-        """Return whether at least one bracket round or the third-place matchup (if exists) remains incomplete."""
+        """Return whether a playable round or the optional third-place matchup remains incomplete."""
         return not self.is_complete()
-    
+
     def has_third_place_matchup(self) -> bool:
         """Return whether a third-place matchup exists for this DE bracket."""
         return self.third_place_matchup is not None
-    
+
+    def has_stop_round(self) -> bool:
+        """Return whether this bracket has a stopping round condition."""
+        return self.stop_at_round is not None
+
     def has_started(self) -> bool:
         """
         Return whether any main-bracket match currently has a recorded result.
@@ -295,7 +431,7 @@ class DEBracket:
         """
         return any(
             matchup.has_match() and matchup.match.is_complete()
-            for de_round in self.rounds 
+            for de_round in self.playable_rounds 
             for matchup in de_round.matchups
         )
 
@@ -433,18 +569,18 @@ class DEBracket:
         
     def get_ready_matchups(self) -> tuple[DEMatchup, ...]:
         """
-        Return incomplete matchups containing matches, including third place.
+        Return playable incomplete matchups containing matches, including third place.
 
         Returns
         -------
         tuple[DEMatchup, ...]
-            Ready main-bracket matchups in round order, then top-to-bottom matchup order, 
+            Ready, playable, main-bracket matchups in round order, then top-to-bottom matchup order, 
             followed by the ready third-place matchup, if any.
         """
-        ready_matchups = tuple(matchup for de_round in self.rounds for matchup in de_round.matchups 
+        ready_matchups = tuple(matchup for de_round in self.playable_rounds for matchup in de_round.matchups 
                                if matchup.has_match() and matchup.is_incomplete()
                          )
-        
+
         if self.has_third_place_matchup() and self.third_place_matchup.has_match() and self.third_place_matchup.is_incomplete():
             return ready_matchups + (self.third_place_matchup, )
         
@@ -461,7 +597,7 @@ class DEBracket:
         Remove its winner from the next matchup when one exists. 
         For a semi-final with third place enabled, also remove its loser from the third-place matchup.
 
-        The next matchup and, for a semifinal, the optional third-place matchup
+        The next matchup and, for a semi-final, the optional third-place matchup
         must be incomplete before the result can be reset.
 
         Parameters
@@ -477,8 +613,8 @@ class DEBracket:
         TypeError
             If either index is not an integer.
         ValueError
-            If either index is outside its valid range, the selected matchup is a bye, 
-            either entry is missing, no result has been recorded, or the next matchup is complete.
+            If either index is outside its valid range, the selected matchup is not in a playable round, 
+            the selected matchup is a bye, either entry is missing, no result has been recorded, or the next matchup is complete.
             Also raised when changing a semi-final whose third-place matchup is already complete.
         RuntimeError
             If both entries are present but the selected matchup has no match,
@@ -533,7 +669,7 @@ class DEBracket:
 
         When a next matchup exists, the winner is added to its designated entry position, which must be empty.
 
-        For a semifinal with third place enabled, also place its loser in the designated third-place position. 
+        For a semi-final with third place enabled, also place its loser in the designated third-place position. 
         The championship final has no advancement destination. This method addresses the main bracket only.
 
         Parameters
@@ -553,7 +689,8 @@ class DEBracket:
             If an index or score is not an integer, or advancement encounters an invalid entry attribute type.
         ValueError
             If an index is outside its valid range, a score is outside the permitted range, the scores are tied, 
-            the selected matchup is a bye, either entry is missing, or the match is already complete.
+            the selected matchup is not in a playable round, the selected matchup is a bye, either entry is missing, 
+            or the match is already complete.
             Also raised if the destination position is occupied or the winner cannot be added to the next round.
         RuntimeError
             If both entries are present but the selected matchup has no match,
@@ -572,7 +709,7 @@ class DEBracket:
         When a next matchup exists, it must be incomplete.
 
         Update the next matchup's entry to the replacement winner. 
-        For a semifinal with third place enabled, also update the third-place entry to the replacement loser. 
+        For a semi-final with third place enabled, also update the third-place entry to the replacement loser. 
         Both destinations must be incomplete, even when the replacement preserves the same winner.
 
         Parameters
@@ -592,7 +729,8 @@ class DEBracket:
             If an index or score is not an integer, or advancement encounters an invalid entry attribute type.
         ValueError
             If an index is outside its valid range, a score is outside the permitted range, the scores are tied, 
-            the selected matchup is a bye, either entry is missing, no result has been recorded, or the next matchup is complete.
+            the selected matchup is not in a playable round, the selected matchup is a bye, either entry is missing, 
+            no result has been recorded, or the next matchup is complete.
             Also raised if the new winner cannot be added to the next round.
             Also raised when changing a semi-final whose third-place matchup is already complete.
         RuntimeError
@@ -613,7 +751,7 @@ class DEBracket:
 
         When a next matchup exists, the winner is added to its designated entry position, which must be empty.
 
-        For a semifinal with third place enabled, also place its loser in the designated third-place position. 
+        For a semi-final with third place enabled, also place its loser in the designated third-place position. 
         The championship final has no advancement destination. This method addresses the main bracket only.
 
         Parameters
@@ -631,8 +769,8 @@ class DEBracket:
         TypeError
             If any index is not an integer, or advancement encounters an invalid entry attribute type.
         ValueError
-            If an index is outside its valid range, the selected matchup is a bye, either entry is missing, 
-            or the match is already complete.
+            If an index is outside its valid range, the selected matchup is not in a playable round, the selected matchup is a bye, 
+            either entry is missing, or the match is already complete.
             Also raised if the destination position is occupied or the winner cannot be added to the next round.
         RuntimeError
             If both entries are present but the selected matchup has no match, 
@@ -651,7 +789,7 @@ class DEBracket:
         When a next matchup exists, it must be incomplete.
 
         Update the next matchup's entry to the replacement winner. 
-        For a semifinal with third place enabled, also update the third-place entry to the replacement loser. 
+        For a semi-final with third place enabled, also update the third-place entry to the replacement loser. 
         Both destinations must be incomplete, even when the replacement preserves the same winner.
 
         Parameters
@@ -669,8 +807,8 @@ class DEBracket:
         TypeError
             If any index is not an integer, or advancement encounters an invalid entry attribute type.
         ValueError
-            If an index is outside its valid range, the selected matchup is a bye, either entry is missing, 
-            no result has been recorded, or the next matchup is complete.
+            If an index is outside its valid range, the selected matchup is not in a playable round, the selected matchup is a bye, 
+            either entry is missing, no result has been recorded, or the next matchup is complete.
             Also raised if the new winner cannot be added to the next round.
             Also raised when changing a semi-final whose third-place matchup is already complete.
         RuntimeError
@@ -1284,16 +1422,16 @@ class DEBracket:
 
     def _advance_semi_final_matchup_loser_to_third_place_matchup(self, matchup: DEMatchup) -> None:
         """
-        Place a completed semifinal's loser in the third-place matchup.
+        Place a completed semi-final's loser in the third-place matchup.
 
-        The first semifinal's loser occupies the bottom position, 
-        and the second semifinal's loser occupies the top position. 
+        The first semi-final's loser occupies the bottom position, 
+        and the second semi-final's loser occupies the top position. 
         An existing entry at the destination is replaced; otherwise, the loser is added.
 
         Parameters
         ----------
         matchup : DEMatchup
-            The completed semifinal matchup, assumed to belong to this bracket.
+            The completed semi-final matchup, assumed to belong to this bracket.
 
         Raises
         ------
@@ -1301,10 +1439,10 @@ class DEBracket:
             If adding or replacing the loser encounters an invalid entry type
             or an invalid attribute type during match creation.
         ValueError
-            If the source matchup is not a semifinal, is incomplete,
+            If the source matchup is not a semi-final, is incomplete,
             or its loser cannot be added to or replace the destination entry.
         RuntimeError
-            If the third-place matchup does not exist, the completed semifinal has no loser, 
+            If the third-place matchup does not exist, the completed semi-final has no loser, 
             or its recorded result is internally inconsistent.
         """
         if self.third_place_matchup is None:
@@ -1321,7 +1459,7 @@ class DEBracket:
         if loser is None:
             raise RuntimeError(f'This semi-final matchup is marked complete but has no loser in {self.label}')
 
-        # First semi-final loser goes to the bottom; second semifinal loser goes to the top.
+        # First semi-final loser goes to the bottom; second semi-final loser goes to the top.
         entry_index = 1 - matchup.matchup_index
 
         if self.third_place_matchup.has_entry_at(entry_index):
@@ -1332,11 +1470,11 @@ class DEBracket:
 
     # --- Match Result Recording Template Helper Methods ---
     def _record_match_result(self, round_index: int, matchup_index: int, method_name: str, *, 
-                             score1: int | None= None, score2: int | None = None, forfeiting_index: int | None = None) -> None:
+                             score1: int | None = None, score2: int | None = None, forfeiting_index: int | None = None) -> None:
         """
         Record a match result and advance its winner when a next round exists.
 
-        For a semifinal with third place enabled, also place its loser in the designated third-place position. 
+        For a semi-final with third place enabled, also place its loser in the designated third-place position. 
         The championship final has no advancement destination. This method addresses the main bracket only.
 
         The operation is selected by ``method_name``.
@@ -1434,7 +1572,7 @@ class DEBracket:
         Replace a recorded result and update the advancing entry.
 
         Update the next matchup's entry to the replacement winner. 
-        For a semifinal with third place enabled, also update the third-place entry to the replacement loser. 
+        For a semi-final with third place enabled, also update the third-place entry to the replacement loser. 
         Both destinations must be incomplete, even when the replacement preserves the same winner.
 
         The operation is selected by ``method_name``.
@@ -1474,9 +1612,9 @@ class DEBracket:
 
         if method_name not in ('replace_with_score', 'replace_with_forfeit'):
             raise ValueError(f'method_name must be either \'replace_with_score\' or \'replace_with_forfeit\' in {location}')
-        
+
         if method_name == 'replace_with_score' and (score1 is None or score2 is None):
-            raise ValueError(f'If method_name is \'replace_with_score\', then arguments for score1 and score2 must be provided {location}')
+            raise ValueError(f'If method_name is \'replace_with_score\', then arguments for score1 and score2 must be provided in {location}')
 
         elif method_name == 'replace_with_forfeit' and forfeiting_index is None:
             raise ValueError(f'If method_name is \'replace_with_forfeit\', then an argument for forfeiting_index must be provided in {location}')
@@ -1698,6 +1836,70 @@ class DEBracket:
             seen_entry_ids.add(entry.id)
             seen_fencer_ids.add(entry.fencer.id)
 
+    def _validate_stop_at_round(self, stop_at_round: int | None, num_entries: int, location: str) -> None:
+        """
+        Validate the round at which the bracket stops.
+
+        The stop round is constructed and receives advancing entries, but its matches are not fenced. 
+        It cannot be the opening round or final round.
+
+        Parameters
+        ----------
+        stop_at_round : int | None
+            The one-based number of the first round whose matches will not be fenced, 
+            or ``None`` to continue through to the final.
+        num_entries : int
+            The number of entries in the DE bracket.
+        location : str
+            The caller location to include in the error message.
+
+        Raises
+        ------
+        TypeError
+            If ``location`` is not a string, when ``stop_at_round`` is provided, 
+            either ``num_entries`` or ``stop_at_round`` is not an integer.
+        ValueError
+            If ``stop_at_round`` is provided and fewer than two entries are supplied or 
+            the stop round is outside its permitted range.
+        """
+        method_name = '_validate_stop_at_round'
+        validation.validate_string(location, 'location', 'DEBracket', method_name)
+
+        if stop_at_round is None:
+            return
+
+        num_de_rounds = self._calculate_number_de_rounds(num_entries)
+
+        validation.validate_int_in_range(stop_at_round, 2, num_de_rounds - 1, 'Stopping round', location)
+
+    def _validate_has_third_place_match(self, has_third_place_match: bool, num_entries: int, location: str) -> None:
+        """
+        Validate the boolean indicating if this bracket has a third-place match.
+
+        Raises
+        ------
+        TypeError
+            If ``has_third_place_match`` is not a boolean, if ``num_entries`` is not an integer, 
+            or if ``location`` is not a string.
+        ValueError
+            If ``num_entries`` is not positive, 
+            or if there are fewer than four entries when ``has_third_place_match`` is True.
+        """
+        validation.validate_string(location, 'location', 'DEBracket', '_validate_has_third_place_match')
+        validation.validate_positive_int(num_entries, 'num_entries', 'DEBracket', '_validate_has_third_place_match')
+
+        if type(has_third_place_match) is not bool:
+            raise TypeError(
+                f'``has_third_place_match`` parameter must be a boolean in {location}'
+                f' - got {type(has_third_place_match).__name__}'
+            )
+
+        if has_third_place_match and num_entries < 4:
+            raise ValueError(
+                f'At least four entries are required if the third-place matchup option is selected in {location}'
+                f' - got {num_entries} entries'
+            )
+
     def _validate_matchup_eligibility_to_record(self, matchup: DEMatchup) -> None:    
         """
         Check whether the matchup is eligible to receive a new result.
@@ -1710,17 +1912,22 @@ class DEBracket:
         Raises
         ------
         ValueError
-            If the matchup is a bye, either entry is missing, 
-            the match is already complete, or the destination position is occupied.
+            If the matchup is not a playable matchup for this bracket, the matchup is a bye, 
+            either entry is missing, the match is already complete, or the destination position is occupied.
         RuntimeError
             If both entries are present but the matchup has no match.
         """
+        if self.stop_at_round is not None and matchup.round_number >= self.stop_at_round:
+            raise ValueError(
+                f'Cannot record a result for {matchup.label} because it is not in a playable round'
+            )
+
         if matchup.is_bye():
             raise ValueError(f'Cannot record a result for {matchup.label} because it is a BYE')
 
         if matchup.is_missing_an_entry():
-            raise ValueError(f'Cannot record a result for {matchup.label} beacuse both entries are required')
-        
+            raise ValueError(f'Cannot record a result for {matchup.label} because both entries are required')
+
         if matchup.match is None:
             raise RuntimeError(f'{matchup.label} contains both entries but has no DE match')
 
@@ -1731,7 +1938,7 @@ class DEBracket:
             raise ValueError(
                 f'Cannot record a result for {matchup.label} because the winner does not have an entry position to proceed to in the next round'
             )
-    
+
     def _validate_matchup_eligibility_to_undo(self, matchup: DEMatchup, action_name: str) -> None:
         """
         Check whether a recorded result can be reset or replaced.
@@ -1746,7 +1953,7 @@ class DEBracket:
         Raises
         ------
         ValueError
-            If the matchup is a bye, either entry is missing, 
+            If the matchup is not in a playable round, is a bye, either entry is missing, 
             no result has been recorded, or the next matchup is complete.
             Also raised when changing a semi-final whose third-place matchup is already complete.
         RuntimeError
@@ -1755,12 +1962,17 @@ class DEBracket:
             or the recorded winner state is internally inconsistent.
             Also raised if the designated third-place entry does not match the recorded semi-final loser.
         """
+        if self.stop_at_round is not None and matchup.round_number >= self.stop_at_round:
+            raise ValueError(
+                f'Cannot {action_name} the result for {matchup.label} because it is not in a playable round'
+            )
+
         if matchup.is_bye():
             raise ValueError(f'Cannot {action_name} the result for {matchup.label} because it is a BYE')
-        
+
         if matchup.is_missing_an_entry():
-            raise ValueError(f'Cannot {action_name} a result for {matchup.label} beacuse both entries are required')
-        
+            raise ValueError(f'Cannot {action_name} a result for {matchup.label} because both entries are required')
+
         if matchup.match is None:
             raise RuntimeError(f'{matchup.label} contains both entries but has no DE match')
 
@@ -1772,10 +1984,10 @@ class DEBracket:
 
             if next_matchup.is_complete():
                 raise ValueError(f'Cannot {action_name} the result for {matchup.label} until its next matchup {next_matchup.label}\'s result has been reset first')
-            
+
             if not next_matchup.has_entry_at(matchup.next_matchup_entry_index):
-                raise RuntimeError(f'Matchup {next_matchup.label} does not has an entry at index {matchup.next_matchup_entry_index} when its previous matchup has a recorded result')
-            
+                raise RuntimeError(f'Matchup {next_matchup.label} does not have an entry at index {matchup.next_matchup_entry_index} when its previous matchup has a recorded result')
+
             if next_matchup.entry_at(matchup.next_matchup_entry_index) != matchup.winner:
                 raise RuntimeError(f'The next matchup {next_matchup.label}\'s entry at position {matchup.next_matchup_entry_index} does not match the current matchup\'s winner')
 
