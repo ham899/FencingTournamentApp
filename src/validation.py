@@ -354,3 +354,73 @@ def validate_int_in_range(value: int,
     if value < min_value or value > max_value:
         location = _validation_location(class_name, method_name, function_name)
         raise ValueError(f'{var_name} must be between {min_value} and {max_value} (inclusive){location} - got {value}')
+
+def validate_string(value: str, 
+                    var_name: str, 
+                    class_name: str | None = None, 
+                    method_name: str | None = None, 
+                    *, 
+                    function_name: str | None = None) -> None:
+    """
+    Validate that a value is a string.
+
+    Parameters
+    ----------
+    value : str
+        The value to validate.
+    var_name : str
+        The name to use for the value in error messages.
+    class_name : str | None, default=None
+        The class in which validation is occurring.
+    method_name : str | None, default=None
+        The method in which validation is occurring.
+    function_name : str | None, default=None
+        The standalone function in which validation is occurring.
+
+    Raises
+    ------
+    TypeError
+        If value is not a string, or if a provided location name is not a string.
+    ValueError
+        If ``method_name`` is provided without ``class_name``, 
+        or ``function_name`` is provided with ``class_name`` or ``method_name``.
+    """
+    location = _validation_location(class_name, method_name, function_name)
+
+    if not isinstance(value, str):
+        raise TypeError(f'{var_name} must be a string{location} - got {type(value).__name__}')
+
+def validate_optional_string(value: str | None, 
+                             var_name: str, 
+                             class_name: str | None = None, 
+                             method_name: str | None = None, 
+                             *, 
+                             function_name: str | None = None) -> None:
+    """
+    Validate that a value is a string or None.
+
+    Parameters
+    ----------
+    value : str | None
+        The value to validate.
+    var_name : str
+        The name to use for the value in error messages.
+    class_name : str | None, default=None
+        The class in which validation is occurring.
+    method_name : str | None, default=None
+        The method in which validation is occurring.
+    function_name : str | None, default=None
+        The standalone function in which validation is occurring.
+
+    Raises
+    ------
+    TypeError
+        If value is neither a string nor None, or if a provided location name is not a string.
+    ValueError
+        If ``method_name`` is provided without ``class_name``, 
+        or ``function_name`` is provided with ``class_name`` or ``method_name``.
+    """
+    location = _validation_location(class_name, method_name, function_name)
+
+    if value is not None and not isinstance(value, str):
+        raise TypeError(f'{var_name} must be either a string or None{location} - got {type(value).__name__}')
