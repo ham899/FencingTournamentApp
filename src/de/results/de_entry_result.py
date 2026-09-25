@@ -15,10 +15,12 @@ class DEEntryStatus(Enum):
     WINNER
         The entry has won the DE bracket.
     ACTIVE
-        The entry remains in contention to win the DE bracket.
+        The entry has not been eliminated from the DE bracket. 
+        In a stopped bracket, 
+        this includes an entry that has reached the stopping round and qualified to advance.
     ELIMINATED
-        The entry can no longer win the DE bracket.
-        It may still participate in the separate third-place matchup.
+        The entry has been eliminated from the DE bracket.
+        It may still participate in the separate third-place matchup, though.
     """
     WINNER = auto()
     ACTIVE = auto()
@@ -41,7 +43,7 @@ class DEEntryResult:
     bracket_seed : int
         The entry's one-based starting seed within this DE bracket.
     round_reached : int
-        The one-based number of the furthest main-bracket round reached.
+        The one-based number of the furthest bracket round reached.
         Participation in the separate third-place matchup does not change this value.
     place : int | None
         The entry's confirmed finishing position within this DE bracket,

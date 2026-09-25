@@ -17,7 +17,7 @@ class _DEEntryResultState:
     bracket_seed : int
         The entry's one-based starting seed within the DE bracket.
     round_reached : int, default=1
-        The one-based number of the furthest main-bracket round reached.
+        The one-based number of the furthest bracket round reached.
         Participation in the separate third-place matchup does not change this value.
     status : DEEntryStatus, default=`DEEntryStatus.ACTIVE`
         The entry's current participation status.
@@ -41,6 +41,11 @@ class DEBracketResults:
 
     Third-place participants remain eliminated from championship contention.
     Their exact places remain unconfirmed until the third-place matchup is complete.
+
+    A stopped bracket has no winner. 
+    Entries that reach its stopping round remain active and have no confirmed place, 
+    while eliminated entries are ordered after them. 
+    Once the bracket is complete, those active entries represent its advancing entries.
 
     The calculated fields cannot be reassigned after initialization.
 
@@ -117,7 +122,7 @@ class DEBracketResults:
     
     def _update_entry_states(self, bracket: DEBracket, entry_states_by_id: dict[int, _DEEntryResultState]) -> None:
         """
-        Update entry result states from the main-bracket rounds.
+        Update entry result states from the bracket rounds.
 
         Entries appearing in later rounds have their furthest round reached updated,
         losers of completed matchups are marked as eliminated,
@@ -171,7 +176,7 @@ class DEBracketResults:
         """
         Arrange the entry states in current result order.
 
-        Entries are ordered by furthest main-bracket round reached, 
+        Entries are ordered by furthest bracket round reached, 
         participation status (with winners before active entries before eliminated entries), 
         confirmed place, and lastly, bracket seed.
 
@@ -208,10 +213,12 @@ class DEBracketResults:
 
     def _assign_confirmed_places(self, bracket: DEBracket, ordered_entry_states: tuple[_DEEntryResultState, ...]) -> None:
         """
-        Assign finishing places from main-bracket state.
+        Assign finishing places from the bracket state.
 
-        Active entries retain a place of ``None``.
-        Eliminated entries receive a place only after all main-bracket rounds up to 
+        Active entries retain a place of ``None``. 
+        In a stopped bracket, this includes entries that have reached the stopping round and 
+        qualified to advance.
+        Eliminated entries receive a place only after all bracket rounds up to 
         and including their elimination round are complete.
 
         Places assigned to third-place participants are temporary here.
@@ -224,23 +231,23 @@ class DEBracketResults:
             The mutable entry states in result order.
         """
         for place, entry_state in enumerate(ordered_entry_states, start=1):
-            if entry_state.status == DEEntryStatus.WINNER:
+            if entry_state.status is DEEntryStatus.WINNER:
                 entry_state.place = 1
 
-            elif entry_state.status == DEEntryStatus.ELIMINATED and (
+            elif entry_state.status is DEEntryStatus.ELIMINATED and (
                 bracket.current_round_number is None or 
                 entry_state.round_reached < bracket.current_round_number):
                 entry_state.place = place
 
     def _apply_third_place_result(self, bracket: DEBracket, entry_states_by_id: dict[int, _DEEntryResultState]) -> None:
         """
-        Override main-bracket places using the optional third-place matchup.
+        Override bracket places using the optional third-place matchup.
 
         Do nothing when the third-place matchup is disabled.
         Otherwise, clear any places assigned to its current participants.
         If the matchup is complete, assign its winner third place and its loser fourth place.
 
-        Participation status and furthest main-bracket round reached are unchanged.
+        Participation status and furthest bracket round reached are unchanged.
 
         Parameters
         ----------
@@ -285,10 +292,10 @@ class DEBracketResults:
         # Step 2: Update the states from the bracket
         self._update_entry_states(bracket, entry_states_by_id)
 
-        # Step 3: Order the entry states for main-bracket place assignment
+        # Step 3: Order the entry states for bracket place assignment
         ordered_entry_states = self._order_entry_states(entry_states_by_id)
 
-        # Step 4: Assign places from the main-bracket's state
+        # Step 4: Assign places from the bracket's state
         self._assign_confirmed_places(bracket, ordered_entry_states)
 
         # Step 5: Apply the third-place match result if applicable
