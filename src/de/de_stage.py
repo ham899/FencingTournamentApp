@@ -21,6 +21,10 @@ class DEStage:
     It coordinates result changes across those brackets and 
     restores their prior state if consolation-bracket creation fails.
 
+    Additionally, the main bracket can optionally stop before a configured round, 
+    allowing the entries reaching that round to advance to a later tournament stage.
+    A stopped stage **cannot** use third-place or consolation classification matches.
+
     Parameters
     ----------
     stage_number : int
@@ -33,6 +37,9 @@ class DEStage:
         Whether the main bracket includes a match for third and fourth place.
     use_consolation_bracket : bool, default=False
         Whether quarter-final losers fence for places five through eight.
+    stop_at_round : int | None, default=None
+        The one-based number of the first main-bracket round that will not be fenced. 
+        Entries reaching this round qualify to advance.
 
     Attributes
     ----------
@@ -44,6 +51,8 @@ class DEStage:
         The target score and maximum permitted recorded score for either entry.
     use_consolation_bracket : bool
         Whether this stage uses a consolation bracket.
+    stop_at_round : int | None
+        The one-based stopping-round number, or ``None`` if the main bracket is fenced to completion.
     main_bracket : DEBracket
         The stage's primary direct-elimination bracket.
     consolation_bracket : DEBracket | None
@@ -55,6 +64,7 @@ class DEStage:
 
     has_third_place_match: InitVar[bool] = field(default=False, kw_only=True)
     use_consolation_bracket: bool = field(default=False, kw_only=True)
+    stop_at_round: int | None = field(default=None, kw_only=True)
 
     main_bracket: DEBracket = field(init=False)
     consolation_bracket: DEBracket | None = field(default=None, init=False)
@@ -73,7 +83,8 @@ class DEStage:
         ValueError
             If an integer is outside its permitted range, fewer than two entries are supplied, 
             entries or seeds are duplicated, entries belong to different tournaments, 
-            or an optional classification format does not have enough entries.
+            an optional classification format does not have enough entries, 
+            or incompatible bracket options are combined.
         """
         validation.validate_positive_int(self.stage_number, 'Stage number', 'DEStage')
         validation.validate_positive_int(self.score_to_win, 'Score to win', 'DEStage')
@@ -101,8 +112,12 @@ class DEStage:
             seed_ordered_entries = ordered_entries,
             bracket_role = DEBracketRole.MAIN,
             score_to_win = self.score_to_win,
-            has_third_place_match = has_third_place_match
+            has_third_place_match = has_third_place_match,
+            stop_at_round = self.stop_at_round
         )
+
+        if self.use_consolation_bracket and self.has_stop_round():
+            raise ValueError(f'{self.label} cannot have a stopped main bracket and have a consolation bracket')
 
 
     # --- Properties ---
@@ -110,7 +125,7 @@ class DEStage:
     def label(self) -> str:
         """Return a descriptive label identifying this DE stage."""
         return f'DE stage {self.stage_number} in tournament {self.tournament_id}'
-    
+
     @property
     def tournament_id(self) -> int:
         """Return the tournament ID shared by the stage entries."""
@@ -125,6 +140,26 @@ class DEStage:
     def entries(self) -> tuple[TournamentEntry, ...]:
         """Return the participating tournament entries in seed order."""
         return tuple(seeded_entry.entry for seeded_entry in self.seeded_entries)
+
+    @property
+    def qualified_entries(self) -> tuple[TournamentEntry, ...]:
+        """Return entries that have reached the main bracket's stopping round."""
+        return self.main_bracket.qualified_entries
+
+    @property
+    def num_qualified_entries(self) -> int:
+        """Return the number of entries that have reached the stopping round."""
+        return self.main_bracket.num_qualified_entries
+
+    @property
+    def advancing_entries(self) -> tuple[TournamentEntry, ...]:
+        """Return entries advancing from the completed stopped main bracket."""
+        return self.main_bracket.advancing_entries
+
+    @property
+    def expected_num_advancing_entries(self) -> int:
+        """Return the expected number of advancing entries."""
+        return self.main_bracket.expected_num_advancing_entries
 
 
     # --- Equality ---
@@ -164,7 +199,15 @@ class DEStage:
     def has_third_place_matchup(self) -> bool:
         """Return whether the main bracket includes a third-place matchup."""
         return self.main_bracket.has_third_place_matchup()
-    
+
+    def has_consolation_bracket(self) -> bool:
+        """Return whether this DE stage has a consolation bracket."""
+        return self.consolation_bracket is not None
+
+    def has_stop_round(self) -> bool:
+        """Return whether the main bracket of this DE stage has a stopping round."""
+        return self.main_bracket.has_stop_round()
+
     def has_started(self) -> bool:
         """Return whether a result has been recorded in the main bracket."""
         return self.main_bracket.has_started()
