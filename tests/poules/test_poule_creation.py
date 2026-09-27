@@ -140,7 +140,7 @@ def test_poule_equality(entries):
 def test_poule_equality_ignores_match_state(poule):
     poule_copy = copy.deepcopy(poule)
     
-    poule.record_on_piste_match_result(5,3)
+    poule.record_on_piste_match_score(5,3)
     
     assert poule == poule_copy
 
