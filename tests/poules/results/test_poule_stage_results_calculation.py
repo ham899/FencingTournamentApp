@@ -433,7 +433,7 @@ def test_tournament_poule_results_is_score_snapshot():
 
     original_results = PouleStageResults((poule,), RANDOM_SEED)
 
-    poule.record_match_result(0, 1, 5)
+    poule.replace_with_score(0, 1, 5)
 
     assert original_results.stage_results[0].entry == entries[0]
     assert original_results.stage_results[0].num_victories == 1
