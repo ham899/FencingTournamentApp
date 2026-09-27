@@ -68,7 +68,7 @@ def expected_poule_stage_results():
 def test_poule_stage_has_started(poule_stage):
     assert not poule_stage.has_started()
 
-    poule_stage.record_on_piste_match_result(1, 5, 0)
+    poule_stage.record_on_piste_match_score(1, 5, 0)
 
     assert poule_stage.has_started()
 
@@ -77,14 +77,14 @@ def test_poule_stage_is_complete(poule_stage):
 
     # Complete poule 1
     for _ in poule_stage.poules[0].matches:
-        poule_stage.record_on_piste_match_result(0, 5, 0)
+        poule_stage.record_on_piste_match_score(0, 5, 0)
 
     assert not poule_stage.is_complete()
 
     # Complete poule 2 and 3
     for i, poule in enumerate(poule_stage.poules[1:], start=1):
         for _ in poule.matches:
-            poule_stage.record_on_piste_match_result(i, 5, 0)
+            poule_stage.record_on_piste_match_score(i, 5, 0)
 
     assert poule_stage.is_complete()
 
@@ -160,100 +160,100 @@ def test_poule_stage_get_on_deck_match_invalid_index_value(poule_stage, invalid_
 
 
 # --- Match Result Recording Method Tests ---
-def test_poule_stage_record_match_result(poule_stage):
+def test_poule_stage_record_match_score(poule_stage):
     poule_index, match_index = 2, 10
 
     match = poule_stage.get_match_at(poule_index, match_index)
 
     assert match.is_incomplete()
     
-    poule_stage.record_match_result(poule_index, match_index, 5, 0)
+    poule_stage.record_match_score(poule_index, match_index, 5, 0)
 
     assert match.is_complete()
     assert match.score1 == 5
     assert match.score2 == 0
 
 @pytest.mark.parametrize('invalid_poule_index_type', INVALID_INDEX_TYPES)
-def test_poule_stage_record_match_result_invalid_poule_index_type(poule_stage, invalid_poule_index_type):
-    with pytest.raises(TypeError):
-        poule_stage.record_match_result(invalid_poule_index_type, 0, 5, 0)
+def test_poule_stage_record_match_score_invalid_poule_index_type(poule_stage, invalid_poule_index_type):
+            with pytest.raises(TypeError):
+                poule_stage.record_match_score(invalid_poule_index_type, 0, 5, 0)
 
 @pytest.mark.parametrize('invalid_poule_index_value', INVALID_POULE_INDEX_VALUES)
-def test_poule_stage_record_match_result_invalid_poule_index_value(poule_stage, invalid_poule_index_value):
+def test_poule_stage_record_match_score_invalid_poule_index_value(poule_stage, invalid_poule_index_value):
     with pytest.raises(ValueError):
-        poule_stage.record_match_result(invalid_poule_index_value, 0, 5, 0)
+        poule_stage.record_match_score(invalid_poule_index_value, 0, 5, 0)
 
 @pytest.mark.parametrize('invalid_match_index_type', INVALID_INDEX_TYPES)
-def test_poule_stage_record_match_result_invalid_match_index_type(poule_stage, invalid_match_index_type):
+def test_poule_stage_record_match_score_invalid_match_index_type(poule_stage, invalid_match_index_type):
     with pytest.raises(TypeError):
-        poule_stage.record_match_result(0, invalid_match_index_type, 5, 0)
+        poule_stage.record_match_score(0, invalid_match_index_type, 5, 0)
 
 @pytest.mark.parametrize('invalid_match_index_value', INVALID_MATCH_INDEX_VALUES)
-def test_poule_stage_record_match_result_invalid_match_index_value(poule_stage, invalid_match_index_value):
+def test_poule_stage_record_match_score_invalid_match_index_value(poule_stage, invalid_match_index_value):
     with pytest.raises(ValueError):
-        poule_stage.record_match_result(0, invalid_match_index_value, 5, 0)
+        poule_stage.record_match_score(0, invalid_match_index_value, 5, 0)
 
 @pytest.mark.parametrize('invalid_scores_type', INVALID_SCORES_TYPES)
-def test_poule_stage_record_match_result_invalid_scores_type(poule_stage, invalid_scores_type):
+def test_poule_stage_record_match_score_invalid_scores_type(poule_stage, invalid_scores_type):
     with pytest.raises(TypeError):
-        poule_stage.record_match_result(0, 0, invalid_scores_type, 0)
+        poule_stage.record_match_score(0, 0, invalid_scores_type, 0)
 
     with pytest.raises(TypeError):
-        poule_stage.record_match_result(0, 0, 5, invalid_scores_type)
+        poule_stage.record_match_score(0, 0, 5, invalid_scores_type)
 
 @pytest.mark.parametrize('invalid_scores_value', INVALID_SCORES_VALUES)
-def test_poule_stage_record_match_results_invalid_scores_value(poule_stage, invalid_scores_value):
+def test_poule_stage_record_match_score_invalid_scores_value(poule_stage, invalid_scores_value):
     with pytest.raises(ValueError):
-        poule_stage.record_match_result(0, 0, invalid_scores_value, 0)
+        poule_stage.record_match_score(0, 0, invalid_scores_value, 0)
 
     with pytest.raises(ValueError):
-        poule_stage.record_match_result(0, 0, 5, invalid_scores_value)
+        poule_stage.record_match_score(0, 0, 5, invalid_scores_value)
 
-def test_poule_stage_record_on_piste_match_result(poule_stage):
+def test_poule_stage_record_on_piste_match_score(poule_stage):
     poule_index = 1
     
     match = poule_stage.get_match_at(poule_index, 0)
 
     assert match.is_incomplete()
 
-    poule_stage.record_on_piste_match_result(poule_index, 0, 5)
+    poule_stage.record_on_piste_match_score(poule_index, 0, 5)
 
     assert match.is_complete()
     assert match.score1 == 0
     assert match.score2 == 5
 
 @pytest.mark.parametrize('invalid_poule_index_type', INVALID_INDEX_TYPES)
-def test_poule_stage_record_on_piste_match_result_invalid_poule_index_type(poule_stage, invalid_poule_index_type):
+def test_poule_stage_record_on_piste_match_score_invalid_poule_index_type(poule_stage, invalid_poule_index_type):
     with pytest.raises(TypeError):
-        poule_stage.record_on_piste_match_result(invalid_poule_index_type, 5, 0)
+        poule_stage.record_on_piste_match_score(invalid_poule_index_type, 5, 0)
 
 @pytest.mark.parametrize('invalid_poule_index_value', INVALID_POULE_INDEX_VALUES)
-def test_poule_stage_record_on_piste_match_result_invalid_poule_index_value(poule_stage, invalid_poule_index_value):
+def test_poule_stage_record_on_piste_match_score_invalid_poule_index_value(poule_stage, invalid_poule_index_value):
     with pytest.raises(ValueError):
-        poule_stage.record_on_piste_match_result(invalid_poule_index_value, 5, 0)
+        poule_stage.record_on_piste_match_score(invalid_poule_index_value, 5, 0)
 
 @pytest.mark.parametrize('invalid_scores_type', INVALID_SCORES_TYPES)
-def test_poule_stage_record_on_piste_match_result_invalid_scores_type(poule_stage, invalid_scores_type):
+def test_poule_stage_record_on_piste_match_score_invalid_scores_type(poule_stage, invalid_scores_type):
     with pytest.raises(TypeError):
-        poule_stage.record_on_piste_match_result(0, invalid_scores_type, 0)
+        poule_stage.record_on_piste_match_score(0, invalid_scores_type, 0)
 
     with pytest.raises(TypeError):
-        poule_stage.record_on_piste_match_result(0, 0, invalid_scores_type)
+        poule_stage.record_on_piste_match_score(0, 0, invalid_scores_type)
 
 @pytest.mark.parametrize('invalid_scores_value', INVALID_SCORES_VALUES)
-def test_poule_stage_record_on_piste_match_result_scores_value(poule_stage, invalid_scores_value):
+def test_poule_stage_record_on_piste_match_score_scores_value(poule_stage, invalid_scores_value):
     with pytest.raises(ValueError):
-        poule_stage.record_on_piste_match_result(0, invalid_scores_value, 0)
+        poule_stage.record_on_piste_match_score(0, invalid_scores_value, 0)
 
     with pytest.raises(ValueError):
-        poule_stage.record_on_piste_match_result(0, 5, invalid_scores_value)
+        poule_stage.record_on_piste_match_score(0, 5, invalid_scores_value)
 
-def test_poule_stage_record_on_piste_match_result_complete_poule(poule_stage):
+def test_poule_stage_record_on_piste_match_score_complete_poule(poule_stage):
     for _ in poule_stage.poules[0].matches:
-        poule_stage.record_on_piste_match_result(0, 5, 0)
+        poule_stage.record_on_piste_match_score(0, 5, 0)
 
     with pytest.raises(RuntimeError, match='already complete'):
-        poule_stage.record_on_piste_match_result(0, 5, 0)
+        poule_stage.record_on_piste_match_score(0, 5, 0)
 
 
 # --- Result Calculation Method Tests ---
@@ -261,7 +261,7 @@ def test_poule_stage_calculate_results(poule_stage, poule_scores, expected_poule
     # Record the results for the first seven matches
     for match_index in range(7):
         for poule_index in range(len(poule_scores)):
-            poule_stage.record_on_piste_match_result(poule_index, *poule_scores[poule_index][match_index])
+            poule_stage.record_on_piste_match_score(poule_index, *poule_scores[poule_index][match_index])
 
     # Calculate the results after the first seven matches
     results_7 = poule_stage.calculate_results(RANDOM_SEED)
@@ -320,9 +320,9 @@ def test_poule_stage_calculate_results(poule_stage, poule_scores, expected_poule
     # Finish the remaining matches
     for match_index in range(7, 21):
         for poule_index in range(len(poule_scores)):
-            poule_stage.record_on_piste_match_result(poule_index, *poule_scores[poule_index][match_index])
+            poule_stage.record_on_piste_match_score(poule_index, *poule_scores[poule_index][match_index])
 
-    # Calcualte the results for all the matches
+    # Calculate the results for all the matches
     results_final = poule_stage.calculate_results(RANDOM_SEED)
 
     # Validate the results for all the matches
@@ -393,7 +393,7 @@ def test_poule_stage_calculate_ranked_results(poule_stage, poule_scores, expecte
     # Record match results
     for match_index in range(21):
         for poule_index in range(len(poule_scores)):
-            poule_stage.record_on_piste_match_result(poule_index, *poule_scores[poule_index][match_index])
+            poule_stage.record_on_piste_match_score(poule_index, *poule_scores[poule_index][match_index])
 
     # Calculate the ranked results
     ranked_results = poule_stage.calculate_ranked_results(RANDOM_SEED)
@@ -416,7 +416,7 @@ def test_poule_stage_calculate_ranked_results_invalid_random_seed_value(poule_st
 def test_poule_stage_calculate_ranked_results_display_names(poule_stage, poule_scores, expected_poule_stage_results):
     for match_index in range(21):
         for poule_index in range(len(poule_scores)):
-            poule_stage.record_on_piste_match_result(poule_index, *poule_scores[poule_index][match_index])
+            poule_stage.record_on_piste_match_score(poule_index, *poule_scores[poule_index][match_index])
 
     assert poule_stage.calculate_ranked_results_display_names(RANDOM_SEED) == expected_poule_stage_results
 
