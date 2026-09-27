@@ -3,9 +3,14 @@ import pytest
 import validation
 
 
+# --- Constants ---
 INVALID_INT_TYPES = [None, 'five', 15.0, False, True, [], {}]
 INVALID_NON_NONE_INT_TYPES = ('five', 15.0, False, True, [], {})
+INVALID_STRING_TYPES = [None, 5, 15.0, False, True, [], {}]
+INVALID_NON_NONE_STRING_TYPES = (5, 15.0, False, True, [], {})
 
+
+# --- Test _validation_location Function ---
 def test__validation_location_no_location():
     assert validation._validation_location() == ''
 
@@ -45,6 +50,8 @@ def test__validation_location_rejects_invalid_function_name_type(invalid_functio
     with pytest.raises(TypeError):
         validation._validation_location(function_name=invalid_function_name)
 
+
+# --- Test validate_int Function ---
 @pytest.mark.parametrize('value', INVALID_INT_TYPES)
 def test_validate_int_rejects_non_ints(value):
     with pytest.raises(TypeError):
@@ -58,6 +65,8 @@ def test_validate_int_rejects_method_name_without_class_name_for_valid_value():
     with pytest.raises(ValueError):
         validation.validate_int(5, 'value', method_name='my_method')
 
+
+# --- Test validate_positive_int Function ---
 @pytest.mark.parametrize('value', INVALID_INT_TYPES)
 def test_validate_positive_int_rejects_non_ints(value):
     with pytest.raises(TypeError):
@@ -72,6 +81,8 @@ def test_validate_positive_int_rejects_non_positive_ints(value):
     with pytest.raises(ValueError):
         validation.validate_positive_int(value, 'value')
 
+
+# --- Test validate_non_negative_int Function ---
 @pytest.mark.parametrize('value', INVALID_INT_TYPES)
 def test_validate_non_negative_int_rejects_non_ints(value):
     with pytest.raises(TypeError):
@@ -86,6 +97,8 @@ def test_validate_non_negative_int_rejects_negative_ints(value):
     with pytest.raises(ValueError):
         validation.validate_non_negative_int(value, 'value')
 
+
+# --- Test validate_optional_positive_int Function ---
 @pytest.mark.parametrize('value', INVALID_NON_NONE_INT_TYPES)
 def test_validate_optional_positive_int_rejects_non_ints(value):
     with pytest.raises(TypeError):
@@ -107,6 +120,8 @@ def test_validate_optional_positive_int_rejects_invalid_location_for_none():
     with pytest.raises(ValueError):
         validation.validate_optional_positive_int(None, 'value', method_name='my_method')
 
+
+# --- Test validate_optional_non_negative_int Function ---
 @pytest.mark.parametrize('value', INVALID_NON_NONE_INT_TYPES)
 def test_validate_optional_non_negative_int_rejects_non_ints(value):
     with pytest.raises(TypeError):
@@ -124,6 +139,8 @@ def test_validate_optional_non_negative_int_accepts_zero_and_positive_ints(value
 def test_validate_optional_non_negative_int_accepts_none():
     validation.validate_optional_non_negative_int(None, 'value')
 
+
+# --- Test validate_int_at_most Function ---
 @pytest.mark.parametrize(('value', 'max_value'), [(-15, -10), (-5, 0), (0, 5), (5, 10), (15, 15)])
 def test_validate_int_at_most_accepts_valid_values(value, max_value):
     validation.validate_int_at_most(value, max_value, 'value')
@@ -143,6 +160,8 @@ def test_validate_int_at_most_rejects_non_int_max_value(max_value):
     with pytest.raises(TypeError):
         validation.validate_int_at_most(10, max_value, 'value')
 
+
+# --- Test validate_int_at_least Function ---
 @pytest.mark.parametrize(('value', 'min_value'), [(-15, -15), (-10, -15), (0, 0), (1, 0), (5, 0), (10, 5), (15, 10)])
 def test_validate_int_at_least_accepts_valid_values(value, min_value):
     validation.validate_int_at_least(value, min_value, 'value')
@@ -162,6 +181,8 @@ def test_validate_int_at_least_rejects_non_int_min_value(min_value):
     with pytest.raises(TypeError):
         validation.validate_int_at_least(10, min_value, 'value')
 
+
+# --- Test validate_int_in_range Function ---
 @pytest.mark.parametrize('value', [0, 3, 5, 8, 12, 15])
 def test_validate_int_in_range_accepts_inclusive_bounds(value):
     validation.validate_int_in_range(value, 0, 15, 'value')
@@ -189,3 +210,32 @@ def test_validate_int_in_range_rejects_non_int_max_value(max_value):
 def test_validate_int_in_range_rejects_min_greater_than_max():
     with pytest.raises(ValueError):
         validation.validate_int_in_range(5, 10, 0, 'value')
+
+
+# --- Test validate_string Function ---
+def test_validate_string_valid_string():
+    validation.validate_string('hello', 'value')
+
+def test_validate_string_empty_string():
+    validation.validate_string('', 'value')
+
+@pytest.mark.parametrize('non_string_value', INVALID_STRING_TYPES)
+def test_validate_string_rejects_non_string(non_string_value):
+    with pytest.raises(TypeError):
+        validation.validate_string(non_string_value, 'value')
+
+
+# --- Test validate_optional_string Function ---
+def test_validate_optional_string_valid_string():
+    validation.validate_optional_string('word', 'value')
+
+def test_validate_optional_string_empty_string():
+    validation.validate_optional_string('', 'value')
+
+def test_validate_optional_string_none():
+    validation.validate_optional_string(None, 'value')
+
+@pytest.mark.parametrize('non_string_value', INVALID_NON_NONE_STRING_TYPES)
+def test_validate_optional_string_rejects_non_string(non_string_value):
+    with pytest.raises(TypeError):
+        validation.validate_optional_string(non_string_value, 'value')
