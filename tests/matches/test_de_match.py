@@ -183,7 +183,7 @@ def test_de_match_equality_different_match_number(entry1, entry2):
 
 # --- TournamentMatch Hook Implementation Tests ---
 def test_de_match__assign_forfeit_scores_entry1_forfeits(de_match):
-    de_match.forfeit(0)
+    de_match.record_forfeit(0)
 
     assert de_match.is_forfeit()
     assert de_match.is_complete()
@@ -196,7 +196,7 @@ def test_de_match__assign_forfeit_scores_entry1_forfeits(de_match):
     assert de_match.loser is de_match.entry1
 
 def test_de_match__assign_forfeit_scores_entry1_forfeits(de_match):
-    de_match.forfeit(1)
+    de_match.record_forfeit(1)
 
     assert de_match.is_forfeit()
     assert de_match.is_complete()

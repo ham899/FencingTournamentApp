@@ -123,12 +123,12 @@ def test_tournament_match_reset(poule_match):
 
 # --- Result Recording Method Tests ---
 def test_tournament_match_record_score_invalid_is_forfeit(poule_match):
-    poule_match.forfeit(0)
+    poule_match.record_forfeit(0)
     with pytest.raises(ValueError):
         poule_match.record_score(5, 3)
 
 def test_tournament_match_forfeit(poule_match):
-    poule_match.forfeit(0)
+    poule_match.record_forfeit(0)
     assert poule_match.forfeited_index == 0
     assert poule_match.is_complete()
     assert poule_match.is_forfeit()
@@ -136,17 +136,17 @@ def test_tournament_match_forfeit(poule_match):
 def test_tournament_match_forfeit_cannot_forfeit_a_completed_match(poule_match):
     poule_match.record_score(5, 1)
     with pytest.raises(ValueError):
-        poule_match.forfeit(1)
+        poule_match.record_forfeit(1)
 
 @pytest.mark.parametrize('invalid_forfeiting_index_type', [None, '0', 1.0, False, True, [], (), {}])
 def test_tournament_match_forfeit_invalid_forfeiting_index_type(poule_match, invalid_forfeiting_index_type):
     with pytest.raises(TypeError):
-        poule_match.forfeit(invalid_forfeiting_index_type)
+        poule_match.record_forfeit(invalid_forfeiting_index_type)
 
 @pytest.mark.parametrize('invalid_forfeiting_index_value', [-100, -1, 2, 100])
 def test_tournament_match_forfeit_invalid_forfeiting_index_value(poule_match, invalid_forfeiting_index_value):
     with pytest.raises(ValueError):
-        poule_match.forfeit(invalid_forfeiting_index_value)
+        poule_match.record_forfeit(invalid_forfeiting_index_value)
 
 
 # --- Test Winner/Loser Querying Properties ---
@@ -159,11 +159,11 @@ def test_tournament_match_winner_index_property_entry2_wins(poule_match):
     assert poule_match.winner_index == 1
 
 def test_tournament_match_winner_index_property_entry1_forfeits(poule_match):
-    poule_match.forfeit(0)
+    poule_match.record_forfeit(0)
     assert poule_match.winner_index == 1
 
 def test_tournament_match_winner_index_property_entry2_forfeits(poule_match):
-    poule_match.forfeit(1)
+    poule_match.record_forfeit(1)
     assert poule_match.winner_index == 0
 
 def test_tournament_match_loser_index_property_entry1_loses(poule_match):
@@ -175,11 +175,11 @@ def test_tournament_match_loser_index_property_entry2_loses(poule_match):
     assert poule_match.loser_index == 0
 
 def test_tournament_match_loser_index_property_entry1_forfeits(poule_match):
-    poule_match.forfeit(0)
+    poule_match.record_forfeit(0)
     assert poule_match.loser_index == 0
 
 def test_tournament_match_loser_index_property_entry2_forfeits(poule_match):
-    poule_match.forfeit(1)
+    poule_match.record_forfeit(1)
     assert poule_match.loser_index == 1
 
 def test_tournament_match_winner_property_entry1_wins(poule_match):
@@ -191,11 +191,11 @@ def test_tournament_match_winner_index_property_entry2_wins(poule_match):
     assert poule_match.winner is poule_match.entry2
 
 def test_tournament_match_winner_index_property_entry1_forfeits(poule_match):
-    poule_match.forfeit(0)
+    poule_match.record_forfeit(0)
     assert poule_match.winner is poule_match.entry2
 
 def test_tournament_match_winner_index_property_entry2_forfeits(poule_match):
-    poule_match.forfeit(1)
+    poule_match.record_forfeit(1)
     assert poule_match.winner is poule_match.entry1
 
 def test_tournament_match_loser_index_property_entry1_loses(poule_match):
@@ -207,9 +207,9 @@ def test_tournament_match_loser_index_property_entry2_loses(poule_match):
     assert poule_match.loser is poule_match.entry2
 
 def test_tournament_match_loser_index_property_entry1_forfeits(poule_match):
-    poule_match.forfeit(0)
+    poule_match.record_forfeit(0)
     assert poule_match.loser is poule_match.entry1
 
 def test_tournament_match_loser_index_property_entry2_forfeits(poule_match):
-    poule_match.forfeit(1)
+    poule_match.record_forfeit(1)
     assert poule_match.loser is poule_match.entry2
