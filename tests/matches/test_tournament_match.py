@@ -172,7 +172,7 @@ def test_tournament_match_loser_index_property_entry1_loses(poule_match):
 
 def test_tournament_match_loser_index_property_entry2_loses(poule_match):
     poule_match.record_score(5, 2)
-    assert poule_match.loser_index == 0
+    assert poule_match.loser_index == 1
 
 def test_tournament_match_loser_index_property_entry1_forfeits(poule_match):
     poule_match.record_forfeit(0)
@@ -186,30 +186,30 @@ def test_tournament_match_winner_property_entry1_wins(poule_match):
     poule_match.record_score(5, 2)
     assert poule_match.winner is poule_match.entry1
 
-def test_tournament_match_winner_index_property_entry2_wins(poule_match):
+def test_tournament_match_winner_property_entry2_wins(poule_match):
     poule_match.record_score(2, 5)
     assert poule_match.winner is poule_match.entry2
 
-def test_tournament_match_winner_index_property_entry1_forfeits(poule_match):
+def test_tournament_match_winner_property_entry1_forfeits(poule_match):
     poule_match.record_forfeit(0)
     assert poule_match.winner is poule_match.entry2
 
-def test_tournament_match_winner_index_property_entry2_forfeits(poule_match):
+def test_tournament_match_winner_property_entry2_forfeits(poule_match):
     poule_match.record_forfeit(1)
     assert poule_match.winner is poule_match.entry1
 
-def test_tournament_match_loser_index_property_entry1_loses(poule_match):
+def test_tournament_match_loser_property_entry1_loses(poule_match):
     poule_match.record_score(2, 5)
     assert poule_match.loser is poule_match.entry1
 
-def test_tournament_match_loser_index_property_entry2_loses(poule_match):
+def test_tournament_match_loser_property_entry2_loses(poule_match):
     poule_match.record_score(5, 2)
     assert poule_match.loser is poule_match.entry2
 
-def test_tournament_match_loser_index_property_entry1_forfeits(poule_match):
+def test_tournament_match_loser_property_entry1_forfeits(poule_match):
     poule_match.record_forfeit(0)
     assert poule_match.loser is poule_match.entry1
 
-def test_tournament_match_loser_index_property_entry2_forfeits(poule_match):
+def test_tournament_match_loser_property_entry2_forfeits(poule_match):
     poule_match.record_forfeit(1)
     assert poule_match.loser is poule_match.entry2
