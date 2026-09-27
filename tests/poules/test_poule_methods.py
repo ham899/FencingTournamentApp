@@ -66,7 +66,7 @@ def test_poule_has_not_started_initially(poule):
     assert not poule.has_started()
 
 def test_poule_has_started(poule):
-    poule.record_match_result(5, 5, 2)
+    poule.record_match_score(5, 5, 2)
 
     assert poule.has_started()
 
@@ -75,13 +75,13 @@ def test_poule_is_not_complete_initially(poule):
 
 def test_poule_is_not_complete_with_remaining_matches(poule):
     for _ in range(poule.number_matches // 2):
-        poule.record_on_piste_match_result(5, 2)
+        poule.record_on_piste_match_score(5, 2)
 
     assert not poule.is_complete()
 
 def test_poule_is_complete(poule):
     for _ in range(poule.number_matches):
-        poule.record_on_piste_match_result(3, 5)
+        poule.record_on_piste_match_score(3, 5)
 
     assert poule.is_complete()
 
@@ -134,13 +134,13 @@ def test_poule_get_on_piste_match_first_match(poule):
     assert on_piste_match.winner is None
 
 def test_poule_get_on_piste_match_match_done_out_of_order(poule):
-    poule.record_match_result(5, 5, 2)
+    poule.record_match_score(5, 5, 2)
 
     assert poule.get_on_piste_match() is poule.matches[0]
 
 def test_poule_get_on_piste_match_no_on_piste_match(poule):
     for _ in range(poule.number_matches):
-        poule.record_on_piste_match_result(5, 0)
+        poule.record_on_piste_match_score(5, 0)
 
     assert poule.get_on_piste_match() is None
 
@@ -157,27 +157,27 @@ def test_poule_get_on_deck_match_first_on_deck_match(poule):
     assert next_match.winner is None
 
 def test_poule_get_on_deck_match_skips_completed_match(poule):
-    poule.record_match_result(1, 5, 0)
+    poule.record_match_score(1, 5, 0)
 
     assert poule.get_on_deck_match() is poule.matches[2]
 
 def test_poule_get_on_deck_match_when_no_match_on_deck(poule):
     for _ in range(poule.number_matches - 1):
-        poule.record_on_piste_match_result(5, 0)
+        poule.record_on_piste_match_score(5, 0)
 
     assert poule.get_on_deck_match() is None
 
 def test_poule_get_on_deck_match_when_poule_complete(poule):
     for _ in range(poule.number_matches):
-        poule.record_on_piste_match_result(5, 0)
+        poule.record_on_piste_match_score(5, 0)
 
     assert poule.get_on_deck_match() is None
 
 
 # --- Match Result Recording Tests ---
-def test_poule_record_match_result(poule):
+def test_poule_record_match_score(poule):
     index = 5
-    poule.record_match_result(index, 2, 3)
+    poule.record_match_score(index, 2, 3)
     
     # Check that first match is still incomplete
     match_1 = poule.matches[0]
@@ -204,36 +204,36 @@ def test_poule_record_match_result(poule):
     assert match_2.winner is match_2.entry2
 
 @pytest.mark.parametrize('invalid_index_type', [None, False, True, 0.0, 1.0, 'first', [], (), {}])
-def test_poule_record_match_result_invalid_index_type(poule, invalid_index_type):
+def test_poule_record_match_score_invalid_index_type(poule, invalid_index_type):
     with pytest.raises(TypeError):
-        poule.record_match_result(invalid_index_type, 5, 2)
+        poule.record_match_score(invalid_index_type, 5, 2)
 
 @pytest.mark.parametrize('invalid_index_value', [-100, -1, 21, 100])
-def test_poule_record_match_result_invalid_index_value(poule, invalid_index_value):
+def test_poule_record_match_score_invalid_index_value(poule, invalid_index_value):
     with pytest.raises(ValueError):
-        poule.record_match_result(invalid_index_value, 5, 2)
+        poule.record_match_score(invalid_index_value, 5, 2)
 
 @pytest.mark.parametrize('invalid_score_type', [None, False, True, 0.0, 5.0, 'two', [], (), {}])
-def test_poule_record_match_result_invalid_score_type(poule, invalid_score_type):
+def test_poule_record_match_score_invalid_score_type(poule, invalid_score_type):
     index = 3
     
     with pytest.raises(TypeError):
-        poule.record_match_result(index, invalid_score_type, 2)
+        poule.record_match_score(index, invalid_score_type, 2)
 
     with pytest.raises(TypeError):
-        poule.record_match_result(index, 5, invalid_score_type)
+        poule.record_match_score(index, 5, invalid_score_type)
 
 @pytest.mark.parametrize('invalid_score_value', [-100, -6, 6, 100])
-def test_poule_record_match_result_invalid_score_value(poule, invalid_score_value):
+def test_poule_record_match_score_invalid_score_value(poule, invalid_score_value):
     index = 5
     
     with pytest.raises(ValueError):
-        poule.record_match_result(index, invalid_score_value, 2)
+        poule.record_match_score(index, invalid_score_value, 2)
 
     with pytest.raises(ValueError):
-        poule.record_match_result(index, 5, invalid_score_value)
+        poule.record_match_score(index, 5, invalid_score_value)
 
-def test_poule_record_on_piste_match_result(poule):  
+def test_poule_record_on_piste_match_score(poule):  
     score1, score2 = 2, 5
 
     for i in range(poule.number_matches):
@@ -248,7 +248,7 @@ def test_poule_record_on_piste_match_result(poule):
         assert match.winner is None
 
         # Record score
-        poule.record_on_piste_match_result(score1=score1, score2=score2)
+        poule.record_on_piste_match_score(score1=score1, score2=score2)
 
         # Check match info after recording the result
         match = poule.matches[i]
@@ -260,17 +260,17 @@ def test_poule_record_on_piste_match_result(poule):
         assert match.is_complete()
         assert match.winner is match.entry2
 
-def test_poule_record_on_piste_match_result_invalid_poule_is_completed(poule):
+def test_poule_record_on_piste_match_score_invalid_poule_is_completed(poule):
     for _ in range(poule.number_matches):
-        poule.record_on_piste_match_result(5,2)
+        poule.record_on_piste_match_score(5,2)
 
     with pytest.raises(RuntimeError):
-        poule.record_on_piste_match_result(5,2)
+        poule.record_on_piste_match_score(5,2)
 
 
 # --- Result Calculation Tests ---
 def test_poule_calculate_results_intermediate_result(poule):
-    poule.record_on_piste_match_result(3, 5)
+    poule.record_on_piste_match_score(3, 5)
 
     results = poule.calculate_results()
 
@@ -289,67 +289,67 @@ def test_poule_calculate_results_intermediate_result(poule):
 
 def test_poule_calculate_results_entire_poule_complete(poule):
     # Match 1: (1,4)
-    poule.record_on_piste_match_result(3, 5)
+    poule.record_on_piste_match_score(3, 5)
 
     # Match 2: (2,5)
-    poule.record_on_piste_match_result(1, 5)
+    poule.record_on_piste_match_score(1, 5)
 
     # Match 3: (3,6)
-    poule.record_on_piste_match_result(5, 4)
+    poule.record_on_piste_match_score(5, 4)
 
     # Match 4: (7,1)
-    poule.record_on_piste_match_result(4, 5)
+    poule.record_on_piste_match_score(4, 5)
 
     # Match 5: (5,4)
-    poule.record_on_piste_match_result(5, 2)
+    poule.record_on_piste_match_score(5, 2)
 
     # Match 6: (2,3)
-    poule.record_on_piste_match_result(1, 5)
+    poule.record_on_piste_match_score(1, 5)
 
     # Match 7: (6,7)
-    poule.record_on_piste_match_result(5, 2)
+    poule.record_on_piste_match_score(5, 2)
 
     # Match 8: (5,1)
-    poule.record_on_piste_match_result(5, 4)
+    poule.record_on_piste_match_score(5, 4)
 
     # Match 9: (4,3)
-    poule.record_on_piste_match_result(2, 5)
+    poule.record_on_piste_match_score(2, 5)
 
     # Match 10: (6,2)
-    poule.record_on_piste_match_result(3, 5)
+    poule.record_on_piste_match_score(3, 5)
 
     # Match 11: (5,7)
-    poule.record_on_piste_match_result(5, 3)
+    poule.record_on_piste_match_score(5, 3)
 
     # Match 12: (3,1)
-    poule.record_on_piste_match_result(5, 0)
+    poule.record_on_piste_match_score(5, 0)
 
     # Match 13: (4,6)
-    poule.record_on_piste_match_result(5, 2)
+    poule.record_on_piste_match_score(5, 2)
 
     # Match 14: (7,2)
-    poule.record_on_piste_match_result(5, 1)
+    poule.record_on_piste_match_score(5, 1)
 
     # Match 15: (3,5)
-    poule.record_on_piste_match_result(5, 3)
+    poule.record_on_piste_match_score(5, 3)
 
     # Match 16: (1,6)
-    poule.record_on_piste_match_result(5, 1)
+    poule.record_on_piste_match_score(5, 1)
 
     # Match 17: (2,4)
-    poule.record_on_piste_match_result(3, 5)
+    poule.record_on_piste_match_score(3, 5)
 
     # Match 18: (7,3)
-    poule.record_on_piste_match_result(3, 5)
+    poule.record_on_piste_match_score(3, 5)
 
     # Match 19: (6,5)
-    poule.record_on_piste_match_result(3, 5)
+    poule.record_on_piste_match_score(3, 5)
 
     # Match 20: (1,2)
-    poule.record_on_piste_match_result(5, 1)
+    poule.record_on_piste_match_score(5, 1)
 
     # Match 21: (4,7)
-    poule.record_on_piste_match_result(5, 2)
+    poule.record_on_piste_match_score(5, 2)
 
     # Check final results
     expected_final_results = (
