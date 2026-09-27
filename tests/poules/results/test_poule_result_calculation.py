@@ -306,7 +306,7 @@ def test_poule_result_ranked_results_uses_touches_scored_tiebreaker(entries):
 @pytest.mark.parametrize('forfeiting_index', (0, 1))
 def test_poule_result_calculates_forfeited_match(entries, incomplete_poule_matches, forfeiting_index):
     forfeited_match = incomplete_poule_matches[0]
-    forfeited_match.forfeit(forfeiting_index)
+    forfeited_match.record_forfeit(forfeiting_index)
 
     result = PouleResult(entries, incomplete_poule_matches, 1, 1)
 
