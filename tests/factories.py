@@ -100,6 +100,6 @@ def make_poule(poule_number: int, stage_number: int, entries: tuple[TournamentEn
     # Record scores if provided
     if scores:
         for i, (score1, score2) in enumerate(scores):
-            poule.record_match_result(i, score1, score2)
-    
+            poule.record_match_score(i, score1, score2)
+
     return poule
