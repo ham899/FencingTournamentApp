@@ -387,9 +387,9 @@ def test_poule_calculate_ranked_results(entry1, entry2, entry3):
 
     poule = Poule(1, 1, entries)
 
-    poule.record_on_piste_match_result(5,1)
-    poule.record_on_piste_match_result(2,5)
-    poule.record_on_piste_match_result(4,5)
+    poule.record_on_piste_match_score(5,1)
+    poule.record_on_piste_match_score(2,5)
+    poule.record_on_piste_match_score(4,5)
 
     ranked_results = poule.calculate_ranked_results()
 
@@ -400,8 +400,8 @@ def test_poule_calculate_results_names_only_poule_of_size_three(entry1, entry2, 
 
     poule = Poule(1, 1, entries)
 
-    poule.record_on_piste_match_result(5,1)
-    poule.record_on_piste_match_result(2,5)
-    poule.record_on_piste_match_result(4,5)
+    poule.record_on_piste_match_score(5,1)
+    poule.record_on_piste_match_score(2,5)
+    poule.record_on_piste_match_score(4,5)
 
     assert poule.calculate_ranked_results_display_names() == ('Hannah', 'John', 'Steve')
