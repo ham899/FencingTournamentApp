@@ -168,11 +168,29 @@ def test_poule_result_creation_invalid_matches_match_wrong_tournament_id(num_ent
 
     matches = list(factories.make_poule_matches(entries, 1, 1))
 
-    matches[index].entry1.tournament_id = TOURNY_ID2
+    match_at_index = matches[index]
+
+    entry1_at_index = match_at_index.entry1
+    entry2_at_index = match_at_index.entry2
+
+    entry1_at_index_copy = copy.deepcopy(entry1_at_index)
+    entry2_at_index_copy = copy.deepcopy(entry2_at_index)
+
+    entry1_at_index_copy.tournament_id = TOURNY_ID2
+    entry2_at_index_copy.tournament_id = TOURNY_ID2
+
+    new_match_with_different_tournament_id = factories.make_poule_match(
+        entry1_at_index_copy, entry2_at_index_copy, 
+        match_at_index.match_number, 
+        match_at_index.poule_number, 
+        match_at_index.stage_number
+    )
+
+    matches[index] = new_match_with_different_tournament_id
 
     matches_match_wrong_tournament_id = tuple(matches)
-    
-    with pytest.raises(ValueError):
+
+    with pytest.raises(ValueError, match='belongs to tournament'):
         PouleResult(entries, matches_match_wrong_tournament_id, 1, 1)
 
 @pytest.mark.parametrize(('num_entries', 'index'), [(7, 3), (2, 0), (5, 9)])
