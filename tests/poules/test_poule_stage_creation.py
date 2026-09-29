@@ -131,14 +131,14 @@ def test_poule_stage_creation_valid_two_entries():
     assert poule_stage.poules[0].number_matches == 1
 
 @pytest.mark.parametrize('invalid_stage_id_type', [None, '1UI3', False, True, 1.0, [], (), {}])
-def test_poule_stage_creation_invalid_stage_id_type(entries, invalid_stage_id_type):
+def test_poule_stage_creation_invalid_stage_id_type(seeded_entries, invalid_stage_id_type):
     with pytest.raises(TypeError):
-        PouleStage(invalid_stage_id_type, entries)
+        PouleStage(invalid_stage_id_type, seeded_entries)
 
 @pytest.mark.parametrize('invalid_stage_id_value', [-100, -1, 0])
-def test_poule_stage_creation_invalid_stage_id_value(entries, invalid_stage_id_value):
+def test_poule_stage_creation_invalid_stage_id_value(seeded_entries, invalid_stage_id_value):
     with pytest.raises(ValueError):
-        PouleStage(invalid_stage_id_value, entries)
+        PouleStage(invalid_stage_id_value, seeded_entries)
 
 @pytest.mark.parametrize('invalid_seeded_entries_type', [None, False, True, 0, 1.0, 'John', {}])
 def test_poule_stage_creation_invalid_seeded_entries_type(invalid_seeded_entries_type):
