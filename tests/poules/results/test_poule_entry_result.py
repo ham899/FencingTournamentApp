@@ -298,9 +298,9 @@ def test_poule_entry_result_inequality_same_entry_different_poules(entry1, num_m
     assert poule_entry_result_1 != poule_entry_result_2
 
 @pytest.mark.parametrize(('num_matches', 'num_victories', 'touches_scored', 'touches_received'), [(0, 0, 0, 0), (5, 3, 15, 10), (6, 6, 30, 0)])
-def test_poule_entry_result_inequality_same_entry_same_poule_different_stage(entry1, entry2, num_matches, num_victories, touches_scored, touches_received):
+def test_poule_entry_result_inequality_same_entry_same_poule_different_stage(entry1, num_matches, num_victories, touches_scored, touches_received):
     poule_entry_result_1 = PouleEntryResult(entry1, 1, 1, num_matches, num_victories, touches_scored, touches_received)
-    poule_entry_result_2 = PouleEntryResult(entry2, 1, 2, num_matches, num_victories, touches_scored, touches_received)
+    poule_entry_result_2 = PouleEntryResult(entry1, 1, 2, num_matches, num_victories, touches_scored, touches_received)
 
     assert poule_entry_result_1 != poule_entry_result_2
 
