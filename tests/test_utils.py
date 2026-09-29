@@ -80,32 +80,32 @@ def test_snake_numbers_3():
     snake_generator = snake_numbers(3)
 
     for i in range(len(expected_sequence)):
-        expected_sequence[i] == next(snake_generator)
+        assert expected_sequence[i] == next(snake_generator)
 
 def test_snake_numbers_4():
     expected_sequence = [0, 1, 2, 3, 3, 2, 1, 0, 0, 1, 2, 3, 3, 2, 1, 0]
     snake_generator = snake_numbers(4)
 
     for i in range(len(expected_sequence)):
-        expected_sequence[i] == next(snake_generator)
+        assert expected_sequence[i] == next(snake_generator)
 
 def test_snake_numbers_5():
     expected_sequence = [0, 1, 2, 3, 4, 4, 3, 2, 1, 0, 0, 1, 2, 3, 4, 4, 3, 2, 1, 0]
     snake_generator = snake_numbers(5)
 
     for i in range(len(expected_sequence)):
-        expected_sequence[i] == next(snake_generator)
+        assert expected_sequence[i] == next(snake_generator)
 
 def test_snake_numbers_6():
     expected_sequence = [0, 1, 2, 3, 4, 5, 5, 4, 3, 2, 1, 0, 0, 1, 2, 3, 4, 5, 5, 4, 3, 2, 1, 0]
     snake_generator = snake_numbers(6)
 
     for i in range(len(expected_sequence)):
-        expected_sequence[i] == next(snake_generator)
+        assert expected_sequence[i] == next(snake_generator)
 
 def test_snake_numbers_7():
     expected_sequence = [0, 1, 2, 3, 4, 5, 6, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2, 3, 4, 5, 6, 6, 5, 4, 3, 2, 1, 0]
     snake_generator = snake_numbers(7)
 
     for i in range(len(expected_sequence)):
-        expected_sequence[i] == next(snake_generator)
+        assert expected_sequence[i] == next(snake_generator)
