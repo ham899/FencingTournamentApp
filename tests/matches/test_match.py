@@ -13,10 +13,11 @@ def poule_match(entry1, entry2):
 # --- Test Match Abstract Base Class ---
 def test_match_cannot_instantiate_abstract_class():
     with pytest.raises(TypeError):
-        Match(10)
+        Match(score_to_win=10)
 
 
 ### Test Match through a PouleMatch object ###
+# ------------------------------------------ #
 
 # --- Test Initialization and Validation ---
 def test_match_creation_attributes(entry1, entry2):
@@ -44,6 +45,7 @@ def test_match_creation_invalid_score_to_win_type(entry1, entry2, invalid_score_
 def test_match_creation_invalid_score_to_win_value(entry1, entry2, invalid_score_to_win_value):
     with pytest.raises(ValueError):
         PouleMatch(entry1, entry2, 1, 1, 1, score_to_win=invalid_score_to_win_value)
+
 
 # --- Test Score Recording Methods ---
 @pytest.mark.parametrize(('valid_score1', 'valid_score2'), [(1, 5), (5, 2), (3, 4), (4, 1), (5, 4)])
@@ -84,6 +86,64 @@ def test_match_record_score_invalid_equal_scores(poule_match, score1, score2):
     with pytest.raises(ValueError, match='cannot be equal'):
         poule_match.record_score(score1, score2)
 
+def test_match_record_score_invalid_result_already_present(poule_match):
+    poule_match.record_score(5, 2)
+
+    with pytest.raises(ValueError, match='Cannot record a score for '):
+        poule_match.record_score(2, 5)
+
+@pytest.mark.parametrize(('valid_score1', 'valid_score2'), [(1, 5), (5, 2), (3, 4), (4, 1), (5, 4)])
+def test_match_replace_with_score_valid_scores(poule_match, valid_score1, valid_score2):
+    # Record the initial scores
+    poule_match.record_score(valid_score1, valid_score2)
+
+    assert poule_match.score1 == valid_score1
+    assert poule_match.score2 == valid_score2
+
+    # Swap the scores
+    poule_match.replace_with_score(valid_score2, valid_score1)
+
+    assert poule_match.score1 == valid_score2
+    assert poule_match.score2 == valid_score1
+
+@pytest.mark.parametrize('invalid_score_type', [None, False, True, 0.0, 1.0, 5.0, 'five', [], (), {}])
+def test_match_replace_with_score_invalid_score_type(poule_match, invalid_score_type):
+    poule_match.record_score(5, 2)
+    
+    with pytest.raises(TypeError):
+        poule_match.replace_with_score(invalid_score_type, 0)
+
+    with pytest.raises(TypeError):
+        poule_match.replace_with_score(0, invalid_score_type)
+
+    with pytest.raises(TypeError):
+        poule_match.replace_with_score(invalid_score_type, invalid_score_type)
+
+@pytest.mark.parametrize('invalid_score_value', [-6, -1, 6, 10])
+def test_match_replace_with_score_invalid_score_out_of_bounds(poule_match, invalid_score_value):
+    poule_match.record_score(5, 2)
+    
+    with pytest.raises(ValueError):
+        poule_match.replace_with_score(invalid_score_value, 0)
+
+    with pytest.raises(ValueError):
+        poule_match.replace_with_score(0, invalid_score_value)
+
+    with pytest.raises(ValueError):
+        poule_match.replace_with_score(invalid_score_value, invalid_score_value)
+
+@pytest.mark.parametrize(('score1', 'score2'), [(0,0), (1,1), (2,2), (3,3), (4,4), (5,5)])
+def test_match_replace_with_score_invalid_equal_scores(poule_match, score1, score2):
+    poule_match.record_score(5, 2)
+    
+    with pytest.raises(ValueError, match='cannot be equal'):
+        poule_match.replace_with_score(score1, score2)
+
+def test_match_replace_with_score_invalid_no_result_to_replace(poule_match):
+    with pytest.raises(ValueError, match='Cannot replace the score for '):
+        poule_match.replace_with_score(5, 2)
+
+
 # --- Test State Change Methods ---
 def test_match_reset(poule_match):
     poule_match.record_score(5, 1)
@@ -92,6 +152,7 @@ def test_match_reset(poule_match):
     assert poule_match.score1 is None
     assert poule_match.score2 is None
     assert poule_match.is_incomplete()
+
 
 # --- Test Winner/Loser Index Properties ---
 def test_match_winner_property_score1_is_greater(poule_match):
