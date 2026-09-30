@@ -50,7 +50,7 @@ def test_poule_match_creation_valid_with_defaults(entry1, entry2):
 
     assert match.tournament_id == entry1.tournament_id
     assert match.tournament_id == entry2.tournament_id
-    
+
     assert match.match_type == 'poule'
 
 def test_poule_match_creation_valid_no_defaults(entry1, entry2):
@@ -62,7 +62,7 @@ def test_poule_match_creation_valid_no_defaults(entry1, entry2):
         stage_number=1, 
         score_to_win=8
     )
-    
+
     assert match.entry1 == entry1
     assert match.entry2 == entry2
 
@@ -79,7 +79,7 @@ def test_poule_match_creation_valid_no_defaults(entry1, entry2):
 
     assert match.tournament_id == entry1.tournament_id
     assert match.tournament_id == entry2.tournament_id
-    
+
     assert match.match_type == 'poule'
 
 @pytest.mark.parametrize('invalid_match_number_type', INVALID_NUMBER_TYPES)
@@ -154,3 +154,79 @@ def test_poule_match_inequality_different_tournament_id(entry1, entry2):
     match2 = PouleMatch(entry3, entry4, match_number=1, poule_number=1, stage_number=1)
 
     assert match1 != match2
+
+
+# --- Poule-specific Forfeit Tests ---
+@pytest.mark.parametrize('forfeiting_index', [0, 1])
+def test_poule_match_record_forfeit_default_score_to_win(poule_match, forfeiting_index):
+    poule_match.record_forfeit(forfeiting_index)
+
+    assert poule_match.forfeited_index == forfeiting_index
+    assert poule_match.winner_index == 1 - forfeiting_index
+    assert poule_match.loser_index == forfeiting_index
+    assert poule_match.is_forfeit()
+    assert poule_match.is_complete()
+
+    score1 = 0 if forfeiting_index == 0 else poule_match.score_to_win
+    score2 = 0 if forfeiting_index == 1 else poule_match.score_to_win
+
+    assert poule_match.score == (score1, score2)
+
+@pytest.mark.parametrize(('forfeiting_index', 'score_to_win'), [(0, 1), (1, 1), (0, 8), (1, 8), (0, 10), (1, 10)])
+def test_poule_match_record_forfeit_custom_score_to_win(entry1, entry2, forfeiting_index, score_to_win):
+    match = PouleMatch(entry1, entry2, 1, 1, 1, score_to_win=score_to_win)
+    match.record_forfeit(forfeiting_index)
+
+    assert match.forfeited_index == forfeiting_index
+    assert match.winner_index == 1 - forfeiting_index
+    assert match.loser_index == forfeiting_index
+    assert match.is_forfeit()
+    assert match.is_complete()
+
+    score1 = 0 if forfeiting_index == 0 else match.score_to_win
+    score2 = 0 if forfeiting_index == 1 else match.score_to_win
+
+    assert match.score == (score1, score2)
+
+@pytest.mark.parametrize('forfeiting_index', [0, 1])
+def test_poule_match_replace_with_forfeit_default_score_to_win(poule_match, forfeiting_index):
+    poule_match.record_score(1, 5)
+
+    assert poule_match.is_complete()
+    assert poule_match.score == (1, 5)
+    assert poule_match.forfeited_index is None
+
+    poule_match.replace_with_forfeit(forfeiting_index)
+
+    assert poule_match.forfeited_index == forfeiting_index
+    assert poule_match.winner_index == 1 - forfeiting_index
+    assert poule_match.loser_index == forfeiting_index
+    assert poule_match.is_forfeit()
+    assert poule_match.is_complete()
+
+    score1 = 0 if forfeiting_index == 0 else poule_match.score_to_win
+    score2 = 0 if forfeiting_index == 1 else poule_match.score_to_win
+
+    assert poule_match.score == (score1, score2)
+
+@pytest.mark.parametrize(('forfeiting_index', 'score_to_win'), [(0, 1), (1, 1), (0, 8), (1, 8), (0, 10), (1, 10)])
+def test_poule_match_replace_with_forfeit_custom_score_to_win(entry1, entry2, forfeiting_index, score_to_win):
+    match = PouleMatch(entry1, entry2, 1, 1, 1, score_to_win=score_to_win)
+    match.record_score(score_to_win - 1, score_to_win)
+
+    assert match.is_complete()
+    assert match.score == (score_to_win - 1, score_to_win)
+    assert match.forfeited_index is None
+
+    match.replace_with_forfeit(forfeiting_index)
+
+    assert match.forfeited_index == forfeiting_index
+    assert match.winner_index == 1 - forfeiting_index
+    assert match.loser_index == forfeiting_index
+    assert match.is_forfeit()
+    assert match.is_complete()
+
+    score1 = 0 if forfeiting_index == 0 else match.score_to_win
+    score2 = 0 if forfeiting_index == 1 else match.score_to_win
+
+    assert match.score == (score1, score2)
