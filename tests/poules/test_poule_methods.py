@@ -267,6 +267,46 @@ def test_poule_record_on_piste_match_score_invalid_poule_is_completed(poule):
     with pytest.raises(RuntimeError):
         poule.record_on_piste_match_score(5,2)
 
+@pytest.mark.parametrize(('match_index', 'forfeiting_index'), [(0, 0), (3, 0), (5, 0), (0, 1), (3, 1), (5, 1)])
+def test_poule_record_forfeit(poule, match_index, forfeiting_index):
+    poule.record_forfeit(match_index, forfeiting_index)
+
+    if match_index - 1 >= 0:
+        assert poule.matches[match_index - 1].is_incomplete()
+
+    forfeited_match = poule.matches[match_index]
+    assert forfeited_match.is_complete()
+    assert forfeited_match.forfeited_index == forfeiting_index
+
+    if match_index + 1 < poule.number_matches:
+        assert poule.matches[match_index + 1].is_incomplete()
+
+def test_poule_replace_with_forfeit(poule):
+    match = poule.matches[5]
+
+    assert match.is_incomplete()
+    assert match.forfeited_index is None
+    assert match.score == (None, None)
+
+    poule.record_match_score(5, 0, 5)
+
+    assert match.is_complete()
+    assert match.forfeited_index is None
+    assert match.score == (0, 5)
+
+    on_piste_match = copy.deepcopy(poule.get_on_piste_match())
+    on_deck_match = copy.deepcopy(poule.get_on_deck_match())
+
+    poule.replace_with_forfeit(5, 1)
+
+    assert match.is_complete()
+    assert match.is_forfeit()
+    assert match.forfeited_index == 1
+    assert match.score == (5, 0)
+
+    assert poule.get_on_piste_match() == on_piste_match
+    assert poule.get_on_deck_match() == on_deck_match
+
 
 # --- Result Calculation Tests ---
 def test_poule_calculate_results_intermediate_result(poule):
