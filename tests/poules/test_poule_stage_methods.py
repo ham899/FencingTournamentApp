@@ -255,23 +255,6 @@ def test_poule_stage_record_on_piste_match_score_complete_poule(poule_stage):
     with pytest.raises(RuntimeError, match='already complete'):
         poule_stage.record_on_piste_match_score(0, 5, 0)
 
-@pytest.mark.parametrize('forfeiting_index', [0, 1])
-def test_poule_stage_record_forfeit(poule_stage, forfeiting_index):
-    poule_index, match_index = 1, 3
-
-    match = poule_stage.get_match_at(poule_index, match_index)
-
-    assert match.is_incomplete()
-
-    poule_stage.record_forfeit(poule_index, match_index, forfeiting_index)
-
-    assert match.is_complete()
-    assert match.forfeited_index == forfeiting_index
-    assert match.is_forfeit()
-
-    assert match.score1 == 0 if forfeiting_index == 0 else match.score_to_win
-    assert match.score2 == 0 if forfeiting_index == 1 else match.score_to_win
-
 def test_poule_stage_replace_with_score(poule_stage):
     poule_index, match_index = 0, 4
 
@@ -291,6 +274,23 @@ def test_poule_stage_replace_with_score(poule_stage):
     assert match.score == (5, 3)
 
 @pytest.mark.parametrize('forfeiting_index', [0, 1])
+def test_poule_stage_record_forfeit(poule_stage, forfeiting_index):
+    poule_index, match_index = 1, 3
+
+    match = poule_stage.get_match_at(poule_index, match_index)
+
+    assert match.is_incomplete()
+
+    poule_stage.record_forfeit(poule_index, match_index, forfeiting_index)
+
+    assert match.is_complete()
+    assert match.forfeited_index == forfeiting_index
+    assert match.is_forfeit()
+
+    assert match.score1 == (0 if forfeiting_index == 0 else poule_stage.score_to_win)
+    assert match.score2 == (0 if forfeiting_index == 1 else poule_stage.score_to_win)
+
+@pytest.mark.parametrize('forfeiting_index', [0, 1])
 def test_poule_stage_replace_with_forfeit(poule_stage, forfeiting_index):
     poule_index = 2
 
@@ -308,8 +308,8 @@ def test_poule_stage_replace_with_forfeit(poule_stage, forfeiting_index):
     assert match.forfeited_index == forfeiting_index
     assert match.is_forfeit()
 
-    assert match.score1 == 0 if forfeiting_index == 0 else match.score_to_win
-    assert match.score2 == 0 if forfeiting_index == 1 else match.score_to_win
+    assert match.score1 == (0 if forfeiting_index == 0 else poule_stage.score_to_win)
+    assert match.score2 == (0 if forfeiting_index == 1 else poule_stage.score_to_win)
 
 
 # --- Result Calculation Method Tests ---
