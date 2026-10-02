@@ -448,7 +448,6 @@ def test_poule_calculate_results_entire_poule_complete(poule):
 
     assert poule.calculate_ranked_results_display_names() == expected_final_results_names
 
-
 def test_poule_calculate_ranked_results(entry1, entry2, entry3):
     entries = (entry1, entry2, entry3)
 
@@ -472,3 +471,37 @@ def test_poule_calculate_results_names_only_poule_of_size_three(entry1, entry2, 
     poule.record_on_piste_match_score(4,5)
 
     assert poule.calculate_ranked_results_display_names() == ('Hannah', 'John', 'Steve')
+
+
+# --- Propagation of score_to_win Tests ---
+def test_poule_score_to_win_propagation(entries):
+    custom_score_to_win_value = 8
+
+    poule = Poule(
+        poule_number=1,
+        stage_number=1,
+        entries=entries,
+        score_to_win=custom_score_to_win_value
+    )
+
+    assert poule.score_to_win == custom_score_to_win_value
+    assert all(match.score_to_win == custom_score_to_win_value for match in poule.matches)
+
+def test_poule_score_to_win_propagation_rejects_invalid_scores(entries):
+    custom_score_to_win_value = 10
+
+    poule = Poule(
+        poule_number=1,
+        stage_number=1,
+        entries=entries,
+        score_to_win=custom_score_to_win_value
+    )
+
+    with pytest.raises(ValueError):
+        poule.record_match_score(1, custom_score_to_win_value+1, custom_score_to_win_value-1)
+
+    with pytest.raises(ValueError):
+        poule.record_match_score(5, custom_score_to_win_value-1, custom_score_to_win_value+1)
+
+    with pytest.raises(ValueError):
+        poule.record_on_piste_match_score(custom_score_to_win_value, custom_score_to_win_value)

@@ -485,3 +485,50 @@ def test_poule_stage_calculate_ranked_results_display_names_invalid_random_seed_
 def test_poule_stage_calculate_ranked_results_display_names_invalid_random_seed_value(poule_stage, invalid_random_seed_value):
     with pytest.raises(ValueError):
         poule_stage.calculate_ranked_results_display_names(invalid_random_seed_value)
+
+
+# --- Propagation of score_to_win Tests ---
+def test_poule_stage_score_to_win_propagation(seeded_entries):
+    custom_score_to_win_value = 8
+
+    poule_stage = PouleStage(
+        stage_number=1, 
+        seeded_entries=seeded_entries, 
+        score_to_win=custom_score_to_win_value
+    )
+
+    assert poule_stage.score_to_win == custom_score_to_win_value
+    assert all(match.score_to_win for poule in poule_stage.poules for match in poule.matches)
+
+def test_poule_stage_score_to_win_propagation_rejects_invalid_scores(seeded_entries):
+    custom_score_to_win_value = 10
+
+    poule_stage = PouleStage(
+        stage_number=1,
+        seeded_entries=seeded_entries,
+        score_to_win=custom_score_to_win_value
+    )
+
+    with pytest.raises(ValueError):
+        poule_stage.record_match_score(
+            poule_index=1, 
+            match_index=1, 
+            score1=custom_score_to_win_value+1, 
+            score2=custom_score_to_win_value-1
+        )
+
+    with pytest.raises(ValueError):
+        poule_stage.record_match_score(
+            poule_index=2, 
+            match_index=2, 
+            score1=custom_score_to_win_value-1, 
+            score2=custom_score_to_win_value+1
+        )
+
+    with pytest.raises(ValueError):
+        poule_stage.record_match_score(
+            poule_index=0, 
+            match_index=5, 
+            score1=custom_score_to_win_value, 
+            score2=custom_score_to_win_value
+        )
