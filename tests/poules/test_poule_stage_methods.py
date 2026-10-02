@@ -498,10 +498,30 @@ def test_poule_stage_score_to_win_propagation(seeded_entries):
     )
 
     assert poule_stage.score_to_win == custom_score_to_win_value
-    assert all(match.score_to_win for poule in poule_stage.poules for match in poule.matches)
+    assert all(match.score_to_win == custom_score_to_win_value for poule in poule_stage.poules for match in poule.matches)
+
+def test_poule_stage_score_to_win_propagation_accepts_valid_scores(seeded_entries):
+    custom_score_to_win_value = 10
+    poule_index, match_index = 1, 1
+
+    poule_stage = PouleStage(
+        stage_number=1,
+        seeded_entries=seeded_entries,
+        score_to_win=custom_score_to_win_value
+    )
+
+    poule_stage.record_match_score(
+        poule_index=poule_index,
+        match_index=match_index,
+        score1=custom_score_to_win_value,
+        score2=custom_score_to_win_value-1
+    )
+
+    match = poule_stage.get_match_at(poule_index, match_index)
+    assert match.score == (custom_score_to_win_value, custom_score_to_win_value-1)
 
 def test_poule_stage_score_to_win_propagation_rejects_invalid_scores(seeded_entries):
-    custom_score_to_win_value = 10
+    custom_score_to_win_value = 3
 
     poule_stage = PouleStage(
         stage_number=1,
