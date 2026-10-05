@@ -139,6 +139,18 @@ def test_match_replace_with_score_invalid_equal_scores(poule_match, score1, scor
     with pytest.raises(ValueError, match='cannot be equal'):
         poule_match.replace_with_score(score1, score2)
 
+def test_match_replace_with_score_invalid_preserves_previous_result(poule_match):
+    poule_match.record_score(5, 3)
+
+    assert poule_match.score == (5, 3)
+    assert poule_match.is_complete()
+
+    with pytest.raises(ValueError):
+        poule_match.replace_with_score(3, 6)
+
+    assert poule_match.score == (5, 3)
+    assert poule_match.is_complete()
+
 def test_match_replace_with_score_invalid_no_result_to_replace(poule_match):
     with pytest.raises(ValueError, match='Cannot replace the score for '):
         poule_match.replace_with_score(5, 2)

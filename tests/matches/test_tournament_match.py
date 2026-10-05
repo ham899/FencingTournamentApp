@@ -141,6 +141,38 @@ def test_tournament_match_replace_with_score_when_forfeit(poule_match):
     assert poule_match.is_complete()
     assert not poule_match.is_forfeit()
 
+def test_tournament_match_replace_with_score_invalid_preserves_previous_score(poule_match):
+    poule_match.record_score(5, 2)
+
+    assert poule_match.score == (5, 2)
+    assert poule_match.forfeited_index is None
+    assert poule_match.is_complete()
+
+    with pytest.raises(ValueError):
+        poule_match.replace_with_score(5, -1)
+
+    assert poule_match.score == (5, 2)
+    assert poule_match.forfeited_index is None
+    assert poule_match.is_complete()
+
+@pytest.mark.parametrize('forfeiting_index', [0, 1])
+def test_tournament_match_replace_with_score_invalid_preserves_previous_forfeit(poule_match, forfeiting_index):
+    poule_match.record_forfeit(forfeiting_index)
+
+    score1 = 0 if forfeiting_index == 0 else poule_match.score_to_win
+    score2 = 0 if forfeiting_index == 1 else poule_match.score_to_win
+
+    assert poule_match.score == (score1, score2)
+    assert poule_match.forfeited_index == forfeiting_index
+    assert poule_match.is_complete()
+
+    with pytest.raises(ValueError):
+        poule_match.replace_with_score(6, 3)
+
+    assert poule_match.score == (score1, score2)
+    assert poule_match.forfeited_index == forfeiting_index
+    assert poule_match.is_complete()
+
 @pytest.mark.parametrize('forfeiting_index', [0, 1])
 def test_tournament_match_record_forfeit(poule_match, forfeiting_index):
     poule_match.record_forfeit(forfeiting_index)
@@ -149,46 +181,85 @@ def test_tournament_match_record_forfeit(poule_match, forfeiting_index):
     assert poule_match.is_complete()
     assert poule_match.is_forfeit()
 
-def test_tournament_match_forfeit_cannot_forfeit_a_completed_match_scored_match(poule_match):
+def test_tournament_match_record_forfeit_cannot_forfeit_a_completed_match_scored_match(poule_match):
     poule_match.record_score(5, 1)
     
     with pytest.raises(ValueError):
         poule_match.record_forfeit(1)
 
-def test_tournament_match_forfeit_cannot_forfeit_a_completed_match_forfeited_match(poule_match):
+def test_tournament_match_record_forfeit_cannot_forfeit_a_completed_match_forfeited_match(poule_match):
     poule_match.record_forfeit(0)
     
     with pytest.raises(ValueError):
         poule_match.record_forfeit(1)
 
 @pytest.mark.parametrize('invalid_forfeiting_index_type', INVALID_INDEX_TYPES)
-def test_tournament_match_forfeit_invalid_forfeiting_index_type(poule_match, invalid_forfeiting_index_type):
+def test_tournament_match_record_forfeit_invalid_forfeiting_index_type(poule_match, invalid_forfeiting_index_type):
     with pytest.raises(TypeError):
         poule_match.record_forfeit(invalid_forfeiting_index_type)
 
 @pytest.mark.parametrize('invalid_forfeiting_index_value', INVALID_INDEX_VALUES)
-def test_tournament_match_forfeit_invalid_forfeiting_index_value(poule_match, invalid_forfeiting_index_value):
+def test_tournament_match_record_forfeit_invalid_forfeiting_index_value(poule_match, invalid_forfeiting_index_value):
     with pytest.raises(ValueError):
         poule_match.record_forfeit(invalid_forfeiting_index_value)
 
 @pytest.mark.parametrize('forfeiting_index', [0, 1])
 def test_tournament_match_replace_with_forfeit(poule_match, forfeiting_index):
-    poule_match.record_score(5, 3)
+    original_score1, original_score2 = 5, 3
 
-    assert poule_match.score == (5, 3)
+    poule_match.record_score(original_score1, original_score2)
+
+    assert poule_match.score == (original_score1, original_score2)
     assert poule_match.forfeited_index is None
     assert poule_match.is_complete()
     assert not poule_match.is_forfeit()
 
     poule_match.replace_with_forfeit(forfeiting_index)
 
-    score1 = 0 if forfeiting_index == 0 else 5
-    score2 = 0 if forfeiting_index == 1 else 5
+    new_score1 = 0 if forfeiting_index == 0 else poule_match.score_to_win
+    new_score2 = 0 if forfeiting_index == 1 else poule_match.score_to_win
 
-    assert poule_match.score == (score1, score2)
+    assert poule_match.score == (new_score1, new_score2)
     assert poule_match.forfeited_index == forfeiting_index
     assert poule_match.is_complete()
     assert poule_match.is_forfeit()
+
+@pytest.mark.parametrize('invalid_forfeiting_index', [-1, 2])
+def test_tournament_match_replace_with_forfeit_invalid_preserves_previous_score(poule_match, invalid_forfeiting_index):
+    score1, score2 = 5, 2
+    
+    poule_match.record_score(score1, score2)
+
+    assert poule_match.is_complete()
+    assert poule_match.score == (score1, score2)
+    assert poule_match.forfeited_index is None
+
+    with pytest.raises(ValueError):
+        poule_match.replace_with_forfeit(invalid_forfeiting_index)
+
+    assert poule_match.is_complete()
+    assert poule_match.score == (score1, score2)
+    assert poule_match.forfeited_index is None
+
+@pytest.mark.parametrize('forfeiting_index', [0, 1])
+def test_tournament_match_replace_with_forfeit_invalid_preserves_previous_forfeit(poule_match, forfeiting_index):
+    invalid_forfeiting_index = -1 if forfeiting_index == 0 else 2
+    
+    score1 = 0 if forfeiting_index == 0 else poule_match.score_to_win
+    score2 = 0 if forfeiting_index == 1 else poule_match.score_to_win
+
+    poule_match.record_forfeit(forfeiting_index)
+
+    assert poule_match.is_complete()
+    assert poule_match.score == (score1, score2)
+    assert poule_match.forfeited_index == forfeiting_index
+
+    with pytest.raises(ValueError):
+        poule_match.replace_with_forfeit(invalid_forfeiting_index)
+
+    assert poule_match.is_complete()
+    assert poule_match.score == (score1, score2)
+    assert poule_match.forfeited_index == forfeiting_index
 
 @pytest.mark.parametrize('forfeiting_index', [0, 1])
 def test_tournament_match_replace_with_forfeit_replace_a_forfeited_match(poule_match, forfeiting_index):

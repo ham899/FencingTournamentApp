@@ -293,6 +293,48 @@ def test_poule_replace_with_score(poule):
     assert poule.get_on_piste_match() is on_piste_match
     assert poule.get_on_deck_match() is on_deck_match
 
+def test_poule_replace_with_score_invalid_preserves_original_score(poule):
+    match_index = 1
+    match = poule.get_match_at(match_index)
+
+    original_score1, original_score2 = 5, 1
+    poule.record_match_score(match_index, original_score1, original_score2)
+
+    assert match.is_complete()
+    assert match.score == (original_score1, original_score2)
+    assert match.forfeited_index is None
+
+    with pytest.raises(ValueError):
+        score_to_win = poule.score_to_win
+        poule.replace_with_score(match_index, score_to_win - 1, score_to_win + 1)
+
+    assert match.is_complete()
+    assert match.score == (original_score1, original_score2)
+    assert match.forfeited_index is None
+
+@pytest.mark.parametrize('forfeiting_index', [0, 1])
+def test_poule_replace_with_score_invalid_preserves_original_forfeit(poule, forfeiting_index):
+    match_index = 7
+    match = poule.get_match_at(match_index)
+
+    losing_score, winning_score = 0, poule.score_to_win
+
+    score1 = losing_score if forfeiting_index == 0 else winning_score
+    score2 = losing_score if forfeiting_index == 1 else winning_score
+
+    poule.record_forfeit(match_index, forfeiting_index)
+
+    assert match.is_complete()
+    assert match.score == (score1, score2)
+    assert match.forfeited_index == forfeiting_index
+
+    with pytest.raises(ValueError):
+        poule.replace_with_score(match_index, losing_score - 1, winning_score + 1)
+
+    assert match.is_complete()
+    assert match.score == (score1, score2)
+    assert match.forfeited_index == forfeiting_index
+
 @pytest.mark.parametrize(('match_index', 'forfeiting_index'), [(0, 0), (3, 0), (5, 0), (0, 1), (3, 1), (5, 1)])
 def test_poule_record_forfeit(poule, match_index, forfeiting_index):
     poule.record_forfeit(match_index, forfeiting_index)
@@ -333,6 +375,47 @@ def test_poule_replace_with_forfeit(poule):
 
     assert poule.get_on_piste_match() is on_piste_match
     assert poule.get_on_deck_match() is on_deck_match
+
+def test_poule_replace_with_forfeit_invalid_preserves_original_score(poule):
+    match_index = 10
+    match = poule.get_match_at(match_index)
+
+    original_score1, original_score2 = 1, 5
+    poule.record_match_score(match_index, original_score1, original_score2)
+
+    assert match.is_complete()
+    assert match.score == (original_score1, original_score2)
+    assert match.forfeited_index is None
+
+    with pytest.raises(TypeError):
+        poule.replace_with_forfeit(match_index, 'Harry')
+
+    assert match.is_complete()
+    assert match.score == (original_score1, original_score2)
+    assert match.forfeited_index is None
+
+@pytest.mark.parametrize('forfeiting_index', [0, 1])
+def test_poule_replace_with_forfeit_invalid_preserves_original_forfeit(poule, forfeiting_index):
+    match_index = 4
+    match = poule.get_match_at(match_index)
+
+    poule.record_forfeit(match_index, forfeiting_index)
+
+    score1 = 0 if forfeiting_index == 0 else poule.score_to_win
+    score2 = 0 if forfeiting_index == 1 else poule.score_to_win
+
+    assert match.is_complete()
+    assert match.score == (score1, score2)
+    assert match.forfeited_index == forfeiting_index
+
+    invalid_forfeiting_index = -1 if forfeiting_index == 0 else 2
+
+    with pytest.raises(ValueError):
+        poule.replace_with_forfeit(match_index, invalid_forfeiting_index)
+
+    assert match.is_complete()
+    assert match.score == (score1, score2)
+    assert match.forfeited_index == forfeiting_index
 
 
 # --- Result Calculation Tests ---

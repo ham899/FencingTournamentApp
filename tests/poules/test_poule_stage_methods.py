@@ -273,6 +273,48 @@ def test_poule_stage_replace_with_score(poule_stage):
     assert match.forfeited_index is None
     assert match.score == (5, 3)
 
+def test_poule_stage_replace_with_score_invalid_preserves_original_score(poule_stage):
+    poule_index, match_index = 0, 1
+    match = poule_stage.get_match_at(poule_index, match_index)
+
+    original_score1, original_score2 = 5, 1
+    poule_stage.record_match_score(poule_index, match_index, original_score1, original_score2)
+
+    assert match.is_complete()
+    assert match.score == (original_score1, original_score2)
+    assert match.forfeited_index is None
+
+    with pytest.raises(ValueError):
+        score_to_win = poule_stage.score_to_win
+        poule_stage.replace_with_score(poule_index, match_index, score_to_win - 1, score_to_win + 1)
+
+    assert match.is_complete()
+    assert match.score == (original_score1, original_score2)
+    assert match.forfeited_index is None
+
+@pytest.mark.parametrize('forfeiting_index', [0, 1])
+def test_poule_stage_replace_with_score_invalid_preserves_original_forfeit(poule_stage, forfeiting_index):
+    poule_index, match_index = 1, 6
+    match = poule_stage.get_match_at(poule_index, match_index)
+
+    losing_score, winning_score = 0, poule_stage.score_to_win
+
+    score1 = losing_score if forfeiting_index == 0 else winning_score
+    score2 = losing_score if forfeiting_index == 1 else winning_score
+
+    poule_stage.record_forfeit(poule_index, match_index, forfeiting_index)
+
+    assert match.is_complete()
+    assert match.score == (score1, score2)
+    assert match.forfeited_index == forfeiting_index
+
+    with pytest.raises(ValueError):
+        poule_stage.replace_with_score(poule_index, match_index, losing_score - 1, winning_score + 1)
+
+    assert match.is_complete()
+    assert match.score == (score1, score2)
+    assert match.forfeited_index == forfeiting_index
+
 @pytest.mark.parametrize('forfeiting_index', [0, 1])
 def test_poule_stage_record_forfeit(poule_stage, forfeiting_index):
     poule_index, match_index = 1, 3
@@ -310,6 +352,48 @@ def test_poule_stage_replace_with_forfeit(poule_stage, forfeiting_index):
 
     assert match.score1 == (0 if forfeiting_index == 0 else poule_stage.score_to_win)
     assert match.score2 == (0 if forfeiting_index == 1 else poule_stage.score_to_win)
+
+def test_poule_stage_replace_with_forfeit_invalid_preserves_original_score(poule_stage):
+    poule_index, match_index = 2, 10
+    match = poule_stage.get_match_at(poule_index, match_index)
+
+    original_score1, original_score2 = 1, 5
+    poule_stage.record_match_score(poule_index, match_index, original_score1, original_score2)
+
+    assert match.is_complete()
+    assert match.score == (original_score1, original_score2)
+    assert match.forfeited_index is None
+
+    with pytest.raises(TypeError):
+        poule_stage.replace_with_forfeit(poule_index, match_index, 'Jane')
+
+    assert match.is_complete()
+    assert match.score == (original_score1, original_score2)
+    assert match.forfeited_index is None
+
+@pytest.mark.parametrize('forfeiting_index', [0, 1])
+def test_poule_stage_replace_with_forfeit_invalid_preserves_original_forfeit(poule_stage, forfeiting_index):
+    poule_index, match_index = 0, 4
+    match = poule_stage.get_match_at(poule_index, match_index)
+
+    poule_stage.record_forfeit(poule_index, match_index, forfeiting_index)
+
+    score_to_win = poule_stage.score_to_win
+    score1 = 0 if forfeiting_index == 0 else score_to_win
+    score2 = 0 if forfeiting_index == 1 else score_to_win
+
+    assert match.is_complete()
+    assert match.score == (score1, score2)
+    assert match.forfeited_index == forfeiting_index
+
+    invalid_forfeiting_index = -1 if forfeiting_index == 0 else 2
+
+    with pytest.raises(ValueError):
+        poule_stage.replace_with_forfeit(poule_index, match_index, invalid_forfeiting_index)
+
+    assert match.is_complete()
+    assert match.score == (score1, score2)
+    assert match.forfeited_index == forfeiting_index
 
 
 # --- Result Calculation Method Tests ---
