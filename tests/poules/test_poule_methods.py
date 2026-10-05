@@ -583,7 +583,7 @@ def test_poule_score_to_win_propagation_accepts_valid_scores(entries):
 
     poule.record_match_score(match_index, custom_score_to_win_value-1, custom_score_to_win_value)
     match = poule.get_match_at(match_index)
-    match.score == (custom_score_to_win_value-1, custom_score_to_win_value)
+    assert match.score == (custom_score_to_win_value - 1, custom_score_to_win_value)
 
 def test_poule_score_to_win_propagation_rejects_invalid_scores(entries):
     custom_score_to_win_value = 3
