@@ -398,6 +398,12 @@ def test_de_matchup_advancement_indices_properties(matchup_number, expected_next
     assert matchup.next_matchup_number == expected_next_number
     assert matchup.next_matchup_entry_index == expected_entry_index
 
+def test_de_matchup_entries_property(empty_matchup, matchup_entry1_only, matchup_entry2_only, matchup, entry1, entry2):
+    assert empty_matchup.entries == (None, None)
+    assert matchup_entry1_only.entries == (entry1, None)
+    assert matchup_entry2_only.entries == (None, entry2)
+    assert matchup.entries == (entry1, entry2)
+
 
 # --- Equality Tests ---
 def test_de_matchup_equality(entry1, entry2):
