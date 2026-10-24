@@ -453,8 +453,6 @@ class DEBracket:
         ------
         TypeError
             If ``entry`` is not a ``TournamentEntry``.
-        ValueError
-            If ``entry`` belongs to another tournament.
         """
         return self.first_round.has_entry(entry)
 
