@@ -24,7 +24,7 @@ class PouleMatch(TournamentMatch):
     match_number : int
         The match's one-based position within the poule's official bout order.
     poule_number : int
-        The poule’s one-based position within its round.
+        The poule's one-based position within its round.
     round_number : int
         The match's one-based round position within the poule stage.
     stage_number : int
@@ -118,28 +118,3 @@ class PouleMatch(TournamentMatch):
             self.poule_number == other.poule_number and 
             self.match_number == other.match_number
         )
-
-
-    # --- TournamentMatch Hook Implementations ---
-    def _assign_forfeit_scores(self) -> None:
-        """
-        Assign the poule-specific scores for a forfeit.
-
-        The non-forfeiting entry receives ``score_to_win``, and the forfeiting entry receives zero.
-
-        Raises
-        ------
-        RuntimeError
-            If ``forfeited_index`` is not ``0`` or ``1``.
-        """
-        forfeited_index = self.forfeited_index
-
-        if type(forfeited_index) is not int or forfeited_index not in (0, 1):
-            raise RuntimeError(f'{self.label} cannot assign a forfeit score without a valid forfeited index')
-
-        if forfeited_index == 0:
-            self.score1 = 0
-            self.score2 = self.score_to_win
-        else:
-            self.score1 = self.score_to_win
-            self.score2 = 0

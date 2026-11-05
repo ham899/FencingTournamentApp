@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from dataclasses import dataclass, field
 
 import validation
@@ -309,8 +309,8 @@ class TournamentMatch(Match, ABC):
         """
         Record a forfeit and mark the match complete.
 
-        The entry at ``forfeiting_index`` is recorded as the loser. 
-        The concrete subclass assigns the appropriate score representation before the match is marked complete.
+        The entry at ``forfeiting_index`` is recorded as the loser.
+        Both scores are set to None.
 
         Parameters
         ----------
@@ -333,14 +333,16 @@ class TournamentMatch(Match, ABC):
         validation.validate_int_in_range(forfeiting_index, 0, 1, 'Forfeiting index', 'TournamentMatch', 'record_forfeit')  
 
         self.forfeited_index = forfeiting_index
-        
-        self._assign_forfeit_scores() # Let subclass handle the score assignment
-
+        self.score1 = None
+        self.score2 = None
         self._mark_complete()
 
     def replace_with_forfeit(self, forfeiting_index: int) -> None:
         """
         Replace the existing scored or forfeit result with a forfeit.
+
+        The entry at ``forfeiting_index`` is recorded as the loser.
+        Both scores are set to None, and the match remains complete.
 
         Parameters
         ----------
@@ -364,20 +366,9 @@ class TournamentMatch(Match, ABC):
         validation.validate_int_in_range(forfeiting_index, 0, 1, 'Forfeiting index', 'TournamentMatch', 'replace_with_forfeit')
 
         self.forfeited_index = forfeiting_index
-        self._assign_forfeit_scores()
+        self.score1 = None
+        self.score2 = None
         self._mark_complete()
-
-
-    # --- Abstract Helper Methods ---
-    @abstractmethod
-    def _assign_forfeit_scores(self) -> None:
-        """
-        Assign the subclass-specific scores for a forfeit.
-
-        Implementations must leave either two valid, non-tied scores 
-        or two absent scores for ``Match._mark_complete`` to validate.
-        """
-        pass
 
 
     # --- Validation Helper Methods ---

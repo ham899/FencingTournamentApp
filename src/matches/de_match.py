@@ -94,9 +94,9 @@ class DEMatch(TournamentMatch):
     def stage_index(self) -> int:
         """Return the match's zero-based stage position within the tournament."""
         return self.stage_number - 1
-    
 
-    # --- Dunder Methods ---
+
+    # --- Equality ---
     def __eq__(self, other: object) -> bool:
         """Verifies equality between this DE match and another object."""
         if not isinstance(other, DEMatch):
@@ -109,10 +109,3 @@ class DEMatch(TournamentMatch):
             self.match_number == other.match_number and 
             self.bracket_role == other.bracket_role
         )
-
-
-    # --- TournamentMatch Hook Implementations ---
-    def _assign_forfeit_scores(self) -> None:
-        """Assigns subclass-specific forfeit scores - no scores are needed for a DE forfeit."""
-        self.score1 = None
-        self.score2 = None

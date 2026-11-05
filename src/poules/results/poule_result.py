@@ -246,6 +246,11 @@ class PouleResult:
         """
         Calculate one result for each entry from the completed matches.
 
+        Forfeited matches count as victories for the non-forfeiting entry.
+        The winner is credited with ``score_to_win`` touches scored and zero touches received. 
+        The forfeiting entry receives the reverse totals.
+        The match's stored scores remain None.
+
         Incomplete matches are ignored.
 
         Parameters
@@ -258,7 +263,7 @@ class PouleResult:
         Returns
         -------
         tuple[PouleEntryResult, ...]
-            The calculated results in the same order as `entries`.
+            The calculated results in the same order as ``entries``.
 
         Raises
         ------
@@ -273,22 +278,30 @@ class PouleResult:
 
         for match in matches:
             if match.is_complete():
-                # Extract the winner index of the match
+                # Extract and validate the winner index of the match
                 winner_index = match.winner_index
 
                 if winner_index not in (0, 1):
                     raise RuntimeError(
-                        f'{match.label} is complete but has an invalid winner index of {winner_index} in PouleResult._calculate_results_from_matches()'
+                        f'{match.label} is complete but has an invalid winner index of {winner_index}'
+                        ' in PouleResult._calculate_results_from_matches()'
                     )
+
+                # Extract the score credit values if the match is a forfeit
+                if match.is_forfeit():
+                    score1 = match.score_to_win if winner_index == 0 else 0
+                    score2 = match.score_to_win if winner_index == 1 else 0
+                else:
+                    score1, score2 = match.score
 
                 # Add match result info to each entry's result stats
                 for entry_index, entry in enumerate(match.entries):
                     entry_stats = results_tracker[entry.id]
-                    
+
                     entry_stats.add_match_info(
                         is_victory = entry_index == winner_index, 
-                        touches_scored = match.score1 if entry_index == 0 else match.score2, 
-                        touches_received = match.score2 if entry_index == 0 else match.score1
+                        touches_scored = score1 if entry_index == 0 else score2, 
+                        touches_received = score2 if entry_index == 0 else score1
                     )
 
         # Create an immutable result snapshot for each entry
