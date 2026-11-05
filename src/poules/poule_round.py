@@ -57,8 +57,8 @@ class PouleRound:
             if `entries` is not a tuple, or if an item is not a `TournamentEntry`.
         ValueError
             If `round_number`, `stage_number`, or `score_to_win` is not positive,
-            if fewer than two entries are provided, if the entries do not share
-            a tournament ID, or if an entry ID occurs more than once.
+            if fewer than two entries are provided, if the entries do not share a tournament ID, 
+            or if an entry ID or fencer ID occurs more than once.
         """
         location = 'PouleRound'
 
@@ -586,10 +586,9 @@ class PouleRound:
             If `entries` is not a tuple, if an item is not a `TournamentEntry`,
             or if `max_poule_size` is not an integer.
         ValueError
-            If fewer than two entries are provided, if the entries do not share
-            a tournament ID, if an entry ID occurs more than once,
-            if `max_poule_size` is less than 3, or if no official bout order
-            exists for a generated poule size.
+            If fewer than two entries are provided, if the entries do not share a tournament ID, 
+            if an entry ID or fencer ID occurs more than once, if `max_poule_size` is less than 3, 
+            or if no official bout order exists for a generated poule size.
         RuntimeError
             If a generated poule has an unexpected number of matches.
         """
@@ -666,7 +665,7 @@ class PouleRound:
         ValueError
             If fewer than two entries are provided, 
             if an entry's tournament ID differs from the first entry's tournament ID, 
-            or if an entry ID occurs more than once.
+            or if an entry ID or fencer ID occurs more than once.
         """
         class_name = 'PouleRound'
 
@@ -688,11 +687,12 @@ class PouleRound:
 
         # Validate each entry
         seen_entry_ids: set[int] = set()
+        seen_fencer_ids: set[int] = set()
 
         for i, entry in enumerate(entries):
             if not isinstance(entry, TournamentEntry):
                 raise TypeError(f'Entry at index {i} in {location} must be a TournamentEntry - got {type(entry).__name__}')
-            
+
             if i == 0:
                 tournament_id = entry.tournament_id
 
@@ -701,8 +701,12 @@ class PouleRound:
                     f'Entry {entry.id} at index {i} in {location} has tournament ID {entry.tournament_id}, '
                     f'which does not match the first entry\'s tournament ID {tournament_id}'
                 )
-            
+
             if entry.id in seen_entry_ids:
                 raise ValueError(f'Entry {entry.id} exists more than once in entries in {location}')
-            
+
+            if entry.fencer.id in seen_fencer_ids:
+                raise ValueError(f'Fencer {entry.fencer.id} exists more than once in entries in {location}')
+
             seen_entry_ids.add(entry.id)
+            seen_fencer_ids.add(entry.fencer.id)

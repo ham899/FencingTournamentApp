@@ -74,7 +74,7 @@ class PouleStage():
             or if random_seed is neither an integer nor None.
         ValueError
             If stage_number or num_rounds is not positive, if fewer than two entries are supplied, 
-            if the entries do not share a tournament ID, if an entry ID is repeated,
+            if the entries do not share a tournament ID, if an entry ID or fencer ID is repeated,
             if the seeds are not exactly the integers from 1 through the number of entries, 
             if a ``score_to_win`` value is not positive, if the score_to_win tuple length differs from num_rounds, 
             or if ``random_seed`` is negative.
@@ -590,7 +590,7 @@ class PouleStage():
         ValueError
             If fewer than two entries are supplied, 
             if an entry's tournament ID differs from the stage's tournament ID,
-            or if an entry ID occurs more than once.
+            or if an entry ID or fencer ID occurs more than once.
         """
         # Validate location input
         if method_name is not None and not isinstance(method_name, str):
@@ -607,21 +607,26 @@ class PouleStage():
 
         # Validate each entry
         seen_entry_ids: set[int] = set()
+        seen_fencer_ids: set[int] = set()
 
         for i, entry in enumerate(entries):
             if not isinstance(entry, TournamentEntry):
                 raise TypeError(f'Entry at index {i} in {location} must be a TournamentEntry - got {type(entry).__name__}')
-            
+
             if self.tournament_id != entry.tournament_id:
                 raise ValueError(
                     f'Entry {entry.id} at index {i} in {location} has tournament ID {entry.tournament_id}, '
                     f'which does not match the poule stage\'s tournament ID {self.tournament_id}'
                 )
-            
+
             if entry.id in seen_entry_ids:
                 raise ValueError(f'Entry {entry.id} exists more than once in entries in {location}')
-            
+
+            if entry.fencer.id in seen_fencer_ids:
+                raise ValueError(f'Fencer {entry.fencer.id} exists more than once in entries in {location}')
+
             seen_entry_ids.add(entry.id)
+            seen_fencer_ids.add(entry.fencer.id)
 
     def _validate_seeded_entries(self, seeded_entries: tuple[SeededEntry, ...], method_name: str | None = None) -> None:
         """
@@ -643,7 +648,7 @@ class PouleStage():
             if an underlying entry is not a ``TournamentEntry``, or if a seed is not an integer.
         ValueError
             If fewer than two entries are supplied, if an entry belongs to another tournament,
-            if an entry ID occurs more than once, if a seed is not positive or is repeated,
+            if an entry ID or fencer ID occurs more than once, if a seed is not positive or is repeated,
             or if the seeds are not exactly the integers from 1 through the number of entries.
         """
         location = 'PouleStage'
