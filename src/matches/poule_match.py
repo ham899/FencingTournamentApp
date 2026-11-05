@@ -17,7 +17,9 @@ class PouleMatch(TournamentMatch):
     ``stage_number`` represents the stage's overall position within the tournament, regardless
     of whether that stage is a poule stage or another type of stage.
 
-    A forfeit is recorded by assigning ``score_to_win`` to the non-forfeiting entry and zero to the forfeiting entry.
+    Recording a forfeit sets both match scores to None.
+    ``PouleResult`` credits the non-forfeiting entry with ``score_to_win`` touches and 
+    the forfeiting entry with zero when calculating statistics.
 
     Attributes
     ----------
@@ -86,12 +88,12 @@ class PouleMatch(TournamentMatch):
 
     @property
     def poule_index(self) -> int:
-        """Return the poule's zero-based position within its stage."""
+        """Return the poule's zero-based position within its round."""
         return self.poule_number - 1
 
     @property
     def round_index(self) -> int:
-        """Return the poule's zero-based position within its round."""
+        """Return the round's zero-based position within its poule stage."""
         return self.round_number - 1
 
     @property
