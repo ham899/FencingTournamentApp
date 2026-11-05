@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import validation
 
 from entities.tournament_entry import TournamentEntry
+from poules.results.poule_stats import PouleStats
 
 
 @dataclass(frozen=True, slots=True)
@@ -10,104 +11,114 @@ class PouleEntryResult:
     """
     Represents a single entry's calculated result snapshot for a poule.
 
-    The statistics are calculated from completed poule matches by `PouleResult`.
+    The supplied statistics represent completed matches in the specified poule.
+    Statistic properties delegate to the immutable PouleStats object.
     This object's fields cannot be reassigned after initialization.
 
-    **Note:** An entry with no completed bouts has a victory ratio of 0.0.
-    
     Attributes
     ----------
     entry : TournamentEntry
         The tournament entry whose poule results are represented.
     poule_number : int
-        The poule's one-based position within its stage.
+        The poule's one-based position within its round.
+    round_number : int
+        The poule round's one-based position within the poule stage.
     stage_number : int
         The poule stage's one-based position within the tournament.
-    num_matches : int
-        The number of completed poule bouts fenced by the entry.
-    num_victories : int
-        The number of completed poule bouts won by the entry.
-    touches_scored : int
-        The total number of touches scored by the entry in completed poule bouts.
-    touches_received : int
-        The total number of touches scored against the entry in completed poule bouts.
+    poule_stats : PouleStats
+        The immutable statistics for the entry in the poule.
+
+    Notes
+    -----
+    An entry with no completed matches has a victory ratio of 0.0.
     """
     entry: TournamentEntry
-    
     poule_number: int
+    round_number: int
     stage_number: int
-    
-    num_matches: int
-    num_victories: int
-    touches_scored: int
-    touches_received: int
+    poule_stats: PouleStats
 
 
     # --- Initialization and Validation Methods ---
     def __post_init__(self) -> None:
         """
-        Validates the class input data.
+        Validate the supplied entry, poule number, round number, stage number, and statistics object.
 
         Raises
         ------
         TypeError
-            If `entry` is not a `TournamentEntry`, or if `poule_number`, `stage_number`, 
-            `num_matches`, `num_victories`, `touches_scored`, or `touches_received` is not an integer.
+            If entry is not a TournamentEntry, if its tournament ID,
+            poule_number, round_number, or stage_number is not an integer,
+            or if poule_stats is not a PouleStats object.
         ValueError
-            If `poule_number` or `stage_number` is not positive, if a result statistic is negative, 
-            if the number of victories exceeds the number of matches, 
-            or if touches are recorded when no matches have been completed.
+            If the entry's tournament ID, poule number, round number, or stage number is not positive.
         """
+        location = 'PouleEntryResult'
+
         # Validate the provided entry
         self._validate_entry(self.entry)
 
-        # Validate the poule number and stage number
-        validation.validate_positive_int(self.stage_number, 'Stage number', 'PouleEntryResult')
-        validation.validate_positive_int(self.poule_number, 'Poule number', 'PouleEntryResult')
-        
-        # Validate the provided entry results
-        validation.validate_non_negative_int(self.num_matches, 'number of matches', 'PouleEntryResult')
-        validation.validate_non_negative_int(self.num_victories, 'number of victories', 'PouleEntryResult')
-        validation.validate_non_negative_int(self.touches_scored, 'touches scored', 'PouleEntryResult')
-        validation.validate_non_negative_int(self.touches_received, 'touches received', 'PouleEntryResult')
+        # Validate the poule number, round number, and stage number
+        validation.validate_positive_int(self.stage_number, 'Stage number', location)
+        validation.validate_positive_int(self.round_number, 'Round number', location)
+        validation.validate_positive_int(self.poule_number, 'Poule number', location)
 
-        # Validate that the result statistics are possible
-        if self.num_victories > self.num_matches:
-            raise ValueError(f'Number of victories cannot be greater than the number of matches in {self.label} - got {self.num_victories} victories and {self.num_matches} matches')
-        
-        if self.num_matches == 0:
-            if self.touches_scored > 0:
-                raise ValueError(f'Touches scored cannot be greater than 0 when the entry has completed no matches in {self.label} - got {self.touches_scored} touches scored and {self.num_matches} matches')
-            
-            if self.touches_received > 0:
-                raise ValueError(f'Touches received cannot be greater than 0 when the entry has completed no matches in {self.label} - got {self.touches_received} touches received and {self.num_matches} matches')
+        # Validate the provided statistics object
+        if not isinstance(self.poule_stats, PouleStats):
+            raise TypeError(
+                f'Poule statistics must be a PouleStats object in {location} - '
+                f'got {type(self.poule_stats).__name__}'
+            )
 
 
     # --- Properties ---
     @property
     def label(self) -> str:
         """Return a descriptive label for the object."""
-        return f'PouleEntryResult for {self.display_name} in poule {self.poule_number} of stage {self.stage_number} in tournament {self.tournament_id}'
+        return (
+            f'PouleEntryResult for {self.display_name} in poule {self.poule_number} ' 
+            f'of round {self.round_number} in stage {self.stage_number} in tournament {self.tournament_id}'
+        )
 
     @property
     def tournament_id(self) -> int:
-        """Returns the tournament ID of this result."""
+        """Return the tournament ID of this result."""
         return self.entry.tournament_id
 
     @property
     def display_name(self) -> str:
-        """Returns the display name of the entry."""
+        """Return the display name of the entry."""
         return self.entry.display_name
 
     @property
+    def num_matches(self) -> int:
+        """Return the number of completed matches for the entry in the poule."""
+        return self.poule_stats.num_matches
+
+    @property
+    def num_victories(self) -> int:
+        """Return the number of victories for the entry in the poule."""
+        return self.poule_stats.num_victories
+
+    @property
+    def touches_scored(self) -> int:
+        """Return the total touches credited to the entry in the poule."""
+        return self.poule_stats.touches_scored
+
+    @property
+    def touches_received(self) -> int:
+        """Return the total touches credited against the entry in the poule."""
+        return self.poule_stats.touches_received
+
+    @property
     def victory_ratio(self) -> float:
-        """Returns the entry's victory ratio, or 0.0 if no completed matches exist."""
-        return 0.0 if self.num_matches == 0 else self.num_victories / self.num_matches
-    
+        """Return the entry's victory ratio, or 0.0 if no matches have been completed."""
+        return self.poule_stats.victory_ratio
+
     @property
     def indicator(self) -> int:
-        """Returns touches scored minus touches received for the entry."""
-        return self.touches_scored - self.touches_received
+        """Return touches scored minus touches received for the entry."""
+        return self.poule_stats.indicator
 
 
     # --- Validation Helper Methods ---
@@ -127,7 +138,8 @@ class PouleEntryResult:
         ValueError
             If the entry's tournament ID is not positive.
         """
+        location = 'PouleEntryResult'
         if not isinstance(entry, TournamentEntry):
-            raise TypeError(f'Entry must be TournamentEntry in PouleEntryResult - got {type(entry).__name__}')
-        
-        validation.validate_positive_int(entry.tournament_id, 'Entry tournament ID', 'PouleEntryResult')
+            raise TypeError(f'Entry must be TournamentEntry in {location} - got {type(entry).__name__}')
+
+        validation.validate_positive_int(entry.tournament_id, 'Entry tournament ID', location)

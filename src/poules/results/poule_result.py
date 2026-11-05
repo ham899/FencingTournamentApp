@@ -5,6 +5,7 @@ import validation
 from entities.tournament_entry import TournamentEntry
 from matches.poule_match import PouleMatch
 from poules.results.poule_entry_result import PouleEntryResult
+from poules.results.poule_stats import PouleStats
 
 
 @dataclass(slots=True)
@@ -38,17 +39,21 @@ class _PouleEntryStats:
 
     # --- Properties ---
     @property
-    def stats(self) -> tuple[int, int, int, int]:
+    def stats(self) -> PouleStats:
         """
-        Return the accumulated statistics as a tuple.
+        Return an immutable snapshot of the accumulated statistics.
 
         Returns
         -------
-        tuple[int, int, int, int]
-            The number of matches, number of victories, 
-            touches scored, and touches received, in that order.
+        PouleStats
+            A new statistics object containing the accumulated match, victory, and touch totals.
         """
-        return (self.num_matches, self.num_victories, self.touches_scored, self.touches_received)
+        return PouleStats(
+            num_matches=self.num_matches,
+            num_victories=self.num_victories,
+            touches_scored=self.touches_scored,
+            touches_received=self.touches_received
+        )
 
 
     # --- Stat Update Methods ---
@@ -104,7 +109,7 @@ class PouleResult:
     of truth. Entry results preserve the order of the supplied entries.
 
     All entries and matches must belong to the same tournament, and every match
-    must belong to the specified stage and poule. The supplied entry and match tuples 
+    must belong to the specified stage, round, and poule. The supplied entry and match tuples 
     are not stored directly. Each generated entry result retains its corresponding entry, 
     while the matches are used only during initialization. The snapshot's fields cannot be 
     reassigned after initialization.
@@ -117,9 +122,11 @@ class PouleResult:
     poule_matches : tuple[PouleMatch, ...]
         The complete round-robin schedule from which results are derived. Each
         match must belong to the tournament shared by the entries and to the
-        specified stage and poule.
+        specified stage, round, and poule.
     poule_number : int
-        The poule's one-based position within its stage.
+        The poule's one-based position within its round.
+    round_number : int
+        The poule round's one-based position within the poule stage.
     stage_number : int
         The poule stage's one-based position within the tournament.
 
@@ -128,7 +135,9 @@ class PouleResult:
     entry_results : tuple[PouleEntryResult, ...]
         The calculated result for each entry, in the order the entries were supplied.
     poule_number : int
-        The poule's one-based position within its stage.
+        The poule's one-based position within its round.
+    round_number : int
+        The poule round's one-based position within the poule stage.
     stage_number : int
         The poule stage's one-based position within the tournament.
     """
@@ -137,6 +146,7 @@ class PouleResult:
 
     entry_results: tuple[PouleEntryResult, ...] = field(init=False)
     poule_number: int
+    round_number: int
     stage_number: int
     
     
@@ -155,29 +165,31 @@ class PouleResult:
         Raises
         ------
         TypeError
-            If the poule number or stage number is not an integer, if
-            `poule_entries` or `poule_matches` is not a tuple, if either tuple
+            If the poule number, round number, or stage number is not an integer, 
+            if `poule_entries` or `poule_matches` is not a tuple, if either tuple
             contains an object of the wrong type, or if an entry ID or
             tournament ID is not an integer.
         ValueError
-            If the poule number, stage number, an entry ID, or a tournament ID
+            If the poule number, round number, stage number, an entry ID, or a tournament ID
             is not positive; fewer than two entries are provided; entry IDs are
             not unique; the entries do not all belong to the same tournament;
             the matches do not form the required round-robin schedule; a match
-            belongs to another tournament, stage, or poule; a match contains an
+            belongs to another tournament, stage, round, or poule; a match contains an
             invalid or repeated entry; match numbers are duplicated or are not
             consecutive from one; or an entry pairing occurs more than once.
         RuntimeError
             If a completed match does not have a valid winner index.
         """
-        validation.validate_positive_int(self.poule_number, 'Poule number', 'PouleResult')
-        validation.validate_positive_int(self.stage_number, 'Stage number', 'PouleResult')
+        location = 'PouleResult'
+        validation.validate_positive_int(self.poule_number, 'Poule number', location)
+        validation.validate_positive_int(self.round_number, 'Round number', location)
+        validation.validate_positive_int(self.stage_number, 'Stage number', location)
 
         self._validate_entries(poule_entries)
         tournament_id = poule_entries[0].tournament_id
 
         self._validate_matches(poule_matches, poule_entries, tournament_id)
-                
+
         object.__setattr__(self, 'entry_results', self._calculate_results_from_matches(poule_entries, poule_matches))
 
 
@@ -265,7 +277,9 @@ class PouleResult:
                 winner_index = match.winner_index
 
                 if winner_index not in (0, 1):
-                    raise RuntimeError(f'{match.label} is complete but has an invalid winner index of {winner_index} in PouleResult._calculate_results_from_matches().')
+                    raise RuntimeError(
+                        f'{match.label} is complete but has an invalid winner index of {winner_index} in PouleResult._calculate_results_from_matches()'
+                    )
 
                 # Add match result info to each entry's result stats
                 for entry_index, entry in enumerate(match.entries):
@@ -277,24 +291,22 @@ class PouleResult:
                         touches_received = match.score2 if entry_index == 0 else match.score1
                     )
 
-        # Create a list of the derived PouleEntryResult statistics
+        # Create an immutable result snapshot for each entry
         entry_results: list[PouleEntryResult] = []
+
         for entry in entries:
-            num_matches, num_victories, touches_scored, touches_received = results_tracker[entry.id].stats
             entry_results.append(
                 PouleEntryResult(
-                    entry = entry, 
-                    poule_number = self.poule_number, 
-                    stage_number = self.stage_number, 
-                    num_matches = num_matches, 
-                    num_victories = num_victories, 
-                    touches_scored = touches_scored, 
-                    touches_received = touches_received
+                    entry=entry,
+                    poule_number=self.poule_number,
+                    round_number=self.round_number,
+                    stage_number=self.stage_number,
+                    poule_stats=results_tracker[entry.id].stats
                 )
             )
 
         return tuple(entry_results)
-    
+
     def _calculate_ranked_results(self) -> tuple[PouleEntryResult, ...]:
         """
         Return the entry results in descending display order.
@@ -359,7 +371,10 @@ class PouleResult:
                 tournament_id: int = entries[0].tournament_id
 
             if entry.tournament_id != tournament_id:
-                raise ValueError(f'Entry at index {i} in entries in PouleResult does not have the same tournament ID {entry.tournament_id} as the tournament ID {tournament_id} shared by the other entries')
+                raise ValueError(
+                    f'Entry at index {i} in entries in PouleResult does not have the same tournament ID {entry.tournament_id}'
+                    f' as the tournament ID {tournament_id} shared by the other entries'
+                )
 
             if entry.id in seen_entry_ids:
                 raise ValueError(f'Entry ID {entry.id} occurs more than once in entries - duplicate found at index {i}')
@@ -385,7 +400,7 @@ class PouleResult:
             If matches is not a tuple, or if matches contains an item that is not a `PouleMatch`.
         ValueError
             If no matches are provided, the matches do not form a complete round-robin schedule, 
-            a match belongs to another tournament, stage, or poule, a match contains the same entry twice, 
+            a match belongs to another tournament, stage, round, or poule, a match contains the same entry twice, 
             a match contains an entry outside the supplied entries, match numbers are duplicated or
             are not consecutive from one, or an entry pairing occurs more than once.
         """
@@ -409,13 +424,28 @@ class PouleResult:
                 raise TypeError(f'Item at index {i} in matches must be a PouleMatch object - got {type(match).__name__}')
             
             if match.poule_number != self.poule_number:
-                raise ValueError(f'The poule match at index {i} in matches does not have the same poule number {match.poule_number} as the poule number of this result container {self.poule_number}')
+                raise ValueError(
+                    f'The poule match at index {i} in matches does not have the same poule number {match.poule_number}'
+                    f' as the poule number of this result container {self.poule_number}'
+                )
+
+            if match.round_number != self.round_number:
+                raise ValueError(
+                    f'The poule match at index {i} in matches does not have the same round number {match.round_number}'
+                    f' as the round number of this result container {self.round_number}'
+                )
 
             if match.stage_number != self.stage_number:
-                raise ValueError(f'The poule match at index {i} in matches does not have the same stage number {match.stage_number} as the stage number of this result container {self.stage_number}')
+                raise ValueError(
+                    f'The poule match at index {i} in matches does not have the same stage number {match.stage_number}'
+                    f' as the stage number of this result container {self.stage_number}'
+                )
 
             if match.tournament_id != tournament_id:
-                raise ValueError(f'The poule match at index {i} belongs to tournament {match.tournament_id}, but the entries belong to tournament {tournament_id}')
+                raise ValueError(
+                    f'The poule match at index {i} belongs to tournament {match.tournament_id},'
+                    f' but the entries belong to tournament {tournament_id}'
+                )
             
             if match.match_number in seen_match_numbers:
                 raise ValueError(f'Match number {match.match_number} occurs more than once in matches')

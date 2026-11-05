@@ -13,8 +13,8 @@ class PouleMatch(TournamentMatch):
     Both entries are required. ``entry1`` represents the fencer to the
     referee's right, and ``entry2`` represents the fencer to the referee's left.
 
-    The match, poule, and stage numbers are all one-based. ``stage_number``
-    represents the stage's overall position within the tournament, regardless
+    The match, poule, round, and stage numbers are all one-based. 
+    ``stage_number`` represents the stage's overall position within the tournament, regardless
     of whether that stage is a poule stage or another type of stage.
 
     A forfeit is recorded by assigning ``score_to_win`` to the non-forfeiting entry and zero to the forfeiting entry.
@@ -24,7 +24,9 @@ class PouleMatch(TournamentMatch):
     match_number : int
         The match's one-based position within the poule's official bout order.
     poule_number : int
-        The poule's one-based position within its stage.
+        The poule’s one-based position within its round.
+    round_number : int
+        The match's one-based round position within the poule stage.
     stage_number : int
         The match's one-based stage position within the tournament.
     score_to_win : int, default=5
@@ -32,6 +34,7 @@ class PouleMatch(TournamentMatch):
     """
     match_number: int
     poule_number: int
+    round_number: int
     stage_number: int
 
     score_to_win: int = field(default=5, kw_only=True)
@@ -45,16 +48,19 @@ class PouleMatch(TournamentMatch):
         Raises
         ------
         TypeError
-            If ``match_number``, ``poule_number``, ``stage_number``, or ``score_to_win`` is 
-            not an integer, or if an entry or one of its validated attributes has an invalid type.
+            If ``match_number``, ``round_number``, ``poule_number``, ``stage_number``, 
+            or ``score_to_win`` is not an integer, 
+            or if an entry or one of its validated attributes has an invalid type.
         ValueError
             If any number is not positive, if either entry contains an invalid value, if the entries are equal, 
             if they represent the same fencer, or if they belong to different tournaments.
         """
-        validation.validate_positive_int(self.match_number, 'Match number', 'PouleMatch')
-        validation.validate_positive_int(self.poule_number, 'Poule number', 'PouleMatch')
-        validation.validate_positive_int(self.stage_number, 'Stage number', 'PouleMatch')
-        
+        location = 'PouleMatch'
+        validation.validate_positive_int(self.match_number, 'Match number', location)
+        validation.validate_positive_int(self.round_number, 'Round number', location)
+        validation.validate_positive_int(self.poule_number, 'Poule number', location)
+        validation.validate_positive_int(self.stage_number, 'Stage number', location)
+
         super().__post_init__()
 
 
@@ -64,7 +70,7 @@ class PouleMatch(TournamentMatch):
         """Return a descriptive label identifying the match."""
         return (
             f'Match {self.match_number} in poule {self.poule_number} '
-            f'of stage {self.stage_number} '
+            f'in round {self.round_number} of stage {self.stage_number} '
             f'in tournament {self.tournament_id}'
         )
 
@@ -72,17 +78,22 @@ class PouleMatch(TournamentMatch):
     def match_type(self) -> str:
         """Return the match type."""
         return 'poule'
-        
+
     @property
     def match_index(self) -> int:
         """Return the match's zero-based position within its poule."""
         return self.match_number - 1
-    
+
     @property
     def poule_index(self) -> int:
         """Return the poule's zero-based position within its stage."""
         return self.poule_number - 1
-    
+
+    @property
+    def round_index(self) -> int:
+        """Return the poule's zero-based position within its round."""
+        return self.round_number - 1
+
     @property
     def stage_index(self) -> int:
         """Return the stage's zero-based position within the tournament."""
@@ -94,8 +105,8 @@ class PouleMatch(TournamentMatch):
         """
         Return whether ``other`` represents the same scheduled poule match.
 
-        Equality is based on tournament ID, stage number, poule number, and
-        match number. Entries and recorded results are not considered.
+        Equality is based on tournament ID, stage number, round number, poule number, 
+        and match number. Entries and recorded results are not considered.
         """
         if not isinstance(other, PouleMatch):
             return False
@@ -103,6 +114,7 @@ class PouleMatch(TournamentMatch):
         return (
             self.tournament_id == other.tournament_id and 
             self.stage_number == other.stage_number and
+            self.round_number == other.round_number and
             self.poule_number == other.poule_number and 
             self.match_number == other.match_number
         )

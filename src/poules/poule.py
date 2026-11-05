@@ -20,7 +20,9 @@ class Poule:
     Attributes
     ----------
     poule_number : int
-        The poule's one-based position within the stage.
+        The poule's one-based position within the round.
+    round_number : int
+        The poule round's one-based position within its stage.
     stage_number : int
         The stage's one-based overall position within the tournament.
     entries : tuple[TournamentEntry, ...]
@@ -31,6 +33,7 @@ class Poule:
         The poule matches in official bout order.
     """
     poule_number: int
+    round_number: int
     stage_number: int
     entries: tuple[TournamentEntry, ...]
     score_to_win: int = field(default=5, kw_only=True)
@@ -45,22 +48,24 @@ class Poule:
         Raises
         ------
         TypeError
-            If the poule number, stage number, or score to win is not an integer, 
-            if `entries` is not a tuple, 
-            or if an item is not a `TournamentEntry` object.
+            If the poule number, round number, stage number, or score to win is not an integer, 
+            if `entries` is not a tuple, or if an item is not a `TournamentEntry` object.
         ValueError
-            If the poule number, stage number, or score to win is not positive, 
+            If the poule number, round number, stage number, or score to win is not positive, 
             if fewer than two entries are provided, 
             if an entry is repeated or belongs to another tournament,
             or no bout order exists for the poule size.
         RuntimeError
             If the generated schedule has the wrong number of matches.
         """
-        # Validate the poule and stage numbers, and the score to win
-        validation.validate_positive_int(self.poule_number, 'Poule number', 'Poule')
-        validation.validate_positive_int(self.stage_number, 'Stage number', 'Poule')
-        validation.validate_positive_int(self.score_to_win, 'Score to win', 'Poule')
-                
+        location = 'Poule'
+
+        # Validate the poule, round, and stage numbers, and the score to win
+        validation.validate_positive_int(self.poule_number, 'Poule number', location)
+        validation.validate_positive_int(self.round_number, 'Round number', location)
+        validation.validate_positive_int(self.stage_number, 'Stage number', location)
+        validation.validate_positive_int(self.score_to_win, 'Score to win', location)
+
         # Validate the entries provided and generate the poule matches given the validated entries
         self.matches = self._generate_matches(self.entries)
 
@@ -91,7 +96,10 @@ class Poule:
     @property
     def label(self) -> str:
         """Return a descriptive label identifying the poule."""
-        return f'Poule {self.poule_number} in stage {self.stage_number} in tournament {self.tournament_id}'
+        return (
+            f'Poule {self.poule_number} in round {self.round_number} '
+            f'in stage {self.stage_number} in tournament {self.tournament_id}'
+        )
 
 
     # --- Dunder Methods ---
@@ -103,6 +111,7 @@ class Poule:
         return (
             self.tournament_id == other.tournament_id and 
             self.stage_number == other.stage_number and
+            self.round_number == other.round_number and
             self.poule_number == other.poule_number
         )
 
@@ -310,10 +319,11 @@ class Poule:
         The matches remain the source of truth for all results.
         """
         return PouleResult(
-            poule_entries = self.entries, 
-            poule_matches = self.matches, 
-            poule_number = self.poule_number, 
-            stage_number = self.stage_number
+            poule_entries=self.entries,
+            poule_matches=self.matches,
+            poule_number=self.poule_number,
+            round_number=self.round_number,
+            stage_number=self.stage_number
         )
 
     def calculate_ranked_results(self) -> tuple[PouleEntryResult, ...]:
@@ -381,11 +391,12 @@ class Poule:
 
         # Create and return the generated poule match
         return PouleMatch(
-            match_number = match_number, 
-            poule_number = self.poule_number,
-            stage_number = self.stage_number,
             entry1 = entry1,
             entry2 = entry2,
+            match_number = match_number,
+            poule_number = self.poule_number,
+            round_number = self.round_number,
+            stage_number = self.stage_number,
             score_to_win = self.score_to_win
         )
 
