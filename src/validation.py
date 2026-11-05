@@ -424,3 +424,38 @@ def validate_optional_string(value: str | None,
 
     if value is not None and not isinstance(value, str):
         raise TypeError(f'{var_name} must be either a string or None{location} - got {type(value).__name__}')
+
+def validate_bool(value: bool, 
+                  var_name: str, 
+                  class_name: str | None = None, 
+                  method_name: str | None = None, 
+                  *, 
+                  function_name: str | None = None) -> None:
+    """
+    Validate that a value is a boolean.
+
+    Parameters
+    ----------
+    value : bool
+        The value to validate.
+    var_name : str
+        The name to use for the value in error messages.
+    class_name : str | None, default=None
+        The class in which validation is occurring.
+    method_name : str | None, default=None
+        The method in which validation is occurring.
+    function_name : str | None, default=None
+        The standalone function in which validation is occurring.
+
+    Raises
+    ------
+    TypeError
+        If value is not a boolean, or if a provided location name is not a string.
+    ValueError
+        If ``method_name`` is provided without ``class_name``,
+        or ``function_name`` is provided with ``class_name`` or ``method_name``.
+    """
+    location = _validation_location(class_name, method_name, function_name)
+
+    if type(value) is not bool:
+        raise TypeError(f'{var_name} must be a boolean{location} - got {type(value).__name__}')
