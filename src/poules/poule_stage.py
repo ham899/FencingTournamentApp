@@ -12,18 +12,19 @@ from poules.results.poule_stage_results import PouleStageResults
 @dataclass(eq=False)
 class PouleStage():
     """
-    Represents a tournament stage containing one or more rounds of poules.
+    Represent a tournament stage containing one or more rounds of poules.
 
-    The first round is created during initialization using the supplied entry seeds. 
-    Subsequent rounds are created automatically when results recorded through this stage complete the current round, 
-    until the configured number of rounds has been reached.
+    The first round is created during initialization using the supplied entry seeds.
+    Subsequent rounds are created explicitly by calling ``advance_round()``, 
+    after all existing rounds are complete.
 
-    Each subsequent round is seeded using the aggregate results across all preceding rounds. 
-    Entries are ranked by victory ratio, indicator, and touches scored, with complete ties ordered using the stage's stored random seed.
+    Each subsequent round is seeded using aggregate results across all preceding rounds.
+    Entries are ranked by victory ratio, indicator, and touches scored,
+    with complete ties ordered using the stage's stored random seed.
 
-    Results may be replaced in the current round, 
-    or in the immediately preceding round before the current round has started. 
-    Replacing a result in the preceding round regenerates the unstarted current round using the updated aggregate ranking.
+    Results may only be recorded or replaced in the current round.
+    To correct an earlier round, call ``rollback_to_round()`` to discard all
+    subsequent rounds while preserving the selected round and its results.
 
     Attributes
     ----------
@@ -203,9 +204,6 @@ class PouleStage():
         """
         Record a scored result for a specified match in the current round.
 
-        If this completes the round and additional rounds are configured,
-        create the next round using the aggregate stage ranking.
-
         Parameters
         ----------
         round_index : int
@@ -228,16 +226,12 @@ class PouleStage():
             If any index is outside its valid range, if ``round_index`` does not identify the current round, 
             if the match is already complete, if either score is outside the permitted range, or if the scores are equal.
         """
-        self._validate_poule_round_index_for_recording(round_index, 'record_match_score')
+        self._validate_poule_round_index_current_round(round_index, 'record_match_score')
         self.poule_rounds[round_index].record_match_score(poule_index, match_index, score1, score2)
-        self._create_next_round_if_needed()
 
     def record_forfeit(self, round_index:int , poule_index: int, match_index: int, forfeiting_index: int) -> None:
         """
         Record a forfeit for a specified match in the current round.
-
-        If this completes the round and additional rounds are configured,
-        create the next round using the aggregate stage ranking.
 
         Parameters
         ----------
@@ -260,17 +254,14 @@ class PouleStage():
             if ``round_index`` does not identify the current round, 
             if ``forfeiting_index`` is neither 0 nor 1, or if the match is already complete.
         """
-        self._validate_poule_round_index_for_recording(round_index, 'record_forfeit')
+        self._validate_poule_round_index_current_round(round_index, 'record_forfeit')
         self.poule_rounds[round_index].record_forfeit(poule_index, match_index, forfeiting_index)
-        self._create_next_round_if_needed()
 
     def record_on_piste_match_score(self, round_index: int, poule_index: int, score1: int, score2: int) -> None:
         """
         Record a scored result for the on-piste match in a current-round poule.
 
-        The on-piste match is the first incomplete match in the poule's scheduled bout order. 
-        If recording its result completes the round and additional rounds are configured, 
-        create the next round using the aggregate stage ranking.
+        The on-piste match is the first incomplete match in the poule's scheduled bout order.
 
         Parameters
         ----------
@@ -294,9 +285,8 @@ class PouleStage():
         RuntimeError
             If the selected poule is complete and has no on-piste match.
         """
-        self._validate_poule_round_index_for_recording(round_index, 'record_on_piste_match_score')
+        self._validate_poule_round_index_current_round(round_index, 'record_on_piste_match_score')
         self.poule_rounds[round_index].record_on_piste_match_score(poule_index, score1, score2)
-        self._create_next_round_if_needed()
 
 
     # --- Result Replacement Methods ---
@@ -304,11 +294,7 @@ class PouleStage():
         """
         Replace a specified match's scored or forfeit result with new scores.
 
-        Replacements are permitted in the current round, 
-        or in the immediately preceding round before the current round has started.
-
-        Replacing a result in the preceding round removes and regenerates the unstarted current 
-        round using the updated aggregate stage ranking and the stage's stored random seed.
+        Replacements are only permitted in the current round.
 
         Parameters
         ----------
@@ -329,22 +315,17 @@ class PouleStage():
             If any index or either score is not an integer.
         ValueError
             If any index is outside its valid range, if the requested round has not been created, 
-            if the round is neither the current round nor the immediately preceding round with an unstarted current round, 
-            if the match is incomplete, if either score is outside the permitted range, or if the scores are equal.
+            if the round is not the current round, if the match is incomplete, 
+            if either score is outside the permitted range, or if the scores are equal.
         """
-        self._validate_poule_round_index_for_replacing(round_index, 'replace_with_score')
+        self._validate_poule_round_index_current_round(round_index, 'replace_with_score')
         self.poule_rounds[round_index].replace_with_score(poule_index, match_index, score1, score2)
-        self._adjust_rounds_for_replacement(round_index)
 
     def replace_with_forfeit(self, round_index: int, poule_index: int, match_index: int, forfeiting_index: int) -> None:
         """
         Replace a specified match's scored or forfeit result with a forfeit.
 
-        Replacements are permitted in the current round, 
-        or in the immediately preceding round before the current round has started.
-
-        Replacing a result in the preceding round removes and regenerates the unstarted current 
-        round using the updated aggregate stage ranking and the stage's stored random seed.
+        Replacements are permitted in the current round.
 
         Parameters
         ----------
@@ -363,12 +344,10 @@ class PouleStage():
             If any index is not an integer.
         ValueError
             If any round, poule, or match index is outside its valid range, if the requested round has not been created, 
-            if the round is neither the current round nor the immediately preceding round with an unstarted current round, 
-            if forfeiting_index is neither 0 nor 1, or if the match is incomplete.
+            if the round is not the current round, if forfeiting_index is neither 0 nor 1, or if the match is incomplete.
         """
-        self._validate_poule_round_index_for_replacing(round_index, 'replace_with_forfeit')
+        self._validate_poule_round_index_current_round(round_index, 'replace_with_forfeit')
         self.poule_rounds[round_index].replace_with_forfeit(poule_index, match_index, forfeiting_index)
-        self._adjust_rounds_for_replacement(round_index)
 
 
     # --- Result Calculation Methods ---
@@ -390,6 +369,64 @@ class PouleStage():
             poule_rounds=self.poule_rounds, 
             random_seed=self.random_seed
         )
+
+
+    # --- Round Management Methods ---
+    def advance_round(self) -> None:
+        """
+        Create the next round using the aggregate stage ranking.
+
+        Use the configured target score for the new round.
+        Existing rounds and their results are preserved.
+
+        Raises
+        ------
+        RuntimeError
+            If all configured rounds have already been created,
+            or if any existing round is incomplete.
+        """
+        if len(self.poule_rounds) >= self.num_rounds:
+            raise RuntimeError('All configured poule rounds have already been created')
+
+        if not all(poule_round.is_complete() for poule_round in self.poule_rounds):
+            raise RuntimeError('All existing poule rounds must be complete before advancing')
+
+        next_round_index = len(self.poule_rounds)
+
+        next_round = PouleRound(
+            round_number=next_round_index + 1,
+            stage_number=self.stage_number,
+            entries=self._current_stage_results_entries(),
+            score_to_win=self._get_round_score_to_win(next_round_index)
+        )
+
+        self.poule_rounds.append(next_round)
+
+    def rollback_to_round(self, round_index: int) -> None:
+        """
+        Discard all rounds after the specified round.
+
+        Preserve the selected round and its results, making it the current round.
+        Results in discarded rounds are lost.
+        Selecting the current round leaves the stage unchanged.
+
+        Parameters
+        ----------
+        round_index : int
+            The zero-based index of the round to retain as the current round.
+
+        Raises
+        ------
+        TypeError
+            If ``round_index`` is not an integer.
+        ValueError
+            If ``round_index`` is outside the configured round range,
+            or if the requested round has not yet been created.
+        """
+        self._validate_poule_round_index_for_accessing(round_index, 'rollback_to_round')
+
+        # Remove all rounds after the specified round
+        del self.poule_rounds[round_index + 1:]
 
 
     # --- Helper Methods ---
@@ -418,39 +455,6 @@ class PouleStage():
             entries=entries,
             score_to_win=self._get_round_score_to_win(0)
         )
-
-    def _create_next_round_if_needed(self) -> None:
-        """
-        Append the next round if all existing rounds are complete and more are configured.
-
-        Seed its entries using the aggregate stage ranking.
-        """
-        if len(self.poule_rounds) < self.num_rounds:
-            if all(poule_round.is_complete() for poule_round in self.poule_rounds):
-                next_round_number = len(self.poule_rounds) + 1
-
-                entries = self._current_stage_results_entries()
-
-                next_round = PouleRound(
-                    round_number=next_round_number,
-                    stage_number=self.stage_number,
-                    entries=entries,
-                    score_to_win=self._get_round_score_to_win(next_round_number - 1)
-                )
-
-                self.poule_rounds.append(next_round)
-
-    def _adjust_rounds_for_replacement(self, index: int) -> None:
-        """
-        Regenerate the unstarted current round if the preceding round was corrected.
-
-        Otherwise, create the next round only if needed.
-        """
-        if index == self.current_round_index - 1:
-            if not self.poule_rounds[self.current_round_index].has_started():
-                self.poule_rounds.pop()
-
-        self._create_next_round_if_needed()
 
 
     # --- Validation Helper Methods ---
@@ -504,11 +508,11 @@ class PouleStage():
                 f'index={index}, current round index={current_round_index}'
             )
 
-    def _validate_poule_round_index_for_recording(self, index: int, method_name: str) -> None:
+    def _validate_poule_round_index_current_round(self, index: int, method_name: str) -> None:
         """
-        Validate that an index identifies the current round for result recording.
+        Validate that an index identifies the current round for recording or replacing results.
 
-        New match results may only be recorded in the most recently created round. 
+        Match results may only be recorded or replaced in the most recently created round.
         Validation of the selected match is handled separately.
 
         Parameters
@@ -523,52 +527,14 @@ class PouleStage():
         TypeError
             If index is not an integer.
         ValueError
-            If index is outside the configured round range, if the requested round has not yet been created,
+            If index is outside the configured round range, 
+            if the requested round has not yet been created,
             or if index does not identify the current round.
         """
         self._validate_poule_round_index_for_accessing(index, method_name)
 
         if index != self.current_round_index:
-            raise ValueError('Only results can be recorded for the current round')
-
-    def _validate_poule_round_index_for_replacing(self, index: int, method_name: str) -> None:
-        """
-        Validate that an index identifies a round eligible for result replacement.
-
-        Replacements are permitted in the current round, 
-        or in the immediately preceding round before the current round has started. 
-        Validation of the selected match is handled separately.
-
-        Parameters
-        ----------
-        index : int
-            The round's zero-based position within the stage.
-        method_name : str
-            The name of the method requesting validation, used in error messages.
-
-        Raises
-        ------
-        TypeError
-            If index is not an integer.
-        ValueError
-            If index is outside the configured round range, if the requested round has not yet been created,
-            if index identifies a round earlier than the immediately preceding round, 
-            or if index identifies the preceding round after the current round has started.
-        """
-        self._validate_poule_round_index_for_accessing(index, method_name)
-
-        current_round_index = self.current_round_index
-
-        if index == current_round_index:
-            return
-
-        if index == current_round_index - 1 and not self.poule_rounds[current_round_index].has_started():
-            return
-
-        raise ValueError(
-            'Results can only be replaced in the current round, '
-            'or in the previous round before the current round has started'
-        )
+            raise ValueError('Recording or replacing can only be done in the current round')
 
     def _validate_entries(self, entries: tuple[TournamentEntry, ...], method_name: str | None = None) -> None:
         """
