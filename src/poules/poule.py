@@ -5,7 +5,6 @@ import validation
 from entities.tournament_entry import TournamentEntry
 from matches.poule_match import PouleMatch
 from poules.poule_orders import POULE_BOUT_ORDER
-from poules.results.poule_entry_result import PouleEntryResult
 from poules.results.poule_result import PouleResult
 
 
@@ -325,16 +324,6 @@ class Poule:
             round_number=self.round_number,
             stage_number=self.stage_number
         )
-
-    def calculate_ranked_results(self) -> tuple[PouleEntryResult, ...]:
-        """Calculates and returns the poule's entry results in ranked order."""
-        poule_result = self.calculate_results()
-        return poule_result.ranked_results
-
-    def calculate_ranked_results_display_names(self) -> tuple[str, ...]:
-        """Returns the entries' display names in current poule ranking order."""
-        poule_result = self.calculate_results()
-        return poule_result.ranked_results_display_names
 
 
     # --- Match Generation Helper Methods ---

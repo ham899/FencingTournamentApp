@@ -396,7 +396,7 @@ class PouleStage():
         next_round = PouleRound(
             round_number=next_round_index + 1,
             stage_number=self.stage_number,
-            entries=self._current_stage_results_entries(),
+            entries=self._current_ranked_entries(),
             score_to_win=self._get_round_score_to_win(next_round_index)
         )
 
@@ -441,9 +441,9 @@ class PouleStage():
         """Return the supplied seeded entries in ascending seed order."""
         return tuple(sorted(seeded_entries, key=lambda entry: entry.seed))
 
-    def _current_stage_results_entries(self) -> tuple[TournamentEntry, ...]:
+    def _current_ranked_entries(self) -> tuple[TournamentEntry, ...]:
         """Return the entries in descending aggregate stage ranking order."""
-        return self.calculate_results().stage_results_entries
+        return self.calculate_results().ranked_entries
 
     def _create_first_round(self) -> PouleRound:
         """Create and return the first round using the stage's initial seed order."""

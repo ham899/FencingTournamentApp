@@ -25,6 +25,9 @@ class PouleStageResults:
     The calculated entry results retain references to their tournament entries. 
     This object's fields cannot be reassigned after initialization.
 
+    The ``ranked_results`` tuple contains the aggregate stage ranking.
+    The ``ranked_entries`` and ``ranked_names`` properties follow that same order.
+
     Parameters
     ----------
     stage_number : int
@@ -42,14 +45,14 @@ class PouleStageResults:
         The poule stage's one-based position within the tournament.
     random_seed : int | None
         The seed supplied for ordering complete ranking ties.
-    stage_results : tuple[PouleStageEntryResult, ...]
+    ranked_results : tuple[PouleStageEntryResult, ...]
         The aggregate entry results ranked by victory ratio, indicator, and touches scored, 
         all in descending order. Complete ties are ordered randomly.
     """
     stage_number: int
     poule_rounds: InitVar[list[PouleRound]]
     random_seed: int | None = None
-    stage_results: tuple[PouleStageEntryResult, ...] = field(init=False)
+    ranked_results: tuple[PouleStageEntryResult, ...] = field(init=False)
 
 
     # --- Initialization and Validation ---
@@ -84,31 +87,46 @@ class PouleStageResults:
         validation.validate_optional_non_negative_int(self.random_seed, 'random_seed', location)
 
         # Calculate the stage results based on the poule rounds
-        object.__setattr__(self, "stage_results", self._calculate_stage_results(poule_rounds))
+        object.__setattr__(self, 'ranked_results', self._calculate_ranked_results(poule_rounds))
 
 
     # --- Properties ---
     @property
-    def stage_results_entries(self) -> tuple[TournamentEntry, ...]:
-        """Return the tournament entries corresponding to the stage results."""
-        return tuple(result.entry for result in self.stage_results)
+    def tournament_id(self) -> int:
+        """Return the tournament ID shared by the represented entries."""
+        return self.ranked_results[0].entry.tournament_id
 
     @property
-    def stage_results_names(self) -> tuple[str, ...]:
-        """Return the names of the fencers corresponding to the stage results."""
-        return tuple(entry_result.display_name for entry_result in self.stage_results)
+    def num_entries(self) -> int:
+        """Return the number of represented entries."""
+        return len(self.ranked_results)
+
+    @property
+    def ranked_entries(self) -> tuple[TournamentEntry, ...]:
+        """Return the tournament entries in the same order as ranked_results."""
+        return tuple(result.entry for result in self.ranked_results)
+
+    @property
+    def ranked_names(self) -> tuple[str, ...]:
+        """Return the entry display names in the same order as ranked_results."""
+        return tuple(result.display_name for result in self.ranked_results)
 
 
     # --- Helper Methods ---
-    def _calculate_stage_results(self, poule_rounds: list[PouleRound]) -> tuple[PouleStageEntryResult, ...]:
+    def _calculate_ranked_results(self, poule_rounds: list[PouleRound]) -> tuple[PouleStageEntryResult, ...]:
         """
         Combine and rank each entry's statistics across the supplied rounds.
 
         Statistics are accumulated by entry ID using the flattened results from each round. 
+        Victory ratios are calculated from the combined victory and match totals, 
+        rather than averaging individual round ratios.
 
         Entries are ranked by victory ratio, indicator, and touches scored,
-        in that priority order and all descending. The results are shuffled before a stable sort 
-        so that entries tied on all three criteria retain their shuffled order.
+        in that priority order and all descending.
+
+        For the same entry IDs and aggregate statistics, 
+        a fixed non-None ``random_seed`` produces reproducible tie ordering independent of input entry order.
+        With ``random_seed=None``, complete ties are ordered nondeterministically.
 
         Parameters
         ----------
@@ -118,8 +136,7 @@ class PouleStageResults:
         Returns
         -------
         tuple[PouleStageEntryResult, ...]
-            One aggregate result for each entry encountered across the supplied rounds, 
-            in descending ranking order.
+            One aggregate result per entry encountered across the supplied rounds, in ranking order.
 
         Raises
         ------
@@ -130,7 +147,7 @@ class PouleStageResults:
         results_tracker: dict[int, tuple[TournamentEntry, PouleStats]] = {}
 
         for poule_round in poule_rounds:
-            round_results = poule_round.calculate_results_flattened()
+            round_results = poule_round.calculate_results().poule_results_flattened
 
             for entry_result in round_results:
                 entry = entry_result.entry

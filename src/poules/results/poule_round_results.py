@@ -4,6 +4,7 @@ from dataclasses import dataclass, field, InitVar
 
 import validation
 
+from entities.tournament_entry import TournamentEntry
 from poules.poule import Poule
 from poules.results.poule_entry_result import PouleEntryResult
 from poules.results.poule_result import PouleResult
@@ -24,6 +25,10 @@ class PouleRoundResults:
     The calculated result snapshots retain references to their tournament entries. 
     This object's fields cannot be reassigned after initialization.
 
+    The `ranked_results` tuple contains the combined round ranking.
+    The `ranked_entries` and `ranked_names` properties follow that same order.
+    The `poule_results_flattened` property instead preserves supplied poule order and the entry order within each poule.
+
     Parameters
     ----------
     poules : tuple[Poule, ...]
@@ -38,7 +43,7 @@ class PouleRoundResults:
         The seed supplied for ordering complete ranking ties.
     poule_results : tuple[PouleResult, ...]
         The calculated poule snapshots, in the order the poules were supplied.
-    round_results : tuple[PouleEntryResult, ...]
+    ranked_results : tuple[PouleEntryResult, ...]
         The entry results ranked by victory ratio, indicator, and touches scored, all in descending order. 
         Complete ties are ordered randomly.
     """
@@ -46,7 +51,7 @@ class PouleRoundResults:
     random_seed: int | None = None
 
     poule_results: tuple[PouleResult, ...] = field(init=False)
-    round_results: tuple[PouleEntryResult, ...] = field(init=False)
+    ranked_results: tuple[PouleEntryResult, ...] = field(init=False)
 
 
     # --- Initialization and Validation Methods ---
@@ -73,7 +78,7 @@ class PouleRoundResults:
         validation.validate_optional_non_negative_int(self.random_seed, 'random_seed', 'PouleRoundResults')
         self._validate_poules(poules)
         object.__setattr__(self, 'poule_results', tuple(poule.calculate_results() for poule in poules))
-        object.__setattr__(self, 'round_results', self._calculate_round_results())
+        object.__setattr__(self, 'ranked_results', self._calculate_ranked_results())
 
 
     # --- Properties ---
@@ -101,6 +106,11 @@ class PouleRoundResults:
         return self.poule_results[0].round_number
 
     @property
+    def num_entries(self) -> int:
+        """Return the number of represented entries."""
+        return len(self.ranked_results)
+
+    @property
     def poule_results_flattened(self) -> tuple[PouleEntryResult, ...]:
         """
         Return the entry results from all poule snapshots without ranking them.
@@ -116,38 +126,49 @@ class PouleRoundResults:
             for poule_result in self.poule_results
             for entry_result in poule_result.entry_results
         )
+    
+    @property
+    def ranked_entries(self) -> tuple[TournamentEntry, ...]:
+        """Return the entries in the same order as ranked_results."""
+        return tuple(result.entry for result in self.ranked_results)
 
     @property
-    def round_results_display_names(self) -> tuple[str, ...]:
-        """Return the entry display names in the same order as round_results."""
-        return tuple(entry_result.display_name for entry_result in self.round_results)
+    def ranked_names(self) -> tuple[str, ...]:
+        """Return the entry display names in the same order as ranked_results."""
+        return tuple(entry_result.display_name for entry_result in self.ranked_results)
 
 
     # --- Result Calculation Helper Methods ---
-    def _calculate_round_results(self) -> tuple[PouleEntryResult, ...]:
+    def _calculate_ranked_results(self) -> tuple[PouleEntryResult, ...]:
         """
         Combine and rank the entry results from all poule snapshots.
 
-        Entries are ranked by victory ratio, indicator, and touches scored, in that priority order and all descending. 
-        The results are shuffled before a stable sort so that entries tied on all three criteria retain their shuffled order.
+        Entries are ranked by victory ratio, indicator, and touches scored,
+        in that priority order and all descending.
 
-        For the same input order and statistics, a fixed `random_seed` produces reproducible tie ordering.
+        For the same entry IDs and statistics, 
+        a fixed non-None ``random_seed`` produces reproducible tie ordering independent of input entry order.
+        With ``random_seed=None``, complete ties are ordered nondeterministically.
 
         Returns
         -------
         tuple[PouleEntryResult, ...]
-            The entry results across all poules in descending ranking order.
+            One result per entry across the supplied poules, in ranking order.
         """
-        round_results: list[PouleEntryResult] = [
+        entry_results: list[PouleEntryResult] = [
             entry_result for poule_result in self.poule_results for entry_result in poule_result.entry_results
         ]
 
         rng = Random(self.random_seed)
-        rng.shuffle(round_results)
 
-        round_results.sort(key=lambda entry_result: (entry_result.victory_ratio, entry_result.indicator, entry_result.touches_scored), reverse=True)
+        # Normalize entry order before shuffling so seeded ties do not depend on input order
+        entry_results.sort(key=lambda result: result.entry.id)
+        rng.shuffle(entry_results)
 
-        return tuple(round_results)
+
+        entry_results.sort(key=lambda entry_result: (entry_result.victory_ratio, entry_result.indicator, entry_result.touches_scored), reverse=True)
+
+        return tuple(entry_results)
 
 
     # --- Validation Helper Methods ---

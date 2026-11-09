@@ -114,6 +114,11 @@ class PouleResult:
     while the matches are used only during initialization. The snapshot's fields cannot be 
     reassigned after initialization.
 
+    The entry_results tuple preserves the supplied entry order.
+    The ranked_results property provides a ranked view, 
+    with exact ties ordered alphabetically by display name for display purposes only.
+    The ranked_entries and ranked_names properties follow that ranked order.
+
     Parameters
     ----------
     poule_entries : tuple[TournamentEntry, ...]
@@ -210,36 +215,35 @@ class PouleResult:
             The entries in the same order as `entry_results`.
         """        
         return tuple(result.entry for result in self.entry_results)
-    
+
+    @property
+    def num_entries(self) -> int:
+        """Return the number of represented entries."""
+        return len(self.entry_results)
+
     @property
     def ranked_results(self) -> tuple[PouleEntryResult, ...]:
         """
         Return the entry results in descending poule ranking order.
 
-        Results are ordered by victory ratio, indicator, and touches scored.
-        Exact ties are ordered alphabetically by display name for consistent
-        display; alphabetical order is not a seeding tiebreaker.
-
-        Returns
-        -------
-        tuple[PouleEntryResult, ...]
-            The entry results in descending poule ranking order.
+        Results are ordered by victory ratio, indicator, and touches scored,
+        in that priority order and all descending.
+        Exact ties are ordered alphabetically by display name for consistent display; 
+        alphabetical order is not a seeding tiebreaker.
         """
         return self._calculate_ranked_results()
-    
-    @property
-    def ranked_results_display_names(self) -> tuple[str, ...]:
-        """
-        Return the display names in the same order as `ranked_results`.
 
-        Returns
-        -------
-        tuple[str, ...]
-            The entries' display names in descending poule ranking order.
-        """        
+    @property
+    def ranked_entries(self) -> tuple[TournamentEntry, ...]:
+        """Return the tournament entries in the same order as `ranked_results`."""
+        return tuple(result.entry for result in self.ranked_results)
+
+    @property
+    def ranked_names(self) -> tuple[str, ...]:
+        """Return the entry display names in the same order as `ranked_results`."""        
         ranked_results = self.ranked_results
         return tuple(result.display_name for result in ranked_results)
-    
+
 
     # --- Result Calculation Helper Methods ---
     def _calculate_results_from_matches(self, entries: tuple[TournamentEntry, ...], matches: tuple[PouleMatch, ...]) -> tuple[PouleEntryResult, ...]:
@@ -324,9 +328,10 @@ class PouleResult:
         """
         Return the entry results in descending display order.
 
-        Results are ordered by victory ratio, indicator, and touches scored.
-        Exact ties are ordered alphabetically by display name. Alphabetical
-        ordering is for display only and is not a seeding tiebreaker.
+        Results are ordered by victory ratio, indicator, and touches scored, 
+        in that priority order and all descending.
+        Exact ties are ordered alphabetically by display name. 
+        Alphabetical ordering is for display only and is not a seeding tiebreaker.
 
         Returns
         -------

@@ -5,7 +5,6 @@ import validation
 from entities.tournament_entry import TournamentEntry
 from matches.poule_match import PouleMatch
 from poules.poule import Poule
-from poules.results.poule_entry_result import PouleEntryResult
 from poules.results.poule_round_results import PouleRoundResults
 from utils import snake_numbers
 
@@ -373,75 +372,11 @@ class PouleRound:
         Raises
         ------
         TypeError
-            If `random_seed` is neither an integer nor `None`.
+            If ``random_seed`` is neither an integer nor `None`.
         ValueError
-            If `random_seed` is negative.
+            If ``random_seed`` is negative.
         """
         return PouleRoundResults(self.poules, random_seed)
-
-    def calculate_results_flattened(self) -> tuple[PouleEntryResult, ...]:
-        """
-        Calculate and return the round's entry results without ranking them.
-
-        Only completed matches contribute to the statistics.
-        The round does not need to be complete.
-
-        Returns
-        -------
-        tuple[PouleEntryResult, ...]
-            Newly calculated entry result snapshots in poule order,
-            preserving the entry order within each poule.
-        """
-        return self.calculate_results().poule_results_flattened
-
-    def calculate_ranked_results(self, random_seed: int | None = None) -> tuple[PouleEntryResult, ...]:
-        """
-        Calculate and return the round's entry results in ranked order.
-
-        Entries are ranked by victory ratio, indicator, and touches scored, all in descending order. 
-        Ties are shuffled using `random_seed`.
-
-        Parameters
-        ----------
-        random_seed : int | None, optional
-            The seed used to order ranking ties. 
-
-        Returns
-        -------
-        tuple[PouleEntryResult, ...]
-            The entry results in descending rank order.
-
-        Raises
-        ------
-        TypeError
-            If `random_seed` is neither an integer nor `None`.
-        ValueError
-            If `random_seed` is negative.
-        """
-        return self.calculate_results(random_seed).round_results
-
-    def calculate_ranked_results_display_names(self, random_seed: int | None = None) -> tuple[str, ...]:
-        """
-        Calculate and return entry display names in round ranking order.
-
-        Parameters
-        ----------
-        random_seed : int | None, optional
-            The seed used to order ranking ties. 
-
-        Returns
-        -------
-        tuple[str, ...]
-            The entries' display names in descending rank order.
-
-        Raises
-        ------
-        TypeError
-            If `random_seed` is neither an integer nor `None`.
-        ValueError
-            If `random_seed` is negative.
-        """
-        return self.calculate_results(random_seed).round_results_display_names
 
 
     # --- Creation Helper Methods ---
