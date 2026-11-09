@@ -908,19 +908,11 @@ class DEStage:
         DEStageResults
             Results combining the main and existing consolation brackets.
         """
-        return DEStageResults(self.main_bracket, self.consolation_bracket)
-    
-    def calculate_results_display_names(self) -> tuple[str, ...]:
-        """
-        Return participant display names in current result order.
-
-        Returns
-        -------
-        tuple[str, ...]
-            Display names ordered by the current stage results.
-        """
-        stage_results = self.calculate_results()
-        return tuple(entry_result.entry.display_name for entry_result in stage_results.entry_results)
+        return DEStageResults(
+            stage_number=self.stage_number,
+            main_bracket=self.main_bracket,
+            consolation_bracket=self.consolation_bracket
+        )
 
 
     # --- Validation Helper Methods ---

@@ -50,6 +50,11 @@ class DEEntryResult:
         or None if its exact position has not yet been determined.
     status : DEEntryStatus
         The entry's participation status within this DE bracket.
+
+    Notes
+    -----
+    When used in DEStageResults, bracket_seed, round_reached, and status describe the main bracket, 
+    while place represents the stage finishing position after any consolation results are applied.
     """
     entry: TournamentEntry
     stage_number: int
@@ -85,6 +90,18 @@ class DEEntryResult:
             raise TypeError(f'Status must be a DEEntryStatus in DEEntryResult - got {type(self.status).__name__}')
         
         self._validate_status_place_relationship(self.status, self.place)
+
+
+    # --- Properties ---
+    @property
+    def tournament_id(self) -> int:
+        """Return the tournament ID of this result."""
+        return self.entry.tournament_id
+
+    @property
+    def display_name(self) -> str:
+        """Return the display name of the represented entry."""
+        return self.entry.display_name
 
 
     # --- Validation Helper Methods ---

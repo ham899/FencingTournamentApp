@@ -49,6 +49,9 @@ class DEBracketResults:
 
     The calculated fields cannot be reassigned after initialization.
 
+    The supplied brackets are used only during initialization and are not stored. 
+    Individual result snapshots retain references to their tournament entries.
+
     Parameters
     ----------
     bracket : DEBracket
@@ -56,11 +59,14 @@ class DEBracketResults:
 
     Attributes
     ----------
-    entry_results : tuple[DEEntryResult, ...]
-        The calculated entry result snapshots in result order.
+    ranked_results : tuple[DEEntryResult, ...]
+        The entry snapshots ordered by descending round reached, 
+        participation status (winner, active, eliminated),
+        ascending confirmed place, and ascending bracket seed.
+        Within the same round and status, unresolved places follow confirmed places.
     """
     bracket: InitVar[DEBracket]
-    entry_results: tuple[DEEntryResult, ...] = field(init=False)
+    ranked_results: tuple[DEEntryResult, ...] = field(init=False)
 
 
     # --- Initialization and Validation ---
@@ -81,7 +87,34 @@ class DEBracketResults:
         if not isinstance(bracket, DEBracket):
             raise TypeError(f'Bracket must be a DEBracket - got {type(bracket).__name__}')
 
-        object.__setattr__(self, 'entry_results', self._calculate_bracket_results(bracket))
+        object.__setattr__(self, 'ranked_results', self._calculate_ranked_results(bracket))
+
+
+    # --- Properties ---
+    @property
+    def tournament_id(self) -> int:
+        """Return the tournament ID shared by the represented entries."""
+        return self.ranked_results[0].tournament_id
+
+    @property
+    def stage_number(self) -> int:
+        """Return the stage number shared by the entry results."""
+        return self.ranked_results[0].stage_number
+
+    @property
+    def num_entries(self) -> int:
+        """Return the number of represented entries."""
+        return len(self.ranked_results)
+
+    @property
+    def ranked_entries(self) -> tuple[TournamentEntry, ...]:
+        """Return the tournament entries in the same order as ``ranked_results``."""
+        return tuple(result.entry for result in self.ranked_results)
+
+    @property
+    def ranked_names(self) -> tuple[str, ...]:
+        """Return the entry display names in the same order as ``ranked_results``."""
+        return tuple(result.display_name for result in self.ranked_results)
 
 
     # --- Helper Methods ---
@@ -272,7 +305,7 @@ class DEBracketResults:
             entry_states_by_id[third_place_matchup.winner.id].place = 3
             entry_states_by_id[third_place_matchup.loser.id].place = 4
 
-    def _calculate_bracket_results(self, bracket: DEBracket) -> tuple[DEEntryResult, ...]:
+    def _calculate_ranked_results(self, bracket: DEBracket) -> tuple[DEEntryResult, ...]:
         """
         Calculate the DE entry result snapshots in result order.
 
