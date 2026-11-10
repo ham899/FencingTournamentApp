@@ -3,19 +3,20 @@ from random import Random
 
 import validation
 
-from entities.seeded_entry import SeededEntry
 from entities.tournament_entry import TournamentEntry
 from poules.poule_round import PouleRound
 from poules.results.poule_stage_results import PouleStageResults
+from tournament.tournament_stage import TournamentStage
 
 
 @dataclass(eq=False)
-class PouleStage():
+class PouleStage(TournamentStage):
     """
     Represent a tournament stage containing one or more rounds of poules.
 
-    The first round is created during initialization using the supplied entry seeds.
-    Subsequent rounds are created explicitly by calling ``advance_round()``, 
+    TournamentStage validates and sorts the initial seeded entries.
+    The first round is then created in seed order during initialization.
+    Subsequent rounds are created explicitly by calling ``advance_round()``,
     after all existing rounds are complete.
 
     Each subsequent round is seeded using aggregate results across all preceding rounds.
@@ -26,31 +27,43 @@ class PouleStage():
     To correct an earlier round, call ``rollback_to_round()`` to discard all
     subsequent rounds while preserving the selected round and its results.
 
+    Parameters
+    ----------
+    stage_number : int
+        The stage's one-based position within the tournament.
+    seeded_entries : tuple[SeededEntry, ...]
+        The participating entries and their initial seeds.
+        Entries may be supplied in any order; they are stored in ascending seed order.
+    num_rounds : int, default=1
+        The number of poule rounds to conduct. Keyword-only.
+    score_to_win : int | tuple[int, ...], default=5
+        The target score for every round, or one target score per round
+        in round-number order. Keyword-only.
+    random_seed : int | None, default=None
+        A nonnegative seed for ordering complete ranking ties.
+        If None, a seed is generated and stored during initialization. Keyword-only.
+
     Attributes
     ----------
     stage_number : int
         The stage's one-based position within the tournament.
     seeded_entries : tuple[SeededEntry, ...]
-        The entries and their initial seeds. 
-        These seeded entries will be stored in ascending seed order.
-    num_rounds : int, default=1
+        The entries and their initial seeds.
+        These seeded entries are stored in ascending seed order.
+    num_rounds : int
         The total number of rounds to conduct in this stage.
-    score_to_win : int | tuple[int, ...], default=5
-        The target score and maximum permitted recorded score for either entry in a match. 
+    score_to_win : int | tuple[int, ...]
+        The target score and maximum permitted recorded score for either entry in a match.
         A single integer applies to every round.
         A tuple supplies one value per round in round-number order.
-    random_seed : int | None, default=None
-        A nonnegative seed used to order complete ranking ties.
-        If None is supplied, an integer seed is generated and stored during initialization.
+    random_seed : int
+        The seed used to order complete ranking ties.
     poule_rounds : list[PouleRound]
         The rounds created so far, in round-number order.
-        Initially contains only round 1. 
+        Initially contains only round 1.
         Additional rounds are created as the stage progresses.
     """
-    stage_number: int
-    seeded_entries: tuple[SeededEntry, ...]
-
-    num_rounds: int = 1
+    num_rounds: int = field(default=1, kw_only=True)
     score_to_win: int | tuple[int, ...] = field(default=5, kw_only=True)
     random_seed: int | None = field(default=None, kw_only=True)
     poule_rounds: list[PouleRound] = field(init=False, default_factory=list)
@@ -61,35 +74,32 @@ class PouleStage():
         """
         Validate the stage configuration and create its first poule round.
 
-        Sort the supplied entries into ascending seed order. 
-        If no random seed is supplied, generate and store one for subsequent stage result calculations. 
-        Create round 1 using the initial seed order and its configured score to win.
+        Call TournamentStage to validate and sort the initial seeded entries.
+        Validate the number of rounds and target scores, 
+        then generate and store a random seed if none was supplied. 
+        Create round 1 from the initial seed order and its configured score to win.
 
         Raises
         ------
         TypeError
-            If stage_number or num_rounds is not an integer,
-            if seeded_entries is not a tuple, if an item is not a ``SeededEntry``, 
-            if an underlying entry is not a ``TournamentEntry``, if a seed is not an integer, 
-            if score_to_win is neither an integer nor a tuple of integers, 
-            or if random_seed is neither an integer nor None.
+            If `stage_number` or `num_rounds` is not an integer,
+            if `seeded_entries` is not a tuple, if an item is not a ``SeededEntry``,
+            if an underlying entry is not a ``TournamentEntry``, if a seed is not an integer,
+            if `score_to_win` is neither an integer nor a tuple of integers,
+            or if `random_seed` is neither an integer nor None.
         ValueError
-            If stage_number or num_rounds is not positive, if fewer than two entries are supplied, 
+            If `stage_number` or `num_rounds` is not positive, if fewer than two entries are supplied,
             if the entries do not share a tournament ID, if an entry ID or fencer ID is repeated,
-            if the seeds are not exactly the integers from 1 through the number of entries, 
-            if a ``score_to_win`` value is not positive, if the score_to_win tuple length differs from num_rounds, 
+            if the seeds are not unique integers from 1 through the number of entries,
+            if a ``score_to_win`` value is not positive, if the `score_to_win` tuple length differs from `num_rounds`,
             or if ``random_seed`` is negative.
         """
         location = 'PouleStage'
 
         # Validate the initialization parameters
-        validation.validate_positive_int(self.stage_number, 'stage_number', location)
-        self._validate_seeded_entries(self.seeded_entries)
+        super().__post_init__()
         validation.validate_positive_int(self.num_rounds, 'num_rounds', location)
         self._validate_score_to_win(self.score_to_win)
-
-        # Sort the seeded entries by seed in ascending order
-        self.seeded_entries = self._sort_seeded_entries(self.seeded_entries)
 
         # Validate the random seed and assign one if none is provided
         validation.validate_optional_non_negative_int(self.random_seed, 'random_seed', location)
@@ -103,9 +113,9 @@ class PouleStage():
 
     # --- Properties ---
     @property
-    def tournament_id(self) -> int:
-        """Return the tournament ID shared by the entries in this stage."""
-        return self.seeded_entries[0].entry.tournament_id
+    def label(self) -> str:
+        """Return a descriptive label identifying this poule stage."""
+        return f'Poule stage with stage number {self.stage_number} in tournament {self.tournament_id}'
 
     @property
     def current_round_number(self) -> int:
@@ -166,10 +176,6 @@ class PouleStage():
             len(self.poule_rounds) == self.num_rounds and
             all(poule_round.is_complete() for poule_round in self.poule_rounds)
         )
-
-    def is_incomplete(self) -> bool:
-        """Return whether any configured round has yet to be created or completed."""
-        return not self.is_complete()
 
 
     # --- Round Access Methods ---
@@ -437,10 +443,6 @@ class PouleStage():
 
         return self.score_to_win
 
-    def _sort_seeded_entries(self, seeded_entries: tuple[SeededEntry, ...]) -> tuple[SeededEntry, ...]:
-        """Return the supplied seeded entries in ascending seed order."""
-        return tuple(sorted(seeded_entries, key=lambda entry: entry.seed))
-
     def _current_ranked_entries(self) -> tuple[TournamentEntry, ...]:
         """Return the entries in descending aggregate stage ranking order."""
         return self.calculate_results().ranked_entries
@@ -535,126 +537,6 @@ class PouleStage():
 
         if index != self.current_round_index:
             raise ValueError('Recording or replacing can only be done in the current round')
-
-    def _validate_entries(self, entries: tuple[TournamentEntry, ...], method_name: str | None = None) -> None:
-        """
-        Validate entry types, minimum count, tournament membership, and uniqueness.
-
-        Parameters
-        ----------
-        entries : tuple[TournamentEntry, ...]
-            The tournament entries to validate.
-        method_name : str | None, optional
-            The name of the method requesting validation.
-            If None, only the class name is used in error messages.
-
-        Raises
-        ------
-        TypeError
-            If method_name is neither a string nor None, if entries is not a tuple,
-            or if an item is not a TournamentEntry.
-        ValueError
-            If fewer than two entries are supplied, 
-            if an entry's tournament ID differs from the stage's tournament ID,
-            or if an entry ID or fencer ID occurs more than once.
-        """
-        # Validate location input
-        if method_name is not None and not isinstance(method_name, str):
-            raise TypeError(f'method_name must be either a string or None in PouleStage._validate_entries() - got {type(method_name).__name__}')
-
-        location = 'PouleStage' if method_name is None else f'PouleStage.{method_name}()'
-
-        # Validate entries
-        if not isinstance(entries, tuple):
-            raise TypeError(f'Entries must be a tuple in {location} - got {type(entries).__name__}')
-
-        if len(entries) < 2:
-            raise ValueError(f'Entries must contain at least 2 entries in {location} - got {len(entries)}')
-
-        # Validate each entry
-        seen_entry_ids: set[int] = set()
-        seen_fencer_ids: set[int] = set()
-
-        for i, entry in enumerate(entries):
-            if not isinstance(entry, TournamentEntry):
-                raise TypeError(f'Entry at index {i} in {location} must be a TournamentEntry - got {type(entry).__name__}')
-
-            if self.tournament_id != entry.tournament_id:
-                raise ValueError(
-                    f'Entry {entry.id} at index {i} in {location} has tournament ID {entry.tournament_id}, '
-                    f'which does not match the poule stage\'s tournament ID {self.tournament_id}'
-                )
-
-            if entry.id in seen_entry_ids:
-                raise ValueError(f'Entry {entry.id} exists more than once in entries in {location}')
-
-            if entry.fencer.id in seen_fencer_ids:
-                raise ValueError(f'Fencer {entry.fencer.id} exists more than once in entries in {location}')
-
-            seen_entry_ids.add(entry.id)
-            seen_fencer_ids.add(entry.fencer.id)
-
-    def _validate_seeded_entries(self, seeded_entries: tuple[SeededEntry, ...], method_name: str | None = None) -> None:
-        """
-        Validate the entries and initial seeds supplied for this stage.
-
-        Parameters
-        ----------
-        seeded_entries : tuple[SeededEntry, ...]
-            The seeded tournament entries to validate.
-        method_name : str | None, optional
-            The name of the method requesting validation.
-            If None, only the class name is used in error messages.
-
-        Raises
-        ------
-        TypeError
-            If ``method_name`` is neither a string nor None,
-            if ``seeded_entries`` is not a tuple, if an item is not a ``SeededEntry``,
-            if an underlying entry is not a ``TournamentEntry``, or if a seed is not an integer.
-        ValueError
-            If fewer than two entries are supplied, if an entry belongs to another tournament,
-            if an entry ID or fencer ID occurs more than once, if a seed is not positive or is repeated,
-            or if the seeds are not exactly the integers from 1 through the number of entries.
-        """
-        location = 'PouleStage'
-
-        if not isinstance(seeded_entries, tuple):
-            raise TypeError(f'Seeded entries must be a tuple in {location} - got {type(seeded_entries).__name__}')
-
-        if len(seeded_entries) < 2:
-            raise ValueError(f'Seeded entries must contain at least 2 entries in {location} - got {len(seeded_entries)}')
-        
-        # Validate that each item is a seeded entry
-        for i, seeded_entry in enumerate(seeded_entries):
-            if not isinstance(seeded_entry, SeededEntry):
-                raise TypeError(f'Seeded entry at index {i} in {location} must be a SeededEntry - got {type(seeded_entry).__name__}')
-
-        # Validate all entries held by seeded entries
-        entries = tuple(seeded_entry.entry for seeded_entry in seeded_entries)
-        self._validate_entries(entries, method_name)
-
-        # Validate the entry seeds held by the seeded entries
-        seen_seeds: set[int] = set()
-        
-        for i, seeded_entry in enumerate(seeded_entries):
-            seed = seeded_entry.seed
-
-            validation.validate_positive_int(seed, f'Seed for seeded entry {seeded_entry.entry.id} at index {i}', 'PouleStage', method_name)
-
-            if seed in seen_seeds:
-                raise ValueError(f'Seed {seed} in seeded entries is assigned more than once in {location}')
-            
-            seen_seeds.add(seed)
-
-        # Verify that all expected seeds are present
-        expected_initial_seeds = set(range(1, len(seeded_entries) + 1))
-
-        if seen_seeds != expected_initial_seeds:
-            raise ValueError(
-                f'Seeds in seeded entries in {location} must be a one-to-one mapping with '
-                f'the integers from 1 through {len(seeded_entries)}'
-            )
 
     def _validate_score_to_win(self, score_to_win: int | tuple[int, ...]) -> None:
         """

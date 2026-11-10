@@ -6,24 +6,24 @@ from de.de_bracket import DEBracket
 from de.de_bracket_role import DEBracketRole
 from de.de_matchup import DEMatchup
 from de.results.de_stage_results import DEStageResults
-from entities.seeded_entry import SeededEntry
 from entities.tournament_entry import TournamentEntry
+from tournament.tournament_stage import TournamentStage
 
 
 @dataclass(eq=False)
-class DEStage:
+class DEStage(TournamentStage):
     """
     Represent and manage a direct-elimination stage within a tournament.
 
-    The stage owns a main direct-elimination bracket and 
-    can optionally create a consolation bracket from the quarter-final losers to determine places five through eight. 
-    
-    It coordinates result changes across those brackets and 
-    restores their prior state if consolation-bracket creation fails.
+    TournamentStage validates and sorts the initial seeded entries.
+    The stage owns a main direct-elimination bracket 
+    and can optionally create a consolation bracket from the quarter-final losers to determine places five through eight.
 
-    Additionally, the main bracket can optionally stop before a configured round, 
+    It coordinates result changes across those brackets and restores their prior state if consolation-bracket creation fails.
+
+    The main bracket can optionally stop before a configured round,
     allowing the entries reaching that round to advance to a later tournament stage.
-    A stopped stage **cannot** use third-place or consolation classification matches.
+    A stopped stage cannot use third-place or consolation classification matches.
 
     Parameters
     ----------
@@ -33,13 +33,17 @@ class DEStage:
         The participating entries and their starting seeds.
     score_to_win : int, default=15
         The target score and maximum permitted recorded score for either entry.
+        Supplied as a keyword argument.
     has_third_place_match : bool, default=False
         Whether the main bracket includes a match for third and fourth place.
+        Supplied as a keyword argument.
     use_consolation_bracket : bool, default=False
         Whether quarter-final losers fence for places five through eight.
+        Supplied as a keyword argument.
     stop_at_round : int | None, default=None
-        The one-based number of the first main-bracket round that will not be fenced. 
+        The one-based number of the first main-bracket round that will not be fenced.
         Entries reaching this round qualify to advance.
+        Supplied as a keyword argument.
 
     Attributes
     ----------
@@ -52,16 +56,14 @@ class DEStage:
     use_consolation_bracket : bool
         Whether this stage uses a consolation bracket.
     stop_at_round : int | None
-        The one-based stopping-round number, or ``None`` if the main bracket is fenced to completion.
+        The one-based stopping-round number, 
+        or ``None`` if the main bracket is fenced to completion.
     main_bracket : DEBracket
         The stage's primary direct-elimination bracket.
     consolation_bracket : DEBracket | None
         The bracket for quarter-final losers, once those entries are known.
     """
-    stage_number: int
-    seeded_entries: tuple[SeededEntry, ...]
     score_to_win: int = field(default=15, kw_only=True)
-
     has_third_place_match: InitVar[bool] = field(default=False, kw_only=True)
     use_consolation_bracket: bool = field(default=False, kw_only=True)
     stop_at_round: int | None = field(default=None, kw_only=True)
@@ -75,33 +77,35 @@ class DEStage:
         """
         Validate the stage configuration and create the main bracket.
 
+        Call TournamentStage to validate and sort the initial seeded entries.
+        Validate DE-specific settings and create the main bracket.
+
         Raises
         ------
         TypeError
-            If an option has an invalid type, ``seeded_entries`` is not a tuple, 
-            or a seeded item or its entry has an invalid type.
+            If the `stage_number` or `score_to_win` is not an integer, 
+            if `seeded_entries` is not a tuple, if a seeded entry is not a ``SeededEntry``,
+            if `has_third_place_match` or `use_consolation_bracket` is not a boolean, 
+            or if `stop_at_round` is neither an integer nor None.
         ValueError
-            If an integer is outside its permitted range, fewer than two entries are supplied, 
-            entries or seeds are duplicated, entries belong to different tournaments, 
-            an optional classification format does not have enough entries, 
+            If `stage_number` or `score_to_win` is not positive,
+            `stop_at_round` is provided but is not between round 2 and the penultimate main-bracket round, 
+            fewer than two entries are supplied, an entry ID, fencer ID, or seed is duplicated, 
+            entries belong to different tournaments, an optional classification format does not have enough entries, 
             or incompatible bracket options are combined.
         """
-        validation.validate_positive_int(self.stage_number, 'Stage number', 'DEStage')
+        super().__post_init__()
         validation.validate_positive_int(self.score_to_win, 'Score to win', 'DEStage')
-
-        self._validate_seeded_entries(self.seeded_entries)
-
-        self.seeded_entries = tuple(sorted(self.seeded_entries, key=lambda seeded_entry: seeded_entry.seed))
 
         if type(has_third_place_match) is not bool:
             raise TypeError(f'The third-place match option must be a boolean - got {type(has_third_place_match).__name__}')
-        
+
         if has_third_place_match and len(self.seeded_entries) < 4:
             raise ValueError(f'If a third-place match is chosen, there must be at least 4 seeded entries provided - got {len(self.seeded_entries)} entries')
 
         if type(self.use_consolation_bracket) is not bool:
             raise TypeError(f'The consolation bracket option must be a boolean - got {type(self.use_consolation_bracket).__name__}')
-        
+
         if self.use_consolation_bracket and len(self.seeded_entries) < 6:
             raise ValueError(f'If a consolation bracket is chosen, there must be at least 6 seeded entries provided - got {len(self.seeded_entries)} entries')
 
@@ -124,22 +128,7 @@ class DEStage:
     @property
     def label(self) -> str:
         """Return a descriptive label identifying this DE stage."""
-        return f'DE stage {self.stage_number} in tournament {self.tournament_id}'
-
-    @property
-    def tournament_id(self) -> int:
-        """Return the tournament ID shared by the stage entries."""
-        return self.seeded_entries[0].entry.tournament_id
-
-    @property
-    def num_entries(self) -> int:
-        """Return the number of entries participating in the stage."""
-        return len(self.seeded_entries)
-
-    @property
-    def entries(self) -> tuple[TournamentEntry, ...]:
-        """Return the participating tournament entries in seed order."""
-        return tuple(seeded_entry.entry for seeded_entry in self.seeded_entries)
+        return f'DE stage with stage number {self.stage_number} in tournament {self.tournament_id}'
 
     @property
     def qualified_entries(self) -> tuple[TournamentEntry, ...]:
@@ -191,11 +180,7 @@ class DEStage:
             return True
         
         return self.consolation_bracket is not None and self.consolation_bracket.is_complete()
-    
-    def is_incomplete(self) -> bool:
-        """Return whether the stage still has required matches to complete."""
-        return not self.is_complete()
-    
+
     def has_third_place_matchup(self) -> bool:
         """Return whether the main bracket includes a third-place matchup."""
         return self.main_bracket.has_third_place_matchup()
@@ -211,7 +196,7 @@ class DEStage:
     def has_started(self) -> bool:
         """Return whether a result has been recorded in the main bracket."""
         return self.main_bracket.has_started()
-    
+
     def has_entry(self, entry: TournamentEntry) -> bool:
         """
         Return whether ``entry`` participates in this stage.
@@ -235,7 +220,7 @@ class DEStage:
             raise TypeError(f'Entry must be a tournament entry object in DEStage.has_entry() - got {type(entry).__name__}')
         
         return entry in self.entries
-    
+
     def _is_quarter_final_matchup(self, round_index: int, matchup_index: int) -> bool:
         """
         Return whether the indexed main-bracket matchup is a quarter-final.
@@ -270,7 +255,7 @@ class DEStage:
             The requested main-bracket matchup.
         """
         return self.main_bracket.get_matchup(round_index, matchup_index)
-    
+
     def get_consolation_matchup(self, round_index: int, matchup_index: int) -> DEMatchup:
         """
         Return the indexed matchup from the consolation bracket.
@@ -297,7 +282,7 @@ class DEStage:
         """
         bracket = self._get_consolation_bracket()
         return bracket.get_matchup(round_index, matchup_index)
-    
+
     def get_ready_matchups(self) -> tuple[DEMatchup, ...]:
         """
         Return every matchup currently ready to receive a result.
@@ -916,56 +901,6 @@ class DEStage:
 
 
     # --- Validation Helper Methods ---
-    def _validate_seeded_entries(self, seeded_entries: tuple[SeededEntry, ...]) -> None:
-        """
-        Validate the stage's seeded-entry collection.
-
-        Parameters
-        ----------
-        seeded_entries : tuple[SeededEntry, ...]
-            The entries and their one-based seeds.
-
-        Raises
-        ------
-        TypeError
-            If the collection is not a tuple, an item is not a ``SeededEntry``, or an item does not contain a ``TournamentEntry``.
-        ValueError
-            If fewer than two entries are supplied, a seed is outside the valid range, 
-            an entry ID or seed is duplicated, or entries belong to different tournaments.
-        """
-        if not isinstance(seeded_entries, tuple):
-            raise TypeError(f'seeded_entries must be a tuple - got {type(seeded_entries).__name__}')
-        
-        if len(seeded_entries) < 2:
-            raise ValueError(f'seeded_entries must contain at least two entries')
-
-        seen_entry_ids: set[int] = set()
-        seen_seeds: set[int] = set()
-
-        for i, seeded_entry in enumerate(seeded_entries):
-            if not isinstance(seeded_entry, SeededEntry):
-                raise TypeError(f'Seeded entry at index {i} must be a SeededEntry - got {type(seeded_entry).__name__}')
-            
-            if not isinstance(seeded_entry.entry, TournamentEntry):
-                raise TypeError(f'Seeded entry at index {i} must have an entry that is a TournamentEntry - got {type(seeded_entry.entry).__name__}')
-            
-            validation.validate_int_in_range(seeded_entry.seed, 1, len(seeded_entries), f'Seed of seeded entry at index {i}', 'DEStage')
-
-            if seeded_entry.entry.id in seen_entry_ids:
-                raise ValueError(f'Entry ID {seeded_entry.entry.id} occurs more than once in seeded_entries')
-
-            if seeded_entry.seed in seen_seeds:
-                raise ValueError(f'Seed {seeded_entry.seed} has occurred more than once in seeded_entries')
-
-            if i == 0:
-                tournament_id: int = seeded_entry.entry.tournament_id
-
-            if seeded_entry.entry.tournament_id != tournament_id:
-                raise ValueError(f'Seeded entry at index {i} must have tournament ID {tournament_id} - got {seeded_entry.entry.tournament_id}')
-            
-            seen_entry_ids.add(seeded_entry.entry.id)
-            seen_seeds.add(seeded_entry.seed)
-
     def _get_consolation_bracket(self) -> DEBracket:
         """
         Return the stage's existing consolation bracket.
