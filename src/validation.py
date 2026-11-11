@@ -459,3 +459,38 @@ def validate_bool(value: bool,
 
     if type(value) is not bool:
         raise TypeError(f'{var_name} must be a boolean{location} - got {type(value).__name__}')
+
+def validate_optional_bool(value: bool | None, 
+                           var_name: str, 
+                           class_name: str | None = None, 
+                           method_name: str | None = None, 
+                           *, 
+                           function_name: str | None = None) -> None:
+    """
+    Validate that a value is either a boolean or None.
+
+    Parameters
+    ----------
+    value : bool | None
+        The value to validate.
+    var_name : str
+        The name to use for the value in error messages.
+    class_name : str | None, default=None
+        The class in which validation is occurring.
+    method_name : str | None, default=None
+        The method in which validation is occurring.
+    function_name : str | None, default=None
+        The standalone function in which validation is occurring.
+
+    Raises
+    ------
+    TypeError
+        If value is neither a boolean nor None, or if a provided location name is not a string.
+    ValueError
+        If ``method_name`` is provided without ``class_name``,
+        or ``function_name`` is provided with ``class_name`` or ``method_name``.
+    """
+    location = _validation_location(class_name, method_name, function_name)
+
+    if value is not None and type(value) is not bool:
+        raise TypeError(f'{var_name} must be either a boolean or None{location} - got {type(value).__name__}')
