@@ -46,25 +46,25 @@ class StageResults(ABC):
     @property
     def tournament_id(self) -> int:
         """Return the tournament ID shared by the represented entries."""
-        return self._ranked_results[0].tournament_id
+        return self.ranked_results[0].tournament_id
 
     @property
     def num_entries(self) -> int:
         """Return the number of represented entries."""
-        return len(self._ranked_results)
+        return len(self.ranked_results)
 
     @property
     @abstractmethod
-    def _ranked_results(self) -> tuple[StageEntryResult, ...]:
+    def ranked_results(self) -> tuple[StageEntryResult, ...]:
         """Return the entry results in stage ranking order."""
         pass
 
     @property
     def ranked_entries(self) -> tuple[TournamentEntry, ...]:
         """Return the entries in the same order as ``ranked_results``."""
-        return tuple(result.entry for result in self._ranked_results)
+        return tuple(result.entry for result in self.ranked_results)
 
     @property
     def ranked_names(self) -> tuple[str, ...]:
         """Return the display names in the same order as ``ranked_results``."""
-        return tuple(result.display_name for result in self._ranked_results)
+        return tuple(result.display_name for result in self.ranked_results)
