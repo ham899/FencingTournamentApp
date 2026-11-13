@@ -895,6 +895,7 @@ class DEStage(TournamentStage):
         """
         return DEStageResults(
             stage_number=self.stage_number,
+            seeded_entries=self.seeded_entries,
             main_bracket=self.main_bracket,
             consolation_bracket=self.consolation_bracket
         )
