@@ -18,9 +18,14 @@ class SeededEntry:
         The tournament entry assigned the seed.
     seed : int
         The entry's one-based seed within the stage.
+    previous_place : int | None, optional
+        The entry's place in the previous stage. 
+        None if there was no previous stage.
     """
     entry: TournamentEntry
     seed: int
+    previous_place: int | None = None
+
 
     def __post_init__(self) -> None:
         """
@@ -29,13 +34,17 @@ class SeededEntry:
         Raises
         ------
         TypeError
-            If ``entry`` is not a TournamentEntry, or if ``seed`` is not an integer.
+            If ``entry`` is not a TournamentEntry, 
+            if ``seed`` or ``previous_place`` is not an integer.
         ValueError
-            If ``seed`` is not positive.
+            If ``seed`` or ``previous_place`` is not positive.
         """
+        location = self.__class__.__name__
+
         if not isinstance(self.entry, TournamentEntry):
             raise TypeError(
-                f'Entry must be a TournamentEntry in SeededEntry - got {type(self.entry).__name__}'
+                f'Entry must be a TournamentEntry in {location} - got {type(self.entry).__name__}'
             )
 
-        validation.validate_positive_int(self.seed, 'Seed', 'SeededEntry')
+        validation.validate_positive_int(self.seed, 'Seed', location)
+        validation.validate_optional_positive_int(self.previous_place, 'Previous place', location)
