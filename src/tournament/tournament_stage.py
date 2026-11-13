@@ -6,6 +6,7 @@ import validation
 
 from entities.seeded_entry import SeededEntry
 from entities.tournament_entry import TournamentEntry
+from tournament.results.stage.stage_results import StageResults
 
 
 @dataclass(eq=False)
@@ -13,19 +14,18 @@ class TournamentStage(ABC):
     """
     Define the shared interface and initial seeding for a tournament stage.
 
-    A stage contains entries from one tournament. Its concrete subclass manages
-    poule rounds or a direct-elimination bracket and calculates result snapshots.
-    During initialization, the entries are validated and stored in ascending
-    seed order. Subclasses must call ``super().__post_init__()`` before using
-    the entries to create rounds or brackets.
+    A stage contains entries from one tournament. 
+    Its concrete subclass manages poule rounds or a direct-elimination bracket and calculates result snapshots.
+    During initialization, the entries are validated and stored in ascending seed order. 
+    Subclasses must call ``super().__post_init__()`` before using the entries to create rounds or brackets.
 
     Attributes
     ----------
     stage_number : int
         The stage's one-based position within its tournament.
     seeded_entries : tuple[SeededEntry, ...]
-        The participating entries with unique seeds from 1 through the number
-        of entries, stored in ascending seed order after initialization.
+        The participating entries with unique seeds from 1 through the number of entries, 
+        stored in ascending seed order after initialization.
     """
     stage_number: int
     seeded_entries: tuple[SeededEntry, ...]
@@ -39,13 +39,12 @@ class TournamentStage(ABC):
         Raises
         ------
         TypeError
-            If the stage number is not an integer, seeded_entries is not a
-            tuple, or an item or its seed has an invalid type.
+            If the stage number is not an integer, 
+            seeded_entries is not a tuple, or an item or its seed has an invalid type.
         ValueError
-            If the stage number is not positive, fewer than two entries are
-            supplied, entries come from different tournaments, an entry or
-            fencer is repeated, or the seeds are not unique integers from
-            1 through the number of entries.
+            If the stage number is not positive, fewer than two entries are supplied, 
+            entries come from different tournaments, an entry or fencer is repeated, 
+            or the seeds are not unique integers from 1 through the number of entries.
         """
         location = type(self).__name__
 
@@ -82,8 +81,13 @@ class TournamentStage(ABC):
 
     # --- Predicate Methods ---
     @abstractmethod
+    def has_started(self) -> bool:
+        """Return whether competition has begun in this stage."""
+        pass
+
+    @abstractmethod
     def is_complete(self) -> bool:
-        """Return whether this stage has completed all its required rounds or brackets."""
+        """Return whether this stage has met its configured completion conditions."""
         pass
 
     def is_incomplete(self) -> bool:
@@ -93,19 +97,26 @@ class TournamentStage(ABC):
 
     # --- Result Calculation Methods ---
     @abstractmethod
-    def calculate_results(self):
-        """
-        Calculate a snapshot of this stage's current results.
-
-        The concrete stage determines how its results are calculated. 
-        The stage may be incomplete when this method is called.
-
-        Returns
-        -------
-        PouleStageResults | DEStageResults
-            A result snapshot for the concrete stage type.
-        """
+    def calculate_results(self) -> StageResults:
+        """Return a snapshot of the stage's current results, whether complete or incomplete."""
         pass
+
+    def calculate_final_results(self) -> StageResults:
+        """
+        Calculate results for a completed stage.
+
+        Raises
+        ------
+        RuntimeError
+            If the stage is incomplete.
+        """
+        if self.is_incomplete():
+            raise RuntimeError(
+                'Cannot calculate final results for an incomplete stage '
+                f'{self.stage_number} in tournament {self.tournament_id}'
+            )
+
+        return self.calculate_results()
 
 
     # --- Validation Helper Methods ---
@@ -127,8 +138,7 @@ class TournamentStage(ABC):
             its entry is not a TournamentEntry, or a seed is not an integer.
         ValueError
             If fewer than two entries are supplied, entries do not share a tournament ID, 
-            an entry or fencer ID is repeated, 
-            or seeds are duplicated or outside the range from 1 through the number of entries.
+            an entry or fencer ID is repeated, or seeds are duplicated or outside the range from 1 through the number of entries.
         """
         if not isinstance(seeded_entries, tuple):
             raise TypeError(f'Seeded entries must be a tuple in {location}')
