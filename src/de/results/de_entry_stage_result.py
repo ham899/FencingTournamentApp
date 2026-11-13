@@ -29,3 +29,10 @@ class DEEntryStageResult(StageEntryResult):
         Indicates whether the placement is a tie or not.
         None if the placement has not been assigned yet.
     """
+    @property
+    def label(self) -> str:
+        """Return a label identifying the entry, stage, and tournament."""
+        return (
+            f'{self.__class__.__name__} for {self.display_name} (ID={self.entry.id}) '
+            f'in stage {self.stage_number} in tournament {self.tournament_id}'
+        )
