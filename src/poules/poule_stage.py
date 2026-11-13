@@ -39,6 +39,10 @@ class PouleStage(TournamentStage):
     score_to_win : int | tuple[int, ...], default=5
         The target score for every round, or one target score per round
         in round-number order. Keyword-only.
+    cut_value : float | None
+        The percentile-rank cutoff, applied only after all configured rounds are complete. 
+        Must be in [0.0, 1.0) and low enough to guarantee at least two advancing entries. 
+        Ties are preserved. None is normalized to 0.0, which applies no cut. Keyword-only.
     random_seed : int | None, default=None
         A nonnegative seed for ordering complete ranking ties.
         If None, a seed is generated and stored during initialization. Keyword-only.
@@ -56,6 +60,9 @@ class PouleStage(TournamentStage):
         The target score and maximum permitted recorded score for either entry in a match.
         A single integer applies to every round.
         A tuple supplies one value per round in round-number order.
+    cut_value : float
+        The normalized percentile-rank cutoff.
+        Applied only when the entire stage is complete.
     random_seed : int
         The seed used to order complete ranking ties.
     poule_rounds : list[PouleRound]
@@ -65,6 +72,7 @@ class PouleStage(TournamentStage):
     """
     num_rounds: int = field(default=1, kw_only=True)
     score_to_win: int | tuple[int, ...] = field(default=5, kw_only=True)
+    cut_value: float | None = field(default=None, kw_only=True)
     random_seed: int | None = field(default=None, kw_only=True)
     poule_rounds: list[PouleRound] = field(init=False, default_factory=list)
 
@@ -86,12 +94,15 @@ class PouleStage(TournamentStage):
             if `seeded_entries` is not a tuple, if an item is not a ``SeededEntry``,
             if an underlying entry is not a ``TournamentEntry``, if a seed is not an integer,
             if `score_to_win` is neither an integer nor a tuple of integers,
+            if `cut_value` is neither a float nor None,
             or if `random_seed` is neither an integer nor None.
         ValueError
             If `stage_number` or `num_rounds` is not positive, if fewer than two entries are supplied,
             if the entries do not share a tournament ID, if an entry ID or fencer ID is repeated,
             if the seeds are not unique integers from 1 through the number of entries,
-            if a ``score_to_win`` value is not positive, if the `score_to_win` tuple length differs from `num_rounds`,
+            if a ``score_to_win`` value is not positive,
+            if `cut_value` is outside [0.0, 1.0), or could leave fewer than two advancing entries,
+            if the `score_to_win` tuple length differs from `num_rounds`,
             or if ``random_seed`` is negative.
         """
         location = 'PouleStage'
@@ -100,6 +111,12 @@ class PouleStage(TournamentStage):
         super().__post_init__()
         validation.validate_positive_int(self.num_rounds, 'num_rounds', location)
         self._validate_score_to_win(self.score_to_win)
+        
+        # Validate the cut value and assign a cut value of 0 if None is provided
+        self._validate_cut_value(self.cut_value, location)
+
+        if self.cut_value is None:
+            self.cut_value = 0.0
 
         # Validate the random seed and assign one if none is provided
         validation.validate_optional_non_negative_int(self.random_seed, 'random_seed', location)
@@ -365,14 +382,20 @@ class PouleStage(TournamentStage):
         The current round does not need to be complete.
         Complete ranking ties are ordered using the stage's stored random seed.
 
+        The configured cutoff is applied only after all configured rounds are complete; 
+        otherwise, all entries remain ACTIVE.
+
         Returns
         -------
         PouleStageResults
             A newly calculated snapshot of the aggregate stage results in descending ranking order.
         """
+        cut_value = self.cut_value if self.is_complete() else None
+
         return PouleStageResults(
             stage_number=self.stage_number, 
             poule_rounds=self.poule_rounds, 
+            cut_value=cut_value,
             random_seed=self.random_seed
         )
 
@@ -572,3 +595,45 @@ class PouleStage(TournamentStage):
 
             for i, score in enumerate(score_to_win):
                 validation.validate_positive_int(score, f'score_to_win value at index {i}', location)
+
+    def _validate_cut_value(self, cut_value: float | None, location: str) -> None:
+        """
+        Validate the percentile cutoff and guarantee two advancing entries.
+
+        Use the no-tie case to determine the maximum permitted cutoff.
+        Preserving ties may cause additional entries to advance.
+
+        Parameters
+        ----------
+        cut_value : float | None
+            The percentile-rank cutoff, or None to apply no cut.
+        location : str
+            The calling class or method name used in error messages.
+
+        Raises
+        ------
+        TypeError
+            If cut_value is neither a float nor None.
+        ValueError
+            If cut_value is outside [0.0, 1.0), or could leave fewer than two advancing entries.
+        """
+        if cut_value is not None:
+            if not isinstance(cut_value, float):
+                raise TypeError(
+                    f'Cut value must be a float or None in {location}'
+                    f' - got {type(cut_value).__name__}'
+                )
+            
+            if not (0.0 <= cut_value < 1.0):
+                raise ValueError(
+                    f'Cut value must be in [0.0, 1.0) in {location}'
+                    f' - got {cut_value}'
+                )
+            
+            second_highest_percentile = (self.num_entries - 1) / self.num_entries
+
+            if cut_value >= second_highest_percentile:
+                raise ValueError(
+                    f'Cut value must be less than {second_highest_percentile} to guarantee '
+                    f'at least two advancing entries in {location} - got {cut_value}'
+                )
