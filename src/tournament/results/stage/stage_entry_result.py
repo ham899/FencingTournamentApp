@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import validation
 
 from entities import Fencer, TournamentEntry
-from tournament.results.stage import StageEntryStatus
+from tournament.results.stage.stage_entry_status import StageEntryStatus
 
 
 @dataclass(frozen=True, slots=True)
