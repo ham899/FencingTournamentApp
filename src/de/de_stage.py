@@ -6,7 +6,7 @@ from de.de_bracket import DEBracket
 from de.de_bracket_role import DEBracketRole
 from de.de_matchup import DEMatchup
 from de.results.de_stage_results import DEStageResults
-from entities.tournament_entry import TournamentEntry
+from entities import TournamentEntry
 from tournament.tournament_stage import TournamentStage
 
 

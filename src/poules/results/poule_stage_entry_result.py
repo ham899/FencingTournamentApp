@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import validation
 
 from poules.results.poule_stats import PouleStats
-from tournament.results.stage.stage_entry_result import StageEntryResult
+from tournament.results.stage import StageEntryResult
 
 
 @dataclass(frozen=True, slots=True)

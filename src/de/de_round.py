@@ -4,7 +4,7 @@ import validation
 
 from de.de_bracket_role import DEBracketRole
 from de.de_matchup import DEMatchup
-from entities.tournament_entry import TournamentEntry
+from entities import TournamentEntry
 from matches.de_match import DEMatch
 from utils import is_power_of_two
 

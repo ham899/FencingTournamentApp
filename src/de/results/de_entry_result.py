@@ -3,7 +3,7 @@ from enum import Enum, auto
 
 import validation
 
-from entities.tournament_entry import TournamentEntry
+from entities import TournamentEntry
 
 
 class DEEntryStatus(Enum):

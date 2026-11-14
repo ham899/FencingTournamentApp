@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
-from tournament.configs.de_config import DEConfig
-from tournament.configs.poule_config import PouleConfig
+from tournament.configs import DEConfig, PouleConfig
 from tournament.tournament_type import TournamentType
 
 

@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 
 import validation
 
-from entities.tournament_entry import TournamentEntry
+from entities import TournamentEntry
 from matches.poule_match import PouleMatch
 from poules.poule_orders import POULE_BOUT_ORDER
 from poules.results.poule_result import PouleResult

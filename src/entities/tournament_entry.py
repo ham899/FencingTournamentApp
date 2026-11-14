@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 import validation
 
-from entities.fencer import Fencer
+from entities import Fencer
 
 
 @dataclass(eq=False)

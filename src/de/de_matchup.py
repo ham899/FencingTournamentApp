@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 import validation
 
 from de.de_bracket_role import DEBracketRole
-from entities.tournament_entry import TournamentEntry
+from entities import TournamentEntry
 from matches.de_match import DEMatch
 
 

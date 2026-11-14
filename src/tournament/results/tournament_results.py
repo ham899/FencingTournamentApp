@@ -2,10 +2,8 @@ from dataclasses import dataclass, field, InitVar
 
 import validation
 
-from entities.tournament_entry import TournamentEntry
-from tournament.results.stage.stage_entry_result import StageEntryResult
-from tournament.results.stage.stage_entry_status import StageEntryStatus
-from tournament.results.stage.stage_results import StageResults
+from entities import TournamentEntry
+from tournament.results.stage import StageEntryResult, StageEntryStatus, StageResults
 from tournament.results.tournament_entry_result import TournamentEntryResult, TournamentEntryStatus
 from tournament.tournament_stage import TournamentStage
 

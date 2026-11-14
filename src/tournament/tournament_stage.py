@@ -4,9 +4,8 @@ from abc import ABC, abstractmethod
 
 import validation
 
-from entities.seeded_entry import SeededEntry
-from entities.tournament_entry import TournamentEntry
-from tournament.results.stage.stage_results import StageResults
+from entities import SeededEntry, TournamentEntry
+from tournament.results.stage import StageResults
 
 
 @dataclass(eq=False)

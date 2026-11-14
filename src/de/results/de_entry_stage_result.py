@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from tournament.results.stage.stage_entry_result import StageEntryResult
+from tournament.results.stage import StageEntryResult
 
 
 @dataclass(frozen=True, slots=True)

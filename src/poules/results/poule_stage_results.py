@@ -5,12 +5,11 @@ from typing import NamedTuple
 
 import validation
 
-from entities.tournament_entry import TournamentEntry
+from entities import TournamentEntry
 from poules.poule_round import PouleRound
-from poules.results.poule_stats import PouleStats
 from poules.results.poule_stage_entry_result import PouleStageEntryResult
-from tournament.results.stage.stage_results import StageResults
-from tournament.results.stage.stage_entry_status import StageEntryStatus
+from poules.results.poule_stats import PouleStats
+from tournament.results.stage import StageEntryStatus, StageResults
 
 
 class _PouleStanding(NamedTuple):

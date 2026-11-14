@@ -5,7 +5,7 @@ import validation
 from de.de_bracket_role import DEBracketRole
 from de.de_matchup import DEMatchup
 from de.de_round import DERound
-from entities.tournament_entry import TournamentEntry
+from entities import TournamentEntry
 from matches.de_match import DEMatch
 
 

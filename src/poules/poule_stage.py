@@ -3,7 +3,7 @@ from random import Random
 
 import validation
 
-from entities.tournament_entry import TournamentEntry
+from entities import TournamentEntry
 from poules.poule_round import PouleRound
 from poules.results.poule_stage_results import PouleStageResults
 from tournament.tournament_stage import TournamentStage

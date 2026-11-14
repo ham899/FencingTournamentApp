@@ -3,8 +3,7 @@ from dataclasses import dataclass, field
 
 import validation
 
-from entities.fencer import Fencer
-from entities.tournament_entry import TournamentEntry
+from entities import Fencer, TournamentEntry
 from matches.match import Match
 
 

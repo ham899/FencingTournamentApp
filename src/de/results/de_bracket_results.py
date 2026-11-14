@@ -4,8 +4,7 @@ import validation
 
 from de.de_bracket import DEBracket
 from de.results.de_entry_result import DEEntryResult, DEEntryStatus
-from entities.seeded_entry import SeededEntry
-from entities.tournament_entry import TournamentEntry
+from entities import TournamentEntry, SeededEntry
 
 
 @dataclass(slots=True)

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 import validation
 
-from entities.tournament_entry import TournamentEntry
+from entities import TournamentEntry
 
 
 @dataclass(frozen=True)

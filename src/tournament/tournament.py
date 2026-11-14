@@ -8,16 +8,11 @@ import validation
 
 from de.de_stage import DEStage
 from de.results.de_stage_results import DEStageResults
-from entities.fencer import Fencer
-from entities.seeded_entry import SeededEntry
-from entities.tournament_entry import TournamentEntry
+from entities import Fencer, SeededEntry, TournamentEntry
 from poules.poule_stage import PouleStage
 from poules.results.poule_stage_results import PouleStageResults
-from tournament.configs.poule_config import PouleConfig
-from tournament.configs.de_config import DEConfig
-from tournament.configs.tournament_config import TournamentConfig
-from tournament.results.stage.stage_entry_status import StageEntryStatus
-from tournament.results.stage.stage_results import StageResults
+from tournament.configs import DEConfig, PouleConfig, TournamentConfig
+from tournament.results.stage import StageEntryStatus, StageResults
 from tournament.results.tournament_results import TournamentResults
 from tournament.tournament_stage import TournamentStage
 

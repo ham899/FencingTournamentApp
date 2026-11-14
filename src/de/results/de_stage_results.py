@@ -5,9 +5,8 @@ from de.de_bracket_role import DEBracketRole
 from de.results.de_bracket_results import DEBracketResults
 from de.results.de_entry_result import DEEntryResult, DEEntryStatus
 from de.results.de_entry_stage_result import DEEntryStageResult
-from entities.seeded_entry import SeededEntry
-from tournament.results.stage.stage_results import StageResults
-from tournament.results.stage.stage_entry_result import StageEntryStatus
+from entities import SeededEntry
+from tournament.results.stage import StageEntryStatus, StageResults
 
 
 @dataclass(frozen=True, slots=True)

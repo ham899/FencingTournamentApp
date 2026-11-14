@@ -3,9 +3,8 @@ from dataclasses import dataclass
 
 import validation
 
-from entities.fencer import Fencer
-from entities.tournament_entry import TournamentEntry
-from tournament.results.stage.stage_entry_status import StageEntryStatus
+from entities import Fencer, TournamentEntry
+from tournament.results.stage import StageEntryStatus
 
 
 @dataclass(frozen=True, slots=True)

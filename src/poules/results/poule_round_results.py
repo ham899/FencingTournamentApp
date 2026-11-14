@@ -4,7 +4,7 @@ from dataclasses import dataclass, field, InitVar
 
 import validation
 
-from entities.tournament_entry import TournamentEntry
+from entities import TournamentEntry
 from poules.poule import Poule
 from poules.results.poule_entry_result import PouleEntryResult
 from poules.results.poule_result import PouleResult
