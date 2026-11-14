@@ -630,7 +630,10 @@ class Tournament:
 
     def calculate_results(self) -> TournamentResults:
         """Return a snapshot of the tournament's current results."""
-        return TournamentResults(self.stages)
+        return TournamentResults(
+            stages=self.stages, 
+            is_complete=self.is_complete()
+        )
 
     def calculate_final_results(self) -> TournamentResults:
         """
