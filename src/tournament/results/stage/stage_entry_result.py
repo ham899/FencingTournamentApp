@@ -16,12 +16,14 @@ class StageEntryResult(ABC):
     Provide common result fields and validation for stage-specific subclasses.
     Subclasses must implement the ``label`` property.
 
-    Fields cannot be reassigned after initialization. 
-    The tournament entry is retained by reference rather than copied.
+    Position identifies the entry's unique one-based index in the containing stage snapshot's ranked_results. 
+    It provides an ordering even when the entry's placement is unresolved and may change between snapshots.
 
-    Positions uniquely order entries, while places may be shared by tied entries. 
-    Rankings may be provisional while the stage is incomplete.
-    ``place`` and ``is_tie`` must either both be assigned or both be None.
+    Place represents a confirmed placement within this stage, not necessarily a final tournament placement. 
+    Multiple entries may share a confirmed place. A stage may confirm some placements before the entire stage is complete.
+
+    Fields cannot be reassigned after initialization.
+    The tournament entry is retained by reference rather than copied.
 
     Attributes
     ----------
@@ -30,23 +32,31 @@ class StageEntryResult(ABC):
     stage_number : int
         The stage's one-based position within the tournament.
     status : StageEntryStatus
-        The entry's status within the stage.
-    position : int | None
-        The entry's unique one-based position in the stage ranking.
-        Used to order advancing entries for seeding into the next stage.
-        None if a position has not been assigned.
+        The entry's participation or elimination status within the stage.
+        Status does not by itself indicate whether a placement is confirmed.
+    position : int
+        The entry's unique one-based index in the stage snapshot's ranked_results.
+        Defines display order and the relative seeding order of advancing entries.
+        Does not imply a confirmed placement.
     place : int | None
-        The entry's one-based placement within the stage.
-        Entries tied in the ranking share the same place.
-        None if a placement has not been assigned.
+        The entry's confirmed one-based placement within the stage.
+        Entries with a confirmed tie share the same place.
+        None while the placement is unresolved.
     is_tie : bool | None
-        Whether the assigned place is shared with another entry.
-        None if a placement has not been assigned.
+        Whether the confirmed place is shared with another entry.
+        None exactly when place is None.
+
+    Notes
+    -----
+    The containing stage-results calculation assigns positions consecutively from 1 and determines placements and ties. 
+    This class validates individual field values but cannot verify ordering, uniqueness, or ties across entries.
+
+    ``place`` and ``is_tie`` must either both be assigned or both be None.
     """
     entry: TournamentEntry
     stage_number: int
     status: StageEntryStatus
-    position: int | None
+    position: int
     place: int | None
     is_tie: bool | None
 
@@ -63,8 +73,9 @@ class StageEntryResult(ABC):
         ------
         TypeError
             If the entry or its checked attributes have invalid types,
-            if ``status`` is not a StageEntryStatus, if ``stage_number`` is not an integer, 
-            if ``position`` or ``place`` is neither an integer nor None, 
+            if ``status`` is not a StageEntryStatus, 
+            if ``stage_number`` or ``position`` is not an integer, 
+            if ``place`` is neither an integer nor None, 
             or if ``is_tie`` is neither a boolean nor None.
         ValueError
             If a required integer is not positive, 
@@ -74,7 +85,7 @@ class StageEntryResult(ABC):
 
         self._validate_entry(self.entry, location)
         validation.validate_positive_int(self.stage_number, 'stage_number', location)
-        validation.validate_optional_positive_int(self.position, 'position', location)
+        validation.validate_positive_int(self.position, 'position', location)
         validation.validate_optional_positive_int(self.place, 'place', location)
         validation.validate_optional_bool(self.is_tie, 'is_tie', location)
         self._validate_place_is_tie_relationship(self.place, self.is_tie, location)
@@ -147,9 +158,9 @@ class StageEntryResult(ABC):
         Parameters
         ----------
         place : int | None
-            The entry's assigned placement, or None if unassigned.
+            The entry's confirmed placement, or None if unassigned.
         is_tie : bool | None
-            Whether the assigned placement is tied, or None if unassigned.
+            Whether the confirmed placement is tied, or None if unassigned.
         location : str
             The class name to include in validation error messages.
 
