@@ -951,7 +951,7 @@ class Tournament:
         Validate that the configured stages support a conservative participant count.
 
         Start with the validated initial entry count and follow the configured stage sequence. 
-        Estimate poule eliminations by rounding the cut count upward, 
+        Estimate the maximum poule eliminations by rounding the cut count downward, 
         without relying on ties to preserve additional entries.
 
         For stopped DE stages, 
