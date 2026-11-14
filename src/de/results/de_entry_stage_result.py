@@ -19,9 +19,10 @@ class DEEntryStageResult(StageEntryResult):
         The one-based position of the stage within the tournament.
     status : StageEntryStatus
         The status of the entry in the stage - either ACTIVE or ELIMINATED.
-    position : int | None
-        The position in the ordering of the ranked entry results. 
-        None if position has not been determined yet.
+    position : int
+        The entry's unique one-based index in the stage snapshot's ranked_results.
+        Defines display order and the relative seeding order of advancing entries.
+        Does not imply a confirmed placement.
     place : int | None
         The placement of the entry in the stage.
         None if placement has not been assigned yet.

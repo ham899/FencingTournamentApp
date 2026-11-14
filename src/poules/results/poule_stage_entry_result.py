@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+import validation
+
 from poules.results.poule_stats import PouleStats
 from tournament.results.stage.stage_entry_result import StageEntryResult
 
@@ -28,19 +30,25 @@ class PouleStageEntryResult(StageEntryResult):
         The poule stage's one-based position within the tournament.
     status : StageEntryStatus
         The entry's elimination status within the stage.
-    position : int | None
-        The entry's unique one-based position in the aggregate stage ranking.
-        Used to order advancing entries for seeding into the next stage.
-        None if a position has not been assigned.
+    position : int
+        The entry's unique one-based index in the stage snapshot's ranked_results.
+        Defines display order and the relative seeding order of advancing entries.
+        Does not imply a confirmed placement.
     place : int | None
-        The entry's one-based placement in the aggregate stage ranking.
-        Entries tied in the ranking share the same place.
-        None if a placement has not been assigned.
+        The entry's confirmed placement within the poule stage.
+        Equals current_place once the entire stage is complete; otherwise None.
     is_tie : bool | None
-        Whether the assigned place is shared with another entry.
-        None if a placement has not been assigned.
+        Whether the confirmed place is shared with another entry.
+        None while the stage is incomplete.
     poule_stats : PouleStats
         The entry's aggregate statistics across the included poule rounds.
+    current_place : int
+        The entry's current one-based placement in the aggregate stage ranking.
+        Entries equal on all ranking criteria share the same current place.
+        May change while the stage is incomplete.
+    is_current_tie : bool
+        Whether another entry shares the same current ranking criteria
+        and current place. May change while the stage is incomplete.
 
     Notes
     -----
@@ -53,21 +61,24 @@ class PouleStageEntryResult(StageEntryResult):
     or verify ties against other entries.
     """
     poule_stats: PouleStats
+    current_place: int
+    is_current_tie: bool
 
 
     # --- Initialization and Validation ---
     def __post_init__(self) -> None:
         """
-        Validate the inherited standing fields and supplied statistics object.
+        Validate the inherited fields, statistics, and current standing.
 
         Raises
         ------
         TypeError
-            If an inherited field or a checked entry attribute has an invalid type, 
-            or if ``poule_stats`` is not a PouleStats object.
+            If an inherited field or a checked entry attribute has an invalid type,
+            if ``poule_stats`` is not a PouleStats object, if ``current_place`` is not an integer,
+            or if ``is_current_tie`` is not a boolean.
         ValueError
-            If a required integer is not positive, 
-            or if exactly one of ``place`` and ``is_tie`` is None.
+            If a required integer is not positive, if exactly one of ``place`` and ``is_tie`` is None,
+            or if a confirmed place or tie flag differs from its current counterpart.
         """
         location = self.__class__.__name__
 
@@ -77,6 +88,21 @@ class PouleStageEntryResult(StageEntryResult):
             raise TypeError(
                 f'Poule statistics must be a PouleStats object in {location}'
                 f' - got {type(self.poule_stats).__name__}'
+            )
+
+        validation.validate_positive_int(self.current_place, 'Current place', location)
+
+        if self.place is not None and self.place != self.current_place:
+            raise ValueError(
+                f'A confirmed poule stage place must equal current_place in {location}'
+                f' - got place={self.place}, current_place={self.current_place}'
+            )
+        
+        validation.validate_bool(self.is_current_tie, 'Is current tie', location)
+
+        if self.place is not None and self.is_tie != self.is_current_tie:
+            raise ValueError(
+                f'Confirmed and current tie flags must agree in {location}'
             )
 
 

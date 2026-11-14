@@ -390,12 +390,11 @@ class PouleStage(TournamentStage):
         PouleStageResults
             A newly calculated snapshot of the aggregate stage results in descending ranking order.
         """
-        cut_value = self.cut_value if self.is_complete() else None
-
         return PouleStageResults(
             stage_number=self.stage_number, 
             poule_rounds=self.poule_rounds, 
-            cut_value=cut_value,
+            is_complete=self.is_complete(),
+            cut_value=self.cut_value,
             random_seed=self.random_seed
         )
 

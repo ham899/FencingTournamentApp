@@ -103,6 +103,9 @@ class PouleStageResults(StageResults):
     poule_rounds : list[PouleRound]
         A nonempty list of rounds ordered consecutively from round 1.
         The final supplied round may be incomplete.
+    is_complete : bool
+        Whether all configured poule rounds have been created and completed.
+        Controls confirmation of placements and application of the cutoff.
     cut_value : float | None, default=None
         The percentile-rank cutoff in [0.0, 1.0). 
         Entries at or below the cutoff are marked ELIMINATED; 
@@ -125,22 +128,25 @@ class PouleStageResults(StageResults):
 
     Notes
     -----
-    The caller decides whether a cut should apply, including whether the stage is complete. 
-    This class does not infer stage completion from the supplied rounds. 
-    Pass None or 0.0 when no cut should be applied.
+    The caller supplies stage completion because the existing rounds alone 
+    do not indicate whether additional rounds are configured.
+    Current placements and current tie flags are always calculated.
+    Confirmed placements, confirmed tie flags, 
+    and elimination decisions are assigned only when is_complete is True.
 
     Cuts preserve ties and eliminate at most the configured proportion of entries. 
     Fewer entries may be eliminated because of ties or the discrete entry count. 
     A tied group crossing the cutoff advances together.
     """
     poule_rounds: InitVar[list[PouleRound]]
+    is_complete: InitVar[bool]
     cut_value: float | None = None
     random_seed: int | None = None
     _ranked_results: tuple[PouleStageEntryResult, ...] = field(init=False)
 
 
     # --- Initialization and Validation ---
-    def __post_init__(self, poule_rounds: list[PouleRound]) -> None:
+    def __post_init__(self, poule_rounds: list[PouleRound], is_complete: bool) -> None:
         """
         Validate the inputs, normalize the cutoff, and calculate the snapshot.
 
@@ -148,17 +154,20 @@ class PouleStageResults(StageResults):
         ----------
         poule_rounds : list[PouleRound]
             The rounds from which to calculate aggregate statistics and standings.
+        is_complete : bool
+            Whether all configured poule rounds have been created and completed.
+            Controls confirmation of placements and application of the cutoff.
 
         Raises
         ------
         TypeError
             If stage_number is not an integer, if poule_rounds is not a list
-            or contains an item that is not a PouleRound, if cut_value is neither a float nor None, 
-            or if random_seed is neither an integer nor None.
+            or contains an item that is not a PouleRound, if ``is_complete`` is not a boolean, 
+            if cut_value is neither a float nor None, or if random_seed is neither an integer nor None.
         ValueError
             If stage_number is not positive, if cut_value is outside [0.0, 1.0),
-            if random_seed is negative, if poule_rounds is empty, 
-            if the rounds do not share a tournament and the specified stage, 
+            if random_seed is negative, if ``is_complete=True`` when any round is incomplete, 
+            if poule_rounds is empty, if the rounds do not share a tournament and the specified stage, 
             if their entry ID sets differ, if round numbers are not consecutive from 1,
             if any round except the last is incomplete, 
             or if a repeated entry ID refers to different fencer IDs across rounds.
@@ -168,7 +177,13 @@ class PouleStageResults(StageResults):
         # Validate input parameters
         super(PouleStageResults, self).__post_init__()
         self._validate_poule_rounds(poule_rounds, location)
-        
+        validation.validate_bool(is_complete, 'Is complete', location)
+
+        if is_complete and any(poule_round.is_incomplete() for poule_round in poule_rounds):
+            raise ValueError(
+                f'A complete poule stage cannot contain incomplete rounds in {location}'
+            )
+
         if self.cut_value is not None:
             if not isinstance(self.cut_value, float):
                 raise TypeError(f'Cut value must be a float or None in {location} - got {type(self.cut_value).__name__}')
@@ -181,7 +196,7 @@ class PouleStageResults(StageResults):
         validation.validate_optional_non_negative_int(self.random_seed, 'random_seed', location)
 
         # Calculate the stage results based on the poule rounds
-        object.__setattr__(self, '_ranked_results', self._calculate_ranked_results(poule_rounds))
+        object.__setattr__(self, '_ranked_results', self._calculate_ranked_results(poule_rounds, is_complete))
 
 
     # --- Properties ---
@@ -192,7 +207,7 @@ class PouleStageResults(StageResults):
 
 
     # --- Helper Methods ---
-    def _calculate_ranked_results(self, poule_rounds: list[PouleRound]) -> tuple[PouleStageEntryResult, ...]:
+    def _calculate_ranked_results(self, poule_rounds: list[PouleRound], is_complete: bool) -> tuple[PouleStageEntryResult, ...]:
         """
         Calculate the aggregate stage results from previously validated rounds.
 
@@ -203,6 +218,9 @@ class PouleStageResults(StageResults):
         ----------
         poule_rounds : list[PouleRound]
             The previously validated rounds whose results are combined.
+        is_complete : bool
+            Whether all configured poule rounds have been created and completed.
+            Controls confirmation of placements and application of the cutoff.
 
         Returns
         -------
@@ -217,7 +235,7 @@ class PouleStageResults(StageResults):
         entry_stats = self._accumulate_entry_stats(poule_rounds)
         ranked_items = self._rank_entry_stats(entry_stats)
         standings = self._calculate_standings(ranked_items)
-        return self._build_entry_results(standings)
+        return self._build_entry_results(standings, is_complete)
 
     def _accumulate_entry_stats(self, poule_rounds: list[PouleRound]) -> tuple[tuple[TournamentEntry, PouleStats], ...]:
         """
@@ -372,17 +390,22 @@ class PouleStageResults(StageResults):
 
         return tuple(standings)
 
-    def _build_entry_results(self, standings: tuple[_PouleStanding, ...]) -> tuple[PouleStageEntryResult, ...]:
+    def _build_entry_results(self, standings: tuple[_PouleStanding, ...], is_complete: bool) -> tuple[PouleStageEntryResult, ...]:
         """
-        Construct entry result snapshots and apply the configured cutoff.
+        Construct entry result snapshots and apply the configured cutoff if the stage is complete.
 
-        Mark entries ELIMINATED when their percentile rank is at or below cut_value; otherwise, mark them ACTIVE. 
+        If the stage is complete, 
+        mark entries ELIMINATED when their percentile rank is at or below cut_value; otherwise, mark them ACTIVE. 
+
         Tied entries share a percentile rank and therefore receive the same status.
 
         Parameters
         ----------
         standings : tuple[_PouleStanding, ...]
             The calculated intermediate standings in ranking order.
+        is_complete : bool
+            Whether all configured poule rounds have been created and completed.
+            Controls confirmation of placements and application of the cutoff.
 
         Returns
         -------
@@ -392,7 +415,8 @@ class PouleStageResults(StageResults):
         stage_results: list[PouleStageEntryResult] = []
 
         for standing in standings:
-            status = StageEntryStatus.ELIMINATED if standing.percentile <= self.cut_value else StageEntryStatus.ACTIVE
+            is_eliminated = is_complete and standing.percentile <= self.cut_value
+            status = StageEntryStatus.ELIMINATED if is_eliminated else StageEntryStatus.ACTIVE
 
             stage_results.append(
                 PouleStageEntryResult(
@@ -400,9 +424,11 @@ class PouleStageResults(StageResults):
                     stage_number=self.stage_number,
                     status=status,
                     position=standing.position,
-                    place=standing.place,
-                    is_tie=standing.is_tie,
-                    poule_stats=standing.poule_stats
+                    place=standing.place if is_complete else None,
+                    is_tie=standing.is_tie if is_complete else None,
+                    poule_stats=standing.poule_stats,
+                    current_place=standing.place, 
+                    is_current_tie=standing.is_tie
                 )
             )
 
