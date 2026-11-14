@@ -3,6 +3,7 @@ from typing import ClassVar
 
 import validation
 
+
 @dataclass(eq=False)
 class Fencer:
     """
