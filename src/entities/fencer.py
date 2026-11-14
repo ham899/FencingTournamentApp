@@ -6,7 +6,8 @@ import validation
 @dataclass(eq=False)
 class Fencer:
     """
-    Represents a fencer with an ID and a display name; a single fencer can participate in multiple tournaments (be multiple entries).
+    Represents a fencer with an ID and a display name; 
+    a single fencer can participate in multiple tournaments (be multiple entries).
     
     Attributes
     ----------
@@ -14,37 +15,39 @@ class Fencer:
         A unique identifier for the fencer.
 
     display_name : str
-        The name of the fencer to be displayed in the tournament; leading and trailing whitespace will be trimmed from the input.
+        The name of the fencer to be displayed in the tournament; 
+        leading and trailing whitespace will be trimmed from the input.
         
     max_name_length : ClassVar[int]
-        A class variable that defines the maximum allowed length for a fencer's display name; it is set to 25 characters.
+        A class variable that defines the maximum allowed length for a fencer's display name; 
+        it is set to 50 characters.
     """
     id: int
     display_name: str
     
-    max_name_length: ClassVar[int] = 25
+    max_name_length: ClassVar[int] = 50
 
     # --- Initialization and Validation ---
     def __post_init__(self) -> None:
         """
         Validates the fencer's ID and display name upon initialization. 
-        The display name is also trimmed of leading and trailing whitespace; the trimmed name is used for input string length.
+        The display name is also trimmed of leading and trailing whitespace; 
+        the trimmed name is used for input string length.
 
         Raises
         ------
         TypeError
             If the fencer's ID is not an integer or if the display name is not a string.
         ValueError
-            If the fencer's ID is not a positive integer or if the display name is empty or exceeds the maximum allowed length after trimming.
+            If the fencer's ID is not a positive integer, 
+            or if the display name is empty or exceeds the maximum allowed length after trimming.
         """
         validation.validate_positive_int(self.id, 'ID', 'Fencer')
 
-        validated_name = Fencer._validate_display_name(self.display_name)
-        
-        # Set valid display name
+        validated_name = Fencer._validate_display_name(self.display_name)        
         self.display_name = validated_name
 
-    # --- Dunder Methods ---
+    # --- Equality ---
     def __eq__(self, other: object) -> bool:
         """
         Determines if two fencers are equal based on their IDs.
@@ -62,6 +65,7 @@ class Fencer:
         """
         if not isinstance(other, Fencer):
             return False
+
         return self.id == other.id
 
 
@@ -73,7 +77,8 @@ class Fencer:
         Parameters
         ----------
         name : str
-            The new display name for the fencer; leading and trailing whitespace will be trimmed from the input.
+            The new display name for the fencer; 
+            leading and trailing whitespace will be trimmed from the input.
 
         Raises
         ------
@@ -90,7 +95,8 @@ class Fencer:
     @staticmethod
     def _validate_display_name(name: str) -> str:
         """
-        Validates a display name by trimming leading and trailing whitespace and checking that the resulting name is a valid length.
+        Validates a display name by trimming leading and trailing whitespace, 
+        and checking that the resulting name is a valid length.
 
         Parameters
         ----------
@@ -117,6 +123,9 @@ class Fencer:
 
         # Check that name is a valid length
         if len(name) == 0 or len(name) > Fencer.max_name_length:
-            raise ValueError(f'Input name must be between 1-{Fencer.max_name_length} characters inclusive, ignoring leading and trailing whitespace')
+            raise ValueError(
+                f'Input name must be between 1-{Fencer.max_name_length} characters inclusive'
+                ', ignoring leading and trailing whitespace'
+            )
         
         return name
