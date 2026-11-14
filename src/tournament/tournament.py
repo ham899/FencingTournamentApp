@@ -1,7 +1,7 @@
 import datetime as dt
 
 from dataclasses import dataclass, field, InitVar
-from math import ceil
+from math import floor
 from zoneinfo import ZoneInfo
 
 import validation
@@ -980,7 +980,7 @@ class Tournament:
         
             if isinstance(stage_config, PouleConfig):
                 cut_value = self._get_post_stage_cut_value(stage_index)
-                remaining_entries -= ceil(remaining_entries * cut_value)
+                remaining_entries -= floor(remaining_entries * cut_value)
                 continue
 
             if stage_config.has_third_place_match and remaining_entries < 4:
