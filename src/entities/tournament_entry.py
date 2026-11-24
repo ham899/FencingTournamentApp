@@ -2,7 +2,8 @@ from dataclasses import dataclass
 
 import validation
 
-from entities import Fencer, Weapon
+from entities.fencer import Fencer
+from entities.weapon import Weapon
 
 
 @dataclass(eq=False, frozen=True)
