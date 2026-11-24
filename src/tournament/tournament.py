@@ -8,9 +8,10 @@ import validation
 
 from de.de_stage import DEStage
 from de.results.de_stage_results import DEStageResults
-from entities import Fencer, SeededEntry, TournamentEntry
+from entities import Fencer, SeededEntry, Weapon, TournamentEntry
 from poules.poule_stage import PouleStage
 from poules.results.poule_stage_results import PouleStageResults
+from tournament.age_category import AgeCategory
 from tournament.configs import DEConfig, PouleConfig, TournamentConfig
 from tournament.results.stage import StageEntryStatus, StageResults
 from tournament.results.tournament_results import TournamentResults
@@ -35,6 +36,11 @@ class Tournament:
         Used during initialization only.
     config : TournamentConfig
         The tournament's stage sequence and settings.
+    weapon : Weapon
+        The weapon assigned to every tournament entry at initialization.
+        Matches use the entries' shared weapon to validate scored results.
+    age_category : AgeCategory, optional
+        The age division for the tournament. Defaults to ``AgeCategory.OPEN``.
     name : str | None, optional
         An optional descriptive name for the tournament.
     random_seed : int | None, optional
@@ -56,6 +62,8 @@ class Tournament:
     id: int
     fencers: InitVar[tuple[Fencer, ...]]
     config: TournamentConfig
+    weapon: Weapon
+    age_category: AgeCategory = AgeCategory.OPEN
 
     name: str | None = None
     random_seed: int | None = None
@@ -84,6 +92,8 @@ class Tournament:
         validation.validate_positive_int(self.id, 'Tournament ID', location)
         self._validate_fencers(fencers, location)
         self._validate_config(self.config, location)
+        self._validate_weapon(self.weapon, location)
+        self._validate_age_category(self.age_category, location)
         validation.validate_optional_string(self.name, 'Tournament name', location)
         self._validate_date(self.date, location)
         validation.validate_optional_non_negative_int(self.random_seed, 'Random seed', location)
@@ -652,17 +662,17 @@ class Tournament:
         """
         Create tournament entries and initial seeds from validated fencers.
 
-        Fencers retain their supplied order. 
-        Entry IDs and seeds are assigned consecutively from 1. 
-        Entry IDs are local to this tournament.
-        Each seeded entry starts with no previous placement.
+        Each entry receives the tournament's ID and weapon. 
+        Entry IDs and seeds are assigned consecutively from 1 in the supplied fencer order. 
+        Entry IDs are local to this tournament. Each seeded entry starts with no previous placement.
         """
         return tuple(
             SeededEntry(
                 entry=TournamentEntry(
                     id=seed,
                     tournament_id=self.id,
-                    fencer=fencer
+                    fencer=fencer, 
+                    weapon=self.weapon
                 ),
                 seed=seed,
                 previous_place=None
@@ -861,18 +871,44 @@ class Tournament:
 
     def _validate_config(self, config: TournamentConfig, location: str) -> None:
         """
-        Validate the configuration object's type.
-
-        TournamentConfig is responsible for validating its own settings.
+        Validate the tournament configuration type.
 
         Raises
         ------
         TypeError
-            If config is not a TournamentConfig.
+            If ``config`` has a type other than ``TournamentConfig``.
         """
         if not isinstance(config, TournamentConfig):
             raise TypeError(
                 f'Config must be a TournamentConfig object in {location} - got {type(config).__name__}'
+            )
+
+    def _validate_weapon(self, weapon: Weapon, location: str) -> None:
+        """
+        Validate that weapon is a Weapon object.
+
+        Raises
+        ------
+        TypeError
+            If weapon is not a Weapon object.
+        """
+        if not isinstance(weapon, Weapon):
+            raise TypeError(
+                f'Weapon must be a Weapon object in {location} - got {type(weapon).__name__}'
+            )
+
+    def _validate_age_category(self, age_category: AgeCategory, location: str) -> None:
+        """
+        Validate the tournament's age category.
+
+        Raises
+        ------
+        TypeError
+            If ``age_category`` has a type other than ``AgeCategory``.
+        """
+        if not isinstance(age_category, AgeCategory):
+            raise TypeError(
+                f'Age category must be an AgeCategory object in {location} - got {type(age_category).__name__}'
             )
 
     def _validate_date(self, date: dt.datetime, location: str) -> None:

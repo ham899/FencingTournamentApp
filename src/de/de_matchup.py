@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 import validation
 
 from de.de_bracket_role import DEBracketRole
-from entities import TournamentEntry
+from entities import TournamentEntry, Weapon
 from matches.de_match import DEMatch
 
 
@@ -13,7 +13,8 @@ class DEMatchup:
     Represent one matchup position in a DE tableau.
 
     A matchup may contain zero, one, or two tournament entries. 
-    When both entries are present, the matchup automatically creates and stores a ``DEMatch`` between them. 
+    When both entries are present, they must use the same weapon. 
+    The matchup creates a ``DEMatch`` between them and exposes its weapon through the ``weapon`` property.
     A first-round matchup containing exactly one entry represents a bye and is complete without a match. 
     A later-round matchup containing one entry remains incomplete while awaiting its other entry.
 
@@ -35,7 +36,9 @@ class DEMatchup:
     entry2 : TournamentEntry | None, default=None
         The entry occupying the bottom branch, or ``None`` if that position is empty.
     score_to_win : int, default=15
-        The target score and maximum permitted recorded score for either entry.
+        Maximum permitted score for either entry. 
+        In a scored sabre match, the winner must reach this target. 
+        A foil or epee match may finish with a winning score below it.
     bracket_role : DEBracketRole, default=DEBracketRole.MAIN
         The role of the bracket within its DE stage that this matchup belongs to.
     match : DEMatch | None, default=None, init=False
@@ -141,7 +144,25 @@ class DEMatchup:
         while the winner of an even-numbered matchup advances to index ``1``.
         """
         return self.matchup_index % 2
-    
+
+    @property
+    def weapon(self) -> Weapon:
+        """
+        Return the weapon shared by the entries in the matchup's DE match.
+
+        Raises
+        ------
+        RuntimeError
+            If the matchup has no DE match. 
+            This includes a first-round bye and a matchup awaiting one or both entries.
+        """
+        if not self.has_match():
+            raise RuntimeError(
+                'Cannot infer a weapon type yet as no match is currently present in this matchup'
+            )
+
+        return self.match.weapon
+
     @property
     def entries(self) -> tuple[TournamentEntry | None, TournamentEntry | None]:
         """Return the matchup entries as ``(entry1, entry2)``."""
@@ -486,8 +507,9 @@ class DEMatchup:
         TypeError
             If either score is not an integer.
         ValueError
-            If the matchup is a BYE, if the matchup does not contain both entries, 
-            either score is outside the permitted range, the scores are tied, or the match is already complete.
+            If either entry is missing (including a bye), the match is already complete, 
+            either score is outside the permitted range, the scores are tied, 
+            or the winning sabre score is below ``score_to_win``.
         RuntimeError
             If both entries are present but the matchup's match is unexpectedly missing.
         """
@@ -524,8 +546,9 @@ class DEMatchup:
         TypeError
             If either score is not an integer.
         ValueError
-            If the matchup is a BYE, if the matchup does not contain both entries, 
-            the match is incomplete, either score is outside the permitted range, or the scores are equal.
+            If either entry is missing (including a bye), the match is incomplete, 
+            either score is outside the permitted range, the scores are tied, 
+            or the winning sabre score is below ``score_to_win``.
         RuntimeError
             If both entries are present but the matchup's match is missing.
         """

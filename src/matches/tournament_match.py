@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 
 import validation
 
-from entities import Fencer, TournamentEntry
+from entities import Fencer, Weapon, TournamentEntry
 from matches.match import Match
 
 
@@ -12,27 +12,24 @@ class TournamentMatch(Match, ABC):
     """
     Represent the shared behaviour of a match between two tournament entries.
 
-    ``TournamentMatch`` is an abstract subclass of ``Match`` and cannot
-    be instantiated directly. Concrete subclasses provide the match type,
-    descriptive label, and score representation used for forfeits.
+    The entries must be distinct, represent different fencers, 
+    belong to the same tournament, and use the same weapon. 
+    Their shared weapon determines which scoring rules ``Match`` applies. 
+    Concrete subclasses provide the match type and descriptive label.
 
-    Both entries are required. They must belong to the same 
-    tournament and represent different fencers.
-
-    A tournament match may be completed by recording a valid score or a
-    single forfeit. For a forfeit, ``forfeited_index`` identifies the losing
-    entry while the concrete subclass determines whether scores are recorded.
-    Resetting the match clears both its result and its forfeit state.
+    A tournament match can end with a scored result or a forfeit. 
+    For any weapon, a forfeit completes the match with both scores set to ``None``.
+    The forfeiting entry loses and its opponent wins.
 
     Attributes
     ----------
     entry1 : TournamentEntry
-        The entry in position 1 of the match.
+        The entry at index ``0``.
     entry2 : TournamentEntry
-        The entry in position 2 of the match.
+        The entry at index ``1``.
     forfeited_index : int | None, default=None, init=False
-        The index of the entry that forfeited: ``0`` for ``entry1``, 
-        ``1`` for ``entry2``, or ``None`` when the match is not a forfeit.
+        Index of the entry that forfeited, 
+        or ``None`` for an incomplete match or a scored result.
     """
     entry1: TournamentEntry
     entry2: TournamentEntry
@@ -45,21 +42,18 @@ class TournamentMatch(Match, ABC):
         """
         Validate the entries and inherited match configuration.
 
-        Each entry is validated individually before the pair is checked. A
-        valid pair contains distinct entries representing distinct fencers in
-        the same tournament. The inherited ``Match`` validation is then
-        used to validate ``score_to_win``.
-        
+        Validate each entry, check that the entries form a valid pair, 
+        and validate ``score_to_win`` through ``Match``.
+
         Raises
         ------
         TypeError
             If either entry, one of its validated attributes, 
             or ``score_to_win`` has an invalid type.
         ValueError
-            If either entry contains an invalid value, if ``score_to_win`` is
-            not positive, if the entries are equal, if they represent the
-            same fencer, or if they belong to different tournaments.
-        """    
+            If an identifier or ``score_to_win`` is zero or negative, the entries are equal, 
+            they represent the same fencer, or their tournament IDs or weapons differ.
+        """
         # Validate provided entries
         self._validate_entry_pair(self.entry1, self.entry2)
 
@@ -72,7 +66,12 @@ class TournamentMatch(Match, ABC):
     def tournament_id(self) -> int:
         """Return the tournament identifier shared by the two entries."""
         return self.entry1.tournament_id
-    
+
+    @property
+    def weapon(self) -> Weapon:
+        """Return the weapon shared by the two tournament entries."""
+        return self.entry1.weapon
+
     @property
     def fencer1(self) -> Fencer:
         """Return the fencer represented by ``entry1``."""
@@ -86,7 +85,7 @@ class TournamentMatch(Match, ABC):
     @property
     def entries(self) -> tuple[TournamentEntry, TournamentEntry]:
         """Return the entries as ``(entry1, entry2)``."""
-        return (self.entry1, self.entry2)    
+        return (self.entry1, self.entry2)
 
     @property
     def winner_index(self) -> int | None:
@@ -112,7 +111,7 @@ class TournamentMatch(Match, ABC):
             return 1 - self._get_forfeited_index()
         
         return super().winner_index
-    
+
     @property
     def winner(self) -> TournamentEntry | None:
         """
@@ -275,8 +274,8 @@ class TournamentMatch(Match, ABC):
         TypeError
             If either score is not an integer.
         ValueError
-            If either score is outside the permitted range, if the scores are equal, 
-            or if the match is already complete.
+            If the match is already complete, if either score is outside the permitted range, 
+            the scores are tied, or the winning sabre score is below ``score_to_win``.
         """
         if self.is_forfeit():
             raise ValueError(f'{self.label} already has a forfeit result - use replace_with_score instead')
@@ -298,8 +297,8 @@ class TournamentMatch(Match, ABC):
         TypeError
             If either score is not an integer.
         ValueError
-            If either score is outside the permitted range, if the scores are equal, 
-            or if no match result has been recorded.
+            If the match is incomplete, either score is outside the permitted range, 
+            the scores are tied, or the winning sabre score is below ``score_to_win``.
         """
         super().replace_with_score(score1, score2)
         self.forfeited_index = None
@@ -406,8 +405,8 @@ class TournamentMatch(Match, ABC):
         """
         Validate two entries as participants in the same match.
 
-        Each entry is first validated independently. The pair must then contain distinct 
-        entries representing distinct fencers, and both entries must belong to the same tournament.
+        Both entries must be individually valid and distinct.
+        They must represent different fencers in the same tournament and use the same weapon.
 
         Parameters
         ----------
@@ -421,23 +420,38 @@ class TournamentMatch(Match, ABC):
         TypeError
             If either entry or one of its validated attributes has an invalid type.
         ValueError
-            If either entry contains an invalid value, if the entries are equal, if they 
-            represent the same fencer, or if they have different tournament identifiers.
+            If an identifier is zero or negative, the entries are equal, 
+            they represent the same fencer, or their tournament IDs or weapons differ.
         """
+        name1, name2 = 'Entry 1', 'Entry 2'
+
         # Validate the entries in isolation
-        self._validate_entry(entry1, 'Entry 1')
-        self._validate_entry(entry2, 'Entry 2')
+        self._validate_entry(entry1, name1)
+        self._validate_entry(entry2, name2)
 
         # Validate the entries as a valid pair
         if entry1 == entry2:
-            raise ValueError('Entry 1 and entry 2 cannot be the same entry; an entry can\'t fence themself.')
-        
+            raise ValueError(
+                f'{name1} and {name2} cannot be the same entry; an entry can\'t fence themself'
+            )
+
         if entry1.fencer == entry2.fencer:
-            raise ValueError('Entry 1 and entry 2 cannot have the same fencer; an entry can\'t fence themself.')
-        
+            raise ValueError(
+                f'{name1} and {name2} cannot have the same fencer; an entry can\'t fence themself'
+            )
+
         if entry1.tournament_id != entry2.tournament_id:
-            raise ValueError('Entry 1 and entry 2 must have the same tournament ID.')  
-        
+            raise ValueError(
+                f'{name1} and {name2} must have the same tournament ID - got '
+                f'entry1.tournament_id={entry1.tournament_id} and entry2.tournament_id={entry2.tournament_id}'
+            )
+
+        if entry1.weapon != entry2.weapon:
+            raise ValueError(
+                f'{name1} and {name2} must have the same weapon type - got '
+                f'entry1.weapon={entry1.weapon.name} and entry2.weapon={entry2.weapon.name}'
+            )
+
 
     # --- Result Validation Helper Methods ---
     def _get_forfeited_index(self) -> int:

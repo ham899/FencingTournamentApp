@@ -3,30 +3,31 @@ from dataclasses import dataclass, field
 
 import validation
 
+from entities import Weapon
+
 
 @dataclass(eq=False)
 class Match(ABC):
     """
-    Represents the shared scoring and completion behaviour of a fencing match.
+    Represent the shared scoring and completion behaviour of a fencing match.
 
-    ``Match`` is an abstract base class and cannot be instantiated directly.
-    Concrete subclasses must provide a match type and a descriptive label.
-    They may also add participants, identifiers, and result types appropriate
-    to their context.
+    Concrete subclasses provide the match type, descriptive label, and weapon.
+    They may also define participants, identifiers, and result types specific to their context.
 
-    A match begins incomplete with no recorded scores. It can be completed by
-    recording a valid, non-tied score or by a subclass recording a scoreless
-    result, such as a forfeit.
+    A match begins incomplete with both scores set to ``None``. 
+    Recording a valid pair of unequal scores completes the match. 
+    Subclasses may also record a scoreless result, such as a forfeit.
 
     Attributes
     ----------
     score_to_win : int
-        The conventional target score and the maximum permitted 
-        recorded score for either fencer.
+        Maximum permitted score for either fencer. In a scored sabre match,
+        the winner must reach this target. A foil or epee match may finish
+        with a winning score below the target.
     score1 : int | None, default=None
-        The recorded score of fencer 1, or ``None`` if no score is recorded.
+        Recorded score of fencer 1, or ``None`` when the match has no scores.
     score2 : int | None, default=None
-        The recorded score of fencer 2, or ``None`` if no score is recorded.
+        Recorded score of fencer 2, or ``None`` when the match has no scores.
     _completed : bool, default=False
         Whether the match has been marked complete.
     """
@@ -56,22 +57,28 @@ class Match(ABC):
     # --- Properties ---
     @property
     @abstractmethod
+    def label(self) -> str:
+        """Return a descriptive label identifying the match."""
+        pass
+
+    @property
+    @abstractmethod
     def match_type(self) -> str:
         """Return a string identifying the concrete type of match."""
         pass
 
     @property
     @abstractmethod
-    def label(self) -> str:
-        """Return a descriptive label identifying the match."""
+    def weapon(self) -> Weapon:
+        """Return the weapon used in the match."""
         pass
 
     @property
     def score(self) -> tuple[int | None, int | None]:
         """
-        Return the current score as ``(score1, score2)``.
+        Return the recorded scores as ``(score1, score2)``.
 
-        Either value may be ``None`` when the match has no recorded score.
+        An incomplete match or a completed scoreless result returns ``(None, None)``.
         """
         return self.score1, self.score2
     
@@ -193,11 +200,14 @@ class Match(ABC):
         TypeError
             If either score is not an integer.
         ValueError
-            If either score is outside the permitted range, if the scores are equal, 
-            or if the match is already complete.
+            If the match is already complete, either score is outside the permitted range, 
+            the scores are tied, or the winning sabre score is below ``score_to_win``.
         """
         if self.is_complete():
-            raise ValueError(f'Cannot record a score for {self.label} because the match is already complete - use replace_with_score() instead')
+            raise ValueError(
+                f'Cannot record a score for {self.label} because the match is already complete '
+                '- use replace_with_score() instead'
+            )
 
         self._validate_score_values(score1, score2, 'record_score')
 
@@ -221,11 +231,14 @@ class Match(ABC):
         TypeError
             If either score is not an integer.
         ValueError
-            If either score is outside the permitted range, if the scores are equal, 
-            or if a match result has not yet been recorded.
+            If the match is incomplete, either score is outside the permitted range, 
+            the scores are tied, or the winning sabre score is below ``score_to_win``.
         """
         if self.is_incomplete():
-            raise ValueError(f'Cannot replace the score for {self.label} because no result has been been recorded - use record_score() instead')
+            raise ValueError(
+                f'Cannot replace the score for {self.label} because no result has been recorded - '
+                'use record_score() instead'
+            )
 
         self._validate_score_values(score1, score2, 'replace_with_score')
 
@@ -251,17 +264,22 @@ class Match(ABC):
         TypeError
             If either score is not an integer or ``method_name`` is not a string.
         ValueError
-            If either score is outside the inclusive range from zero to
-            ``score_to_win`` or if the scores are equal.
+            If either score is outside the inclusive range from zero to ``score_to_win``,
+            the scores are tied, or the winning sabre score is below ``score_to_win``.
         """
-        if not isinstance(method_name, str):
-            raise TypeError(f'method_name must be a string in Match._validate_score_values() - got {type(method_name).__name__}')
+        validation.validate_string(method_name, 'Method name', self.__class__.__name__, '_validate_score_values')
 
         validation.validate_int_in_range(score1, 0, self.score_to_win, 'Score 1', 'Match', method_name)
         validation.validate_int_in_range(score2, 0, self.score_to_win, 'Score 2', 'Match', method_name)
 
         if score1 == score2:
             raise ValueError(f'Score 1 and score 2 cannot be equal in {self.label}')
+
+        if self.weapon == Weapon.SABRE:
+            if max(score1, score2) != self.score_to_win:
+                raise ValueError(
+                    f'A sabre match must reach the score to win of {self.score_to_win} touches'
+                )
 
 
     # --- State Change Helper Methods ---
@@ -278,8 +296,8 @@ class Match(ABC):
         TypeError
             If both scores are present and either score is not an integer.
         ValueError
-            If exactly one score is present, if either present score is
-            outside the permitted range, or if the scores are tied.
+            If exactly one score is present, 
+            or if both scores are present and violate the scoring rules for the match weapon.
         """
         score1, score2 = self.score
 

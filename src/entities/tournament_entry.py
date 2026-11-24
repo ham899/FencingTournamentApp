@@ -2,54 +2,67 @@ from dataclasses import dataclass
 
 import validation
 
-from entities import Fencer
+from entities import Fencer, Weapon
 
 
-@dataclass(eq=False)
+@dataclass(eq=False, frozen=True)
 class TournamentEntry:
     """
-    Represents an entry participating in a tournament.
-    An entry is a fencer in a specific tournament; 
-    one entry can only be associated with one fencer and one tournament.
+    Represent a fencer's entry in a tournament.
+
+    The entry's fields are fixed at creation. 
+    The tournament ID and entry ID together identify the entry.
 
     Attributes
     ----------
     id : int
-        Unique identifier for the tournament entry.
+        Identifier unique within this tournament.
     tournament_id : int
-        Identifier for the tournament this entry is associated with.
+        Identifier of the tournament this entry belongs to.
     fencer : Fencer
-        The fencer associated with this tournament entry.
+        The fencer represented by this entry.
+    weapon : Weapon
+        The weapon the fencer uses in this tournament.
     """
     id: int
     tournament_id: int
     fencer: Fencer
+    weapon: Weapon
 
 
     # --- Initialization and Validation ---
     def __post_init__(self) -> None:
         """
-        Validates the entry ID and tournament ID to be positive integers. 
-        Ensures the supplied fencer is a fencer object.
+        Validate the entry identifiers, fencer, and weapon.
 
         Raises
         ------
         TypeError
-            If any attribute is an invalid type.
+            If either identifier has a type other than ``int``, 
+            or if ``fencer`` or ``weapon`` has the wrong type.
         ValueError
-            If any of the numeric attributes are not positive integers.
+            If either identifier is zero or negative.
         """
-        validation.validate_positive_int(self.id, 'ID', 'TournamentEntry')
-        validation.validate_positive_int(self.tournament_id, 'Tournament ID', 'TournamentEntry')
+        location = self.__class__.__name__
+
+        validation.validate_positive_int(self.id, 'ID', location)
+        validation.validate_positive_int(self.tournament_id, 'Tournament ID', location)
 
         if not isinstance(self.fencer, Fencer):
-            raise TypeError(f'Fencer in TournamentEntry must be a Fencer - got {type(self.fencer).__name__}')
+            raise TypeError(
+                f'Fencer in {location} must be a Fencer - got {type(self.fencer).__name__}'
+            )
+
+        if not isinstance(self.weapon, Weapon):
+            raise TypeError(
+                f'Weapon of entry in {location} must be a Weapon instance - got {type(self.weapon).__name__}'
+            )
 
 
     # --- Properties ---
     @property
     def display_name(self) -> str:
-        """Gets the display name of the entry."""
+        """Return the associated fencer's current display name."""
         return self.fencer.display_name
 
 
