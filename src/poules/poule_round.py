@@ -226,7 +226,29 @@ class PouleRound:
         """
         self._validate_poule_index(poule_index, 'get_on_deck_match')
         return self.poules[poule_index].get_on_deck_match()
-    
+
+
+    # --- Match Result Resetting Methods ---
+    def reset_match(self, poule_index: int, match_index: int) -> None:
+        """
+        Clear the recorded score or forfeit for a match in the specified poule.
+
+        Parameters
+        ----------
+        poule_index : int
+            The zero-based position of the poule within the round.
+        match_index : int
+            The zero-based position of the match within that poule.
+
+        Raises
+        ------
+        TypeError
+            If either index is not an integer.
+        ValueError
+            If either index is out of range or the match has no recorded result.
+        """
+        self.get_poule_at(poule_index).reset_match(match_index)
+
 
     # --- Match Result Recording Methods ---
     def record_match_score(self, poule_index: int, match_index: int, score1: int, score2: int) -> None:

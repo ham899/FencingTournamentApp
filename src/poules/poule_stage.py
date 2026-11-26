@@ -222,6 +222,35 @@ class PouleStage(TournamentStage):
         return self.poule_rounds[index]
 
 
+    # --- Match Result Resetting Methods ---
+    def reset_match(self, round_index: int, poule_index: int, match_index: int) -> None:
+        """
+        Clear the recorded score or forfeit for a match in the current poule round.
+
+        The current round may already be complete. 
+        To reset a match in an earlier round, first roll back to that round.
+
+        Parameters
+        ----------
+        round_index : int
+            The zero-based position of the current poule round within the stage.
+        poule_index : int
+            The zero-based position of the poule within that round.
+        match_index : int
+            The zero-based position of the match within that poule.
+
+        Raises
+        ------
+        TypeError
+            If any index is not an integer.
+        ValueError
+            If any index is out of range, `round_index` does not identify the current round, 
+            or the match has no recorded result.
+        """
+        self._validate_poule_round_index_current_round(round_index, 'reset_match')
+        self.poule_rounds[round_index].reset_match(poule_index, match_index)
+
+
     # --- Match Result Recording Methods ---
     def record_match_score(self, round_index: int, poule_index: int, match_index: int, score1: int, score2: int) -> None:
         """
@@ -558,7 +587,7 @@ class PouleStage(TournamentStage):
         self._validate_poule_round_index_for_accessing(index, method_name)
 
         if index != self.current_round_index:
-            raise ValueError('Recording or replacing can only be done in the current round')
+            raise ValueError('Match results can only be changed in the current poule round')
 
     def _validate_score_to_win(self, score_to_win: int | tuple[int, ...]) -> None:
         """

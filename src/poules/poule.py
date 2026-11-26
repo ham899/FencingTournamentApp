@@ -193,6 +193,26 @@ class Poule:
         return next((match for match in self.matches if match is not on_piste_match and match.is_incomplete()), None)
 
 
+    # --- Match Result Resetting Methods ---
+    def reset_match(self, match_index: int) -> None:
+        """
+        Clear the recorded score or forfeit and return the match to its incomplete state.
+
+        Parameters
+        ----------
+        match_index : int
+            The zero-based position of the match within the poule.
+
+        Raises
+        ------
+        TypeError
+            If `match_index` is not an integer.
+        ValueError
+            If `match_index` is out of range or the match has no recorded result.
+        """
+        self.get_match_at(match_index).reset()
+
+
     # --- Match Result Recording Methods ---
     def record_match_score(self, match_index: int, score1: int, score2: int) -> None:
         """
