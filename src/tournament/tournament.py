@@ -40,7 +40,7 @@ class Tournament:
         The weapon assigned to every tournament entry at initialization.
         Matches use the entries' shared weapon to validate scored results.
     age_category : AgeCategory, optional
-        The age division for the tournament. Defaults to ``AgeCategory.OPEN``.
+        The age division for the tournament. Defaults to `AgeCategory.OPEN`.
     name : str | None, optional
         An optional descriptive name for the tournament.
     random_seed : int | None, optional
@@ -54,8 +54,7 @@ class Tournament:
     ----------
     initial_seeded_entries : tuple[SeededEntry, ...]
         All tournament entries in initial seed order. 
-        These seeds are retained as the tournament advances; 
-        each stage maintains its own seeding.
+        These seeds are retained as the tournament advances; each stage maintains its own seeding.
     stages : list[TournamentStage]
         The stages created so far, in tournament order. 
     """
@@ -201,6 +200,22 @@ class Tournament:
         return self.stages[index]
 
 
+    # --- Poule Stage Result Resetting Methods ---
+    def reset_poule_match_result(self, stage_index: int, 
+                                 round_index: int, poule_index: int, match_index: int) -> None:
+        """
+        Clear the recorded score or forfeit for a match in the latest poule round.
+
+        All indices are zero-based. 
+        `stage_index` must identify the latest created tournament stage, which must be a `PouleStage`. 
+        `round_index` must identify its latest created round, even if that round is already complete.
+
+        The match returns to its incomplete state and can receive a new result.
+        """
+        stage = self._get_latest_poule_stage_at(stage_index, 'reset_poule_match_result')
+        stage.reset_match(round_index, poule_index, match_index)
+
+
     # --- Poule Stage Result Recording Methods ---
     def record_poule_match_score(self, stage_index: int, round_index: int, poule_index: int, 
                                  match_index: int, score1: int, score2: int) -> None:
@@ -208,7 +223,7 @@ class Tournament:
         Record scores for an incomplete match in the specified poule stage.
 
         All indices are zero-based. 
-        ``stage_index`` must identify the latest created tournament stage, which must be a PouleStage. 
+        `stage_index` must identify the latest created tournament stage, which must be a `PouleStage`. 
         Scores correspond to the match's first and second entries.
 
         Earlier stages require tournament rollback before modification.
@@ -223,8 +238,8 @@ class Tournament:
         Record a forfeit for an incomplete match in the specified poule stage.
 
         All indices are zero-based. 
-        ``stage_index`` must identify the latest created tournament stage, which must be a PouleStage. 
-        ``forfeiting_index`` is 0 for the match's first entry or 1 for its second entry.
+        `stage_index` must identify the latest created tournament stage, which must be a `PouleStage`. 
+        `forfeiting_index` is 0 for the match's first entry or 1 for its second entry.
 
         Earlier stages require tournament rollback before modification.
         The poule stage enforces its own round and match restrictions.
@@ -238,7 +253,7 @@ class Tournament:
         Replace an existing match result with scores in the specified poule stage.
 
         All indices are zero-based. 
-        ``stage_index`` must identify the latest created tournament stage, which must be a PouleStage. 
+        `stage_index` must identify the latest created tournament stage, which must be a `PouleStage`. 
         Scores correspond to the match's first and second entries.
 
         Tournament completion does not prevent corrections to the latest stage.
@@ -254,8 +269,8 @@ class Tournament:
         Replace an existing match result with a forfeit in the specified poule stage.
 
         All indices are zero-based. 
-        ``stage_index`` must identify the latest created tournament stage, which must be a PouleStage. 
-        ``forfeiting_index`` is 0 for the match's first entry or 1 for its second entry.
+        `stage_index` must identify the latest created tournament stage, which must be a `PouleStage`. 
+        `forfeiting_index` is 0 for the match's first entry or 1 for its second entry.
 
         Tournament completion does not prevent corrections to the latest stage.
         Earlier stages require tournament rollback before modification.
@@ -265,13 +280,66 @@ class Tournament:
         stage.replace_with_forfeit(round_index, poule_index, match_index, forfeiting_index)
 
 
+    # --- DE Stage Result Resetting Methods ---
+    def reset_main_bracket_match_result(self, stage_index: int, round_index: int, matchup_index: int) -> None:
+        """
+        Clear the recorded score or forfeit for a main-bracket matchup.
+
+        All indices are zero-based. 
+        `stage_index` must identify the latest created tournament stage, which must be a `DEStage`. 
+        The round and matchup indices refer to its main bracket.
+
+        Reset any completed matchup that depends on this result first. 
+        Resetting a quarter-final also discards an unstarted consolation bracket. 
+        If the consolation bracket has started, its results must be reset first.
+        """
+        stage = self._get_latest_de_stage_at(stage_index, 'reset_main_bracket_match_result')
+        stage.reset_match_result(round_index, matchup_index)
+
+    def reset_third_place_match_result(self, stage_index: int) -> None:
+        """
+        Clear the recorded score or forfeit for the main bracket's third-place match.
+
+        `stage_index` is zero-based and must identify the latest created tournament stage, 
+        which must be a `DEStage` with a completed third-place match.
+        The two semi-final losers can then receive a new third-place result.
+        """
+        stage = self._get_latest_de_stage_at(stage_index, 'reset_third_place_match_result')
+        stage.reset_third_place_match_result()
+
+    def reset_consolation_bracket_match_result(self, stage_index: int, consol_round_index: int, consol_matchup_index: int) -> None:
+        """
+        Clear the recorded score or forfeit for an indexed consolation matchup.
+
+        All indices are zero-based. `stage_index` must identify the latest created tournament stage, 
+        which must be a `DEStage` with an existing consolation bracket. 
+        The round and matchup indices are relative to that bracket.
+
+        Reset any completed matchup that depends on this result first, 
+        including the seventh-place match if it depends on the selected consolation semi-final.
+        """
+        stage = self._get_latest_de_stage_at(stage_index, 'reset_consolation_bracket_match_result')
+        stage.reset_consolation_match_result(consol_round_index, consol_matchup_index)
+
+    def reset_seventh_place_consolation_match_result(self, stage_index: int) -> None:
+        """
+        Clear the recorded score or forfeit for the seventh-place match.
+
+        `stage_index` is zero-based and must identify the latest created tournament stage, 
+        which must be a `DEStage` with a completed seventh-place match.
+        This match is the consolation bracket's third-place matchup.
+        """
+        stage = self._get_latest_de_stage_at(stage_index, 'reset_seventh_place_consolation_match_result')
+        stage.reset_seventh_place_match_result()
+
+
     # --- DE Stage Main Bracket Result Recording Methods ---
     def record_de_match_score(self, stage_index: int, round_index: int, matchup_index: int, score1: int, score2: int) -> None:
         """
         Record scores for an incomplete main-bracket match in the specified DE stage.
 
         All indices are zero-based. 
-        ``stage_index`` must identify the latest created tournament stage, which must be a DEStage. 
+        `stage_index` must identify the latest created tournament stage, which must be a `DEStage`. 
         Scores correspond to the match's first and second entries.
 
         Earlier stages require tournament rollback before modification.
@@ -285,8 +353,8 @@ class Tournament:
         Record a forfeit for an incomplete main-bracket match in the specified DE stage.
 
         All indices are zero-based. 
-        ``stage_index`` must identify the latest created tournament stage, which must be a DEStage. 
-        ``forfeiting_index`` is 0 for the match's first entry or 1 for its second entry.
+        `stage_index` must identify the latest created tournament stage, which must be a `DEStage`. 
+        `forfeiting_index` is 0 for the match's first entry or 1 for its second entry.
 
         Earlier stages require tournament rollback before modification.
         The DE stage enforces its own round and matchup restrictions.
@@ -299,7 +367,7 @@ class Tournament:
         Replace an existing main-bracket match result with scores in the specified DE stage.
 
         All indices are zero-based. 
-        ``stage_index`` must identify the latest created tournament stage, which must be a DEStage. 
+        `stage_index` must identify the latest created tournament stage, which must be a `DEStage`. 
         Scores correspond to the match's first and second entries.
 
         Tournament completion does not prevent corrections to the latest stage.
@@ -314,8 +382,8 @@ class Tournament:
         Replace an existing main-bracket match result with a forfeit in the specified DE stage.
 
         All indices are zero-based. 
-        ``stage_index`` must identify the latest created tournament stage, which must be a DEStage. 
-        ``forfeiting_index`` is 0 for the match's first entry or 1 for its second entry.
+        `stage_index` must identify the latest created tournament stage, which must be a `DEStage`. 
+        `forfeiting_index` is 0 for the match's first entry or 1 for its second entry.
 
         Tournament completion does not prevent corrections to the latest stage.
         Earlier stages require tournament rollback before modification.
@@ -330,7 +398,7 @@ class Tournament:
         """
         Record scores for an incomplete third-place match in the specified DE stage.
 
-        ``stage_index`` is zero-based and must identify the latest created tournament stage, which must be a DEStage. 
+        `stage_index` is zero-based and must identify the latest created tournament stage, which must be a `DEStage`. 
         Scores correspond to the match's first and second entries.
 
         Earlier stages require tournament rollback before modification.
@@ -343,8 +411,8 @@ class Tournament:
         """
         Record a forfeit for an incomplete third-place match in the specified DE stage.
 
-        ``stage_index`` is zero-based and must identify the latest created tournament stage, which must be a DEStage. 
-        ``forfeiting_index`` is 0 for the match's first entry or 1 for its second entry.
+        `stage_index` is zero-based and must identify the latest created tournament stage, which must be a `DEStage`. 
+        `forfeiting_index` is 0 for the match's first entry or 1 for its second entry.
 
         Earlier stages require tournament rollback before modification.
         The DE stage enforces the third-place matchup's availability and restrictions.
@@ -356,7 +424,7 @@ class Tournament:
         """
         Replace an existing third-place match result with scores in the specified DE stage.
 
-        ``stage_index`` is zero-based and must identify the latest created tournament stage, which must be a DEStage. 
+        `stage_index` is zero-based and must identify the latest created tournament stage, which must be a `DEStage`. 
         Scores correspond to the match's first and second entries.
 
         Tournament completion does not prevent corrections to the latest stage.
@@ -370,8 +438,8 @@ class Tournament:
         """
         Replace an existing third-place match result with a forfeit in the specified DE stage.
 
-        ``stage_index`` is zero-based and must identify the latest created tournament stage, which must be a DEStage. 
-        ``forfeiting_index`` is 0 for the match's first entry or 1 for its second entry.
+        `stage_index` is zero-based and must identify the latest created tournament stage, which must be a `DEStage`. 
+        `forfeiting_index` is 0 for the match's first entry or 1 for its second entry.
 
         Tournament completion does not prevent corrections to the latest stage.
         Earlier stages require tournament rollback before modification.
@@ -388,7 +456,7 @@ class Tournament:
         Record scores for an incomplete consolation match in the specified DE stage.
 
         All indices are zero-based. 
-        ``stage_index`` must identify the latest created tournament stage, which must be a DEStage. 
+        `stage_index` must identify the latest created tournament stage, which must be a `DEStage`. 
         The round and matchup indices refer to the consolation bracket. 
         Scores correspond to the match's first and second entries.
 
@@ -404,9 +472,9 @@ class Tournament:
         Record a forfeit for an incomplete consolation match in the specified DE stage.
 
         All indices are zero-based. 
-        ``stage_index`` must identify the latest created tournament stage, which must be a DEStage. 
+        `stage_index` must identify the latest created tournament stage, which must be a `DEStage`. 
         The round and matchup indices refer to the consolation bracket. 
-        ``forfeiting_index`` is 0 for the match's first entry or 1 for its second entry.
+        `forfeiting_index` is 0 for the match's first entry or 1 for its second entry.
 
         Earlier stages require tournament rollback before modification.
         The DE stage enforces the consolation bracket's availability and restrictions.
@@ -420,7 +488,7 @@ class Tournament:
         Replace an existing consolation match result with scores in the specified DE stage.
 
         All indices are zero-based. 
-        ``stage_index`` must identify the latest created tournament stage, which must be a DEStage. 
+        `stage_index` must identify the latest created tournament stage, which must be a `DEStage`. 
         The round and matchup indices refer to the consolation bracket. 
         Scores correspond to the match's first and second entries.
 
@@ -437,9 +505,9 @@ class Tournament:
         Replace an existing consolation match result with a forfeit in the specified DE stage.
 
         All indices are zero-based. 
-        ``stage_index`` must identify the latest created tournament stage, which must be a DEStage. 
+        `stage_index` must identify the latest created tournament stage, which must be a `DEStage`. 
         The round and matchup indices refer to the consolation bracket. 
-        ``forfeiting_index`` is 0 for the match's first entry or 1 for its second entry.
+        `forfeiting_index` is 0 for the match's first entry or 1 for its second entry.
 
         Tournament completion does not prevent corrections to the latest stage.
         Earlier stages require tournament rollback before modification.
@@ -454,7 +522,7 @@ class Tournament:
         """
         Record scores for an incomplete seventh-place match in the specified DE stage.
 
-        ``stage_index`` is zero-based and must identify the latest created tournament stage, which must be a DEStage. 
+        `stage_index` is zero-based and must identify the latest created tournament stage, which must be a `DEStage`. 
         Scores correspond to the match's first and second entries.
 
         Earlier stages require tournament rollback before modification.
@@ -467,8 +535,8 @@ class Tournament:
         """
         Record a forfeit for an incomplete seventh-place match in the specified DE stage.
 
-        ``stage_index`` is zero-based and must identify the latest created tournament stage, which must be a DEStage. 
-        ``forfeiting_index`` is 0 for the match's first entry or 1 for its second entry.
+        `stage_index` is zero-based and must identify the latest created tournament stage, which must be a `DEStage`. 
+        `forfeiting_index` is 0 for the match's first entry or 1 for its second entry.
 
         Earlier stages require tournament rollback before modification.
         The DE stage enforces the seventh-place matchup's availability and restrictions.
@@ -480,7 +548,7 @@ class Tournament:
         """
         Replace an existing seventh-place match result with scores in the specified DE stage.
 
-        ``stage_index`` is zero-based and must identify the latest created tournament stage, which must be a DEStage. 
+        `stage_index` is zero-based and must identify the latest created tournament stage, which must be a `DEStage`. 
         Scores correspond to the match's first and second entries.
 
         Tournament completion does not prevent corrections to the latest stage.
@@ -494,8 +562,8 @@ class Tournament:
         """
         Replace an existing seventh-place match result with a forfeit in the specified DE stage.
 
-        ``stage_index`` is zero-based and must identify the latest created tournament stage, which must be a DEStage. 
-        ``forfeiting_index`` is 0 for the match's first entry or 1 for its second entry.
+        `stage_index` is zero-based and must identify the latest created tournament stage, which must be a `DEStage`. 
+        `forfeiting_index` is 0 for the match's first entry or 1 for its second entry.
 
         Tournament completion does not prevent corrections to the latest stage.
         Earlier stages require tournament rollback before modification.
@@ -510,7 +578,7 @@ class Tournament:
         """
         Create the next round in the specified poule stage.
 
-        ``stage_index`` is zero-based and must identify the latest created tournament stage, which must be a PouleStage.
+        `stage_index` is zero-based and must identify the latest created tournament stage, which must be a `PouleStage`.
 
         The poule stage validates that advancement is allowed and creates the next round using its seeding rules. 
         Earlier stages require tournament rollback before modification.
@@ -523,7 +591,7 @@ class Tournament:
         Roll back the specified poule stage to an existing round.
 
         Both indices are zero-based. 
-        ``stage_index`` must identify the latest created tournament stage, which must be a PouleStage.
+        `stage_index` must identify the latest created tournament stage, which must be a `PouleStage`.
 
         The target round is retained, and subsequent rounds and their results are discarded. 
         Earlier stages require tournament rollback before their rounds can be modified.
@@ -584,7 +652,7 @@ class Tournament:
         """
         Retain the specified stage and discard all subsequent stages.
 
-        ``stage_index`` is zero-based and must identify an existing stage.
+        `stage_index` is zero-based and must identify an existing stage.
         The retained stage's rounds, matches, and results are unchanged.
         Discarded stages must be recreated through normal advancement.
 
@@ -594,9 +662,9 @@ class Tournament:
         Raises
         ------
         TypeError
-            If ``stage_index`` is not an integer.
+            If `stage_index` is not an integer.
         ValueError
-            If ``stage_index`` is outside the range of created stages.
+            If `stage_index` is outside the range of created stages.
         """
         self._validate_stage_index_for_accessing(stage_index, 'rollback_to_stage')
 
@@ -608,7 +676,7 @@ class Tournament:
         """
         Return a snapshot of the specified stage's current results.
 
-        ``stage_index`` is zero-based and must identify an existing stage.
+        `stage_index` is zero-based and must identify an existing stage.
         The stage may be incomplete or complete.
         """
         return self.get_stage_at(stage_index).calculate_results()
@@ -617,7 +685,7 @@ class Tournament:
         """
         Return a snapshot of the specified poule stage's current results.
 
-        ``stage_index`` is zero-based and must identify an existing PouleStage.
+        `stage_index` is zero-based and must identify an existing `PouleStage`.
         The stage may be incomplete or complete.
         """
         stage = self._get_poule_stage_at(stage_index, 'calculate_poule_stage_results_at')
@@ -627,7 +695,7 @@ class Tournament:
         """
         Return a snapshot of the specified DE stage's current results.
 
-        ``stage_index`` is zero-based and must identify an existing DEStage.
+        `stage_index` is zero-based and must identify an existing `DEStage`.
         The stage may be incomplete or complete.
         """
         stage = self._get_de_stage_at(stage_index, 'calculate_de_stage_results_at')
@@ -684,7 +752,7 @@ class Tournament:
         """
         Construct a stage using its configured settings and supplied seeding.
 
-        ``stage_index`` is zero-based and identifies a configured stage, which need not exist yet. 
+        `stage_index` is zero-based and identifies a configured stage, which need not exist yet.
         The returned stage is not appended to stages.
 
         The concrete stage validates its settings and seeded entries.
@@ -692,9 +760,9 @@ class Tournament:
         Raises
         ------
         TypeError
-            If ``stage_index`` has an invalid type or the stage configuration is neither a PouleConfig nor a DEConfig.
+            If `stage_index` has an invalid type or the stage configuration is neither a `PouleConfig` nor a `DEConfig`.
         ValueError
-            If stage_index is outside the range of configured stages.
+            If `stage_index` is outside the range of configured stages.
         """
         self._validate_stage_index(stage_index, '_create_stage')
 
@@ -784,7 +852,7 @@ class Tournament:
 
         The stage must be complete. 
         Active entries retain their ranked order and receive consecutive seeds starting at 1. 
-        Each entry's stage placement is carried forward as ``previous_place``, preserving ties.
+        Each entry's stage placement is carried forward as `previous_place`, preserving ties.
         """
         stage_results = self.stages[-1].calculate_final_results()
 
@@ -803,7 +871,7 @@ class Tournament:
         """
         Return the configured cut proportion for the specified stage.
 
-        ``stage_index`` must be a valid zero-based index into ``stage_configs``.
+        `stage_index` must be a valid zero-based index into `stage_configs`.
         The stage need not have been created.
 
         Return 0.0 if cuts are unspecified, the stage is not a poule stage, or the stage is the tournament's final stage. 
@@ -876,7 +944,7 @@ class Tournament:
         Raises
         ------
         TypeError
-            If ``config`` has a type other than ``TournamentConfig``.
+            If `config` has a type other than `TournamentConfig`.
         """
         if not isinstance(config, TournamentConfig):
             raise TypeError(
@@ -904,7 +972,7 @@ class Tournament:
         Raises
         ------
         TypeError
-            If ``age_category`` has a type other than ``AgeCategory``.
+            If `age_category` has a type other than `AgeCategory`.
         """
         if not isinstance(age_category, AgeCategory):
             raise TypeError(
