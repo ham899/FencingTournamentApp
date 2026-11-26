@@ -184,6 +184,9 @@ class Tournament:
         Stages remain accessible after the tournament is complete.
         Configured stages that have not yet been created cannot be accessed.
 
+        Returns the live stage for inspection. Use the `Tournament` methods to record, replace, 
+        or reset match results so stage and round restrictions are enforced.
+
         Parameters
         ----------
         index : int
