@@ -246,11 +246,14 @@ class TournamentMatch(Match, ABC):
         """
         Reset the match to its initial incomplete state.
 
-        The inherited scores and completion state are cleared, 
-        and ``forfeited_index`` is restored to ``None``.
+        Clear both scores and the completion flag, and restore `forfeited_index` to ``None``.
+
+        Raises
+        ------
+        ValueError
+            If the match has no recorded result to reset.
         """
         super().reset()
-        
         self.forfeited_index = None
 
 

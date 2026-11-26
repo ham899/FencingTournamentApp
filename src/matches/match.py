@@ -173,10 +173,17 @@ class Match(ABC):
         Reset the match to its initial incomplete state.
 
         Both recorded scores are cleared and the completion state is set to ``False``.
+
+        Raises
+        ------
+        ValueError
+            If the match has no recorded result to reset.
         """
+        if self.is_incomplete():
+            raise ValueError(f'Cannot reset {self.label} because it has no recorded result')
+
         self.score1 = None
         self.score2 = None
-        
         self._completed = False
 
 
