@@ -21,7 +21,8 @@ class DEStageResults(StageResults):
 
     Stage status follows the main bracket: its winner and active entries remain ACTIVE, 
     while its eliminated entries are ELIMINATED. 
-    Consolation affects placement only and does not restore eligibility to advance from the stage.
+    Consolation determines the current order and stage places of its participants. 
+    Their stage status continues to follow the main bracket.
 
     The supplied brackets and seeded-entry tuple are used only during initialization and are not stored. 
     Individual result snapshots retain references to their tournament entries.
@@ -47,19 +48,18 @@ class DEStageResults(StageResults):
     stage_number : int
         The stage's one-based position within its tournament.
     ranked_results : tuple[DEEntryStageResult, ...]
-        One result per main-bracket entry, ordered by descending main-bracket round reached, 
-        main-bracket status (winner, active, eliminated), ascending confirmed stage place, 
-        and ascending main-bracket seed.
-        Within the same round and status, unresolved places follow confirmed places. 
-        Positions are unique, one-based indices in this snapshot; 
-        they may change in subsequent snapshots as matches are completed.
-        Places may be shared or unresolved. An unresolved place has is_tie=None.
+        One result per main-bracket entry in current stage ranking order. 
+        Entries follow main-bracket order, 
+        with consolation participants ordered by their consolation standings starting at position 5.
+        Each entry has a unique, one-based position. Its place is ``None`` until confirmed. 
+        Multiple entries may share a confirmed place.
 
     Notes
     -----
-    Consolation places are offset by four, preserving any shared placements.
-    Progress within unfinished consolation rounds does not independently control the stage ordering. 
-    A stopped main bracket's advancing entries remain ACTIVE with unresolved places, as supplied by DEBracketResults.
+    A confirmed consolation place becomes a stage place by adding four.
+    Entries sharing a confirmed stage place have ``is_tie=True``.
+    Entries awaiting a place have ``is_tie=None``.
+    Advancing entries in a stopped main bracket remain ACTIVE with unresolved places.
     """
     seeded_entries: InitVar[tuple[SeededEntry, ...]]
     main_bracket: InitVar[DEBracket]
@@ -85,48 +85,38 @@ class DEStageResults(StageResults):
         ------
         TypeError
             If the stage number has an invalid type, a bracket has an invalid type, 
-            or seeded entries fail the type checks in DEBracketResults.
+            or seeded entries fail the type checks in `DEBracketResults`.
         ValueError
             If the stage number is not positive, bracket roles or stage numbers are inconsistent, 
-            the brackets have different tournament IDs, consolation entries are not a subset of main-bracket entries,
-            or seeded entries fail the value checks in DEBracketResults.
+            the brackets have different tournament IDs, consolation entries are not a subset of main-bracket entries, 
+            seeded entries fail the value checks in `DEBracketResults`, 
+            or if the consolation entry IDs differ from the IDs in the corresponding slice of the main-bracket standings.
         """
         # 1. Validate inputs
         location = self.__class__.__name__
-
         super(DEStageResults, self).__post_init__()
-
         self._validate_main_bracket(main_bracket, location)
 
         if consolation_bracket is not None:
             self._validate_consolation_bracket(consolation_bracket, main_bracket, location)
 
         # 2. Calculate the main-bracket result snapshot
-        main_bracket_results = DEBracketResults(
-            bracket=main_bracket,
-            seeded_entries=seeded_entries
-        )
+        main_bracket_results = DEBracketResults(main_bracket, seeded_entries)
 
         # 3. Calculate the optional consolation snapshot
         consolation_results = None
 
         if consolation_bracket is not None:
-            consolation_entry_ids = {entry.id for entry in consolation_bracket.entries}
+            consolation_entry_ids: set[int] = set(entry.id for entry in consolation_bracket.entries)
 
             consolation_seeded_entries = tuple(
                 seeded_entry for seeded_entry in seeded_entries if seeded_entry.entry.id in consolation_entry_ids
             )
 
-            consolation_results = DEBracketResults(
-                bracket=consolation_bracket,
-                seeded_entries=consolation_seeded_entries
-            )
+            consolation_results = DEBracketResults(consolation_bracket, consolation_seeded_entries)
 
         # 4. Convert every entry into a stage result, with or without consolation information
-        ranked_results = self._calculate_stage_entry_results(
-            main_bracket_results=main_bracket_results,
-            consolation_results=consolation_results
-        )
+        ranked_results = self._calculate_stage_entry_results(main_bracket_results, consolation_results)
 
         object.__setattr__(self, '_ranked_results', ranked_results)
 
@@ -139,90 +129,94 @@ class DEStageResults(StageResults):
 
 
     # --- Helper Methods ---
-    def _calculate_stage_entry_results(
-            self, 
-            main_bracket_results: DEBracketResults, 
+    def _calculate_stage_entry_results(self, main_bracket_results: DEBracketResults, 
             consolation_results: DEBracketResults | None) -> tuple[DEEntryStageResult, ...]:
         """
-        Resolve bracket placements and construct ordered stage entry results.
+        Combine main and consolation bracket results into stage standings.
 
-        Entries outside consolation retain their main-bracket places. 
-        For consolation participants, confirmed consolation places are increased by four; 
-        unresolved consolation places produce unresolved stage places.
+        Start with the main bracket's ranking order and placements. 
+        When a consolation bracket exists, 
+        its entries occupy the rows immediately after the four main-bracket semifinalists. 
+        Only those rows follow the consolation bracket's ranking order.
 
-        Order entries using main-bracket round reached and status, resolved stage place, and main-bracket seed. 
-        Assign unique positions after sorting.
-        Map main-bracket WINNER and ACTIVE to stage ACTIVE, and main-bracket ELIMINATED to stage ELIMINATED. 
-        Count equal confirmed stage places to identify ties; unresolved places receive is_tie=None.
+        A confirmed consolation place is offset by four to obtain the stage place. 
+        An unresolved place remains ``None``. 
+        For example, if the seventh-place bout finishes before the fifth-place bout, 
+        the two consolation finalists still occupy positions 5 and 6, 
+        with their places unresolved.
+
+        Stage status comes from the main bracket. 
+        ``WINNER`` and ``ACTIVE`` map to stage ``ACTIVE``, and ``ELIMINATED`` maps to stage ``ELIMINATED``. 
+        Entries sharing a confirmed stage place are tied. Entries with an unresolved place have ``is_tie=None``.
 
         Parameters
         ----------
         main_bracket_results : DEBracketResults
-            The snapshot containing every stage participant's main-bracket result.
+            The ranked main-bracket results for all stage participants.
         consolation_results : DEBracketResults | None
-            Optional snapshot used to resolve stage places 5-8.
+            The ranked consolation results, if available. 
+            Their entries must match the main-bracket entries in the rows they replace.
 
         Returns
         -------
         tuple[DEEntryStageResult, ...]
-            Stage results in current ranking order, with one result per entry.
-            Position represents current ordering rather than a confirmed place.
+            One result per entry in current stage ranking order.
+            `position` is the one-based row in the standings, 
+            and `place` is the confirmed finishing place, if available.
+
+        Raises
+        ------
+        ValueError
+            If the consolation entry IDs differ from the IDs in the corresponding slice of the main-bracket standings.
         """
-        consolation_results_by_entry_id: dict[int, DEEntryResult] = {}
+        # Use main-bracket order and places as the starting standings
+        ranked_main_results = main_bracket_results.ranked_results
+        results_with_stage_places = [(result, result.place) for result in ranked_main_results]
 
         if consolation_results is not None:
-            consolation_results_by_entry_id = {result.entry.id: result for result in consolation_results.ranked_results}
+            ranked_consolation_results = consolation_results.ranked_results
 
-        # Step 1: Resolve stage places while retaining main-bracket information
-        results_with_places: list[tuple[DEEntryResult, int | None]] = []
+            # Consolation starts after the four main-bracket semifinalists
+            num_main_semifinalists: int = 4
+            consolation_slice: slice = slice(num_main_semifinalists, num_main_semifinalists + len(ranked_consolation_results))
 
-        for main_result in main_bracket_results.ranked_results:
-            consolation_result = consolation_results_by_entry_id.get(main_result.entry.id)
+            main_results_by_entry_id: dict[int, DEEntryResult] = {
+                result.entry.id: result for result in ranked_main_results[consolation_slice]
+            }
 
-            if consolation_result is None:
-                stage_place = main_result.place
-            elif consolation_result.place is None:
-                stage_place = None
-            else:
-                stage_place = consolation_result.place + 4
+            consolation_entry_ids: set[int] = {result.entry.id for result in ranked_consolation_results}
 
-            results_with_places.append((main_result, stage_place))
+            # Require the same entries so the replacement cannot duplicate or drop a fencer
+            if main_results_by_entry_id.keys() != consolation_entry_ids:
+                raise ValueError(
+                    'Consolation entries must match the main-bracket entries whose stage positions are being replaced'
+                )
 
+            # Follow consolation order and keep each fencer's main result for stage status
+            consolation_rows: list[tuple[DEEntryResult, int | None]] = []
+            for consolation_result in ranked_consolation_results:
+                main_result = main_results_by_entry_id[consolation_result.entry.id]
+                consolation_place = consolation_result.place
+                stage_place = None if consolation_place is None else consolation_place + num_main_semifinalists
+                consolation_rows.append((main_result, stage_place))
 
-        # Step 2: Establish the combined ordering before assigning positions
-        status_rank = {DEEntryStatus.WINNER: 0, DEEntryStatus.ACTIVE: 1, DEEntryStatus.ELIMINATED: 2}
-        
-        results_with_places.sort(
-            key=lambda result: (
-                -result[0].round_reached,
-                status_rank[result[0].status],
-                result[1] if result[1] is not None else float('inf'),
-                result[0].bracket_seed
-            )
-        )
+            results_with_stage_places[consolation_slice] = consolation_rows
 
+        # Count confirmed places after the merge to identify stage ties
+        stage_place_counts: dict[int, int] = {}
+        for _, stage_place in results_with_stage_places:
+            if stage_place is not None:
+                stage_place_counts[stage_place] = stage_place_counts.get(stage_place, 0) + 1
 
-        # Step 3: Count confirmed placements to identify ties
-        place_counts: dict[int, int] = {}
-
-        for _, place in results_with_places:
-            if place is not None:
-                place_counts[place] = place_counts.get(place, 0) + 1
-
-
-        # Step 4: Translate each bracket result into the shared stage interface
+        # Assign live positions from the combined row order
         stage_results: list[DEEntryStageResult] = []
-
-        for position, (main_result, stage_place) in enumerate(results_with_places, start=1):
+        for position, (main_result, stage_place) in enumerate(results_with_stage_places, start=1):
             if main_result.status is DEEntryStatus.ELIMINATED:
                 stage_status = StageEntryStatus.ELIMINATED
             else:
                 stage_status = StageEntryStatus.ACTIVE
-            
-            if stage_place is None:
-                is_tie = None
-            else:
-                is_tie = place_counts[stage_place] > 1
+
+            is_tie = None if stage_place is None else stage_place_counts[stage_place] > 1
 
             stage_results.append(
                 DEEntryStageResult(
